@@ -67,7 +67,10 @@ function getSortedWords(content) {
 
   // Sort words by the most frequent first
   return content.sortedWords = Object.keys(wordFrequency).sort(function(a, b) {
-    return wordFrequency[b] - wordFrequency[a];
+    let freqDelta = wordFrequency[b] - wordFrequency[a];
+    if (0 != freqDelta)
+      return freqDelta;
+    return a < b ? -1 : 1;
   }).map(function(key) key.slice(1));
 }
 
