@@ -56,14 +56,14 @@ function getSortedWords(content) {
   let splitter = RegExp(edges + "\\s+" + edges);
   let words = text.trim().toLowerCase().split(splitter);
   let wordFrequency = {};
-  words.forEach(function(word) {
+  for (var i = 0, word; word = words[i++];) {
+    // words must be 3 chars long
+    if (3 > word.length)
+      continue;
     // Prepend "w" to avoid special properties like __proto__
     let key = "w" + word;
-    if (wordFrequency[key] == null)
-      wordFrequency[key] = 1;
-    else
-      wordFrequency[key]++;
-  });
+    wordFrequency[key] = wordFrequency[key] + 1 || 1;
+  }
 
   // Sort words by the most frequent first
   return content.sortedWords = Object.keys(wordFrequency).sort(function(a, b) {
