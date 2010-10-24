@@ -46,7 +46,12 @@ function getSortedWords(content) {
 
   // Use the selection object to get strings separate by whitespace
   let selection = content.getSelection();
-  let range = selection.getRangeAt(0);
+  try {
+    var range = selection.getRangeAt(0);
+  } catch(e) {
+    // Blank page throws an error, so do not return any words
+    return [];
+  }
   range.selectNode(content.document.body);
   let text = selection.toString();
   range.collapse(true);
