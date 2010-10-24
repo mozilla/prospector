@@ -109,6 +109,11 @@ function addFindSuggestions(window) {
     let queryLen = query.length;
     let matches = 0;
     let sortedWords = getSortedWords(content);
+    function suggestionClick(event) {
+      let word = findField.value = event.target.value;
+      findBar._find();
+      suggest(word, content);
+    }
     for each (let word in sortedWords) {
       // Only find prefix matches
       if (word.slice(0, queryLen) != lowerQuery)
@@ -122,12 +127,7 @@ function addFindSuggestions(window) {
       findContainer.appendChild(suggestion);
 
       // Fill in the word when clicking on it
-      suggestion.addEventListener("click", function(event) {
-        let word = event.target.value;
-        findField.value = word;
-        findBar._find();
-        suggest(word, content);
-      }, false);
+      suggestion.addEventListener("click", suggestionClick, false);
 
       // Don't try suggesting too many words
       if (++matches == 100)
