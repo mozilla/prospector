@@ -92,11 +92,7 @@ function addFindSuggestions(window) {
 
   // Update the suggestions when the find field changes
   function onFind() {
-    let last = findField.value.trim().match(/\S+$/);
-    if (last == null)
-      last = "";
-    else
-      last = last[0];
+    let last = /(\S+)\s*$/.test(findField.value) ? RegExp.$1 : "";
     suggest(last, window.gBrowser.selectedBrowser.contentWindow);
   }
   listen(window, findField, "focus", onFind);
