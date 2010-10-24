@@ -169,6 +169,14 @@ function addFindSuggestions(window) {
   function suggest(query, content) {
     clearSuggestions();
 
+    // Provide a callback to handle clicks that recursively suggests
+    function suggestionClick(event) {
+      let word = findField.value = event.target.value;
+      findBar._find();
+      suggest(word, content);
+    }
+
+    // Figure out which words to show for the given query
     let lowerQuery = query.toLowerCase();
     let queryLen = query.length;
     let matches = 0;
@@ -187,12 +195,7 @@ function addFindSuggestions(window) {
       findContainer.appendChild(suggestion);
 
       // Fill in the word when clicking on it
-      suggestion.addEventListener("click", function(event) {
-        let word = event.target.value;
-        findField.value = word;
-        findBar._find();
-        suggest(word, content);
-      }, false);
+      suggestion.addEventListener("click", suggestionClick, false);
 
       // Don't try suggesting too many words
       if (++matches == limit)
