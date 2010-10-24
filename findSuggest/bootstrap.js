@@ -37,6 +37,8 @@
 const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
 
+const SPLITTER = /[-]*[\s\u2010-\u201f\"',\.:;\?!\(\)\{\}\[\]=]+[-]*/
+
 /**
  * Get all the words in the content window sorted by frequency
  */
@@ -52,9 +54,7 @@ function getSortedWords(content) {
   range.collapse(true);
 
   // Count up how many times each word is used ignoring edge punctuation
-  let edges = "[\u2010-\u201f\"',.:;?!()]*";
-  let splitter = RegExp(edges + "\\s+" + edges);
-  let words = text.trim().toLowerCase().split(splitter);
+  let words = text.trim().toLowerCase().split(SPLITTER);
   let wordFrequency = {};
   words.forEach(function(word) {
     // Prepend "w" to avoid special properties like __proto__
