@@ -132,8 +132,7 @@ function addEnterSelects(window) {
     if (search.match(/ /) == null) {
       try {
         // Quit early if the input is already a URI
-        return Cc["@mozilla.org/network/io-service;1"].
-          getService(Ci.nsIIOService).newURI(gURLBar.value, null, null);
+        return Services.io.newURI(gURLBar.value, null, null);
       }
       catch(ex) {}
 
