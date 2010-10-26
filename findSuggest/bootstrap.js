@@ -41,6 +41,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 const PREF_BRANCH = "extensions.prospector.findSuggest.";
 const PREFS = {
   minWordLength: 1,
+  maxResults: 100
 };
 
 /**
@@ -166,6 +167,7 @@ function addFindSuggestions(window) {
     let queryLen = query.length;
     let matches = 0;
     let sortedWords = getSortedWords(content);
+    let limit = getPref("maxResults");
     for each (let word in sortedWords) {
       // Only find prefix matches
       if (word.slice(0, queryLen) != lowerQuery)
@@ -187,7 +189,7 @@ function addFindSuggestions(window) {
       }, false);
 
       // Don't try suggesting too many words
-      if (++matches == 100)
+      if (++matches == limit)
         break;
     }
   }
