@@ -94,8 +94,8 @@ function addFindSuggestions(window) {
       last = last[0];
     suggest(last, window.gBrowser.selectedBrowser.contentWindow);
   }
-  listen(findField, "focus", onFind);
-  listen(findField, "input", onFind);
+  listen(window, findField, "focus", onFind);
+  listen(window, findField, "input", onFind);
 
   // Clear out the suggestions when removing the add-on
   function clearSuggestions() {
@@ -105,8 +105,8 @@ function addFindSuggestions(window) {
         findContainer.removeChild(node);
     });
   }
-  listen(window.gBrowser.tabContainer, "TabSelect", clearSuggestions);
-  unloaders.push(clearSuggestions);
+  listen(window, window.gBrowser.tabContainer, "TabSelect", clearSuggestions);
+  addUnloaderForWindow(window, clearSuggestions);
 
   // Show suggestions for the provided word
   function suggest(query, content) {
@@ -146,9 +146,10 @@ function addFindSuggestions(window) {
 /**
  * Helper that adds event listeners and remembers to remove on unload
  */
-function listen(node, event, func) {
+function listen(window, node, event, func) {
   node.addEventListener(event, func, false);
-  unloaders.push(function() node.removeEventListener(event, func, false));
+  addUnloaderForWindow(window, function() (
+      node.removeEventListener(event, func, false)));
 }
 
 /**
@@ -180,10 +181,16 @@ function startup() {
 
 // Keep an array of functions to call when shutting down
 let unloaders = [];
+function addUnloader(unload) unloaders.push(unload) - 1;
+function addUnloaderForWindow(window, unload) {
+  let index = addUnloader(unload);
+  // Remove unload func from unloaders if window is closed.
+  window.addEventListener("unload", function() unloaders[index] = null, false);
+}
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
  */
 function shutdown() {
-  unloaders.forEach(function(unload) unload());
+  unloaders.forEach(function(unload) unload && unload());
 }
