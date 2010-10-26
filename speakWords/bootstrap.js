@@ -74,6 +74,10 @@ function addKeywordSuggestions(window) {
       case event.DOM_VK_DELETE:
         deleting = true;
         break;
+      case event.DOM_VK_LEFT:
+      case event.DOM_VK_RIGHT:
+        suggesting = false;
+        break;
     }
   });
 
