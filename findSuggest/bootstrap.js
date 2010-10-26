@@ -38,6 +38,50 @@
 const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
 
+const PREF_BRANCH = "extensions.prospector.findSuggest.";
+const PREFS = {
+  minWordLength: 1,
+};
+
+/**
+ * Get the preference value of type specified in PREFS
+ */
+function getPref(key) {
+  // Cache the prefbranch after first use
+  if (getPref.branch == null)
+    getPref.branch = Services.prefs.getBranch(PREF_BRANCH);
+
+  // Figure out what type of pref to fetch
+  switch (typeof PREFS[key]) {
+    case "boolean":
+      return getPref.branch.getBoolPref(key);
+    case "number":
+      return getPref.branch.getIntPref(key);
+    case "string":
+      return getPref.branch.getCharPref(key);
+  }
+}
+
+/**
+ * Initialize default preferences specified in PREFS
+ */
+function setDefaultPrefs() {
+  let branch = Services.prefs.getDefaultBranch(PREF_BRANCH);
+  for (let [key, val] in Iterator(PREFS)) {
+    switch (typeof val) {
+      case "boolean":
+        branch.setBoolPref(key, val);
+        break;
+      case "number":
+        branch.setIntPref(key, val);
+        break;
+      case "string":
+        branch.setCharPref(key, val);
+        break;
+    }
+  }
+}
+
 /**
  * Get all the words in the content window sorted by frequency
  */
@@ -64,7 +108,12 @@ function getSortedWords(content) {
   let splitter = RegExp(edges + "\\s+" + edges);
   let words = text.trim().toLowerCase().split(splitter);
   let wordFrequency = {};
+  let minWordLength = getPref("minWordLength");
   words.forEach(function(word) {
+    // Skip words that are too short
+    if (word.length < minWordLength)
+      return;
+
     // Prepend "w" to avoid special properties like __proto__
     let key = "w" + word;
     if (wordFrequency[key] == null)
@@ -158,6 +207,9 @@ function listen(window, node, event, func) {
  * Handle the add-on being activated on install/enable
  */
 function startup() {
+  // Always set the default prefs as they disappear on restart
+  setDefaultPrefs();
+
   // Add functionality to existing windows
   let browserWindows = Services.wm.getEnumerator("navigator:browser");
   while (browserWindows.hasMoreElements())
