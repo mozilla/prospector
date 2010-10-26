@@ -99,6 +99,7 @@ function addFindSuggestions(window) {
         findContainer.removeChild(node);
     });
   }
+  listen(window.gBrowser.tabContainer, "TabSelect", clearSuggestions);
   unloaders.push(clearSuggestions);
 
   // Show suggestions for the provided word
