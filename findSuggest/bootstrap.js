@@ -47,9 +47,11 @@ function getSortedWords(content) {
 
   // Use the selection object to get strings separate by whitespace
   let selection = content.getSelection();
+  let range;
   try {
-    var range = selection.getRangeAt(0);
-  } catch(e) {
+    range = selection.getRangeAt(0);
+  }
+  catch(ex) {
     // Blank page throws an error, so do not return any words
     return [];
   }
@@ -74,7 +76,7 @@ function getSortedWords(content) {
   // Sort words by the most frequent first
   return content.sortedWords = Object.keys(wordFrequency).sort(function(a, b) {
     let freqDelta = wordFrequency[b] - wordFrequency[a];
-    if (0 != freqDelta)
+    if (freqDelta != 0)
       return freqDelta;
     return a < b ? -1 : 1;
   }).map(function(key) key.slice(1));
@@ -151,8 +153,9 @@ function addFindSuggestions(window) {
  */
 function listen(window, node, event, func) {
   node.addEventListener(event, func, false);
-  addUnloaderForWindow(window, function() (
-      node.removeEventListener(event, func, false)));
+  addUnloaderForWindow(window, function() {
+    node.removeEventListener(event, func, false);
+  });
 }
 
 /**
