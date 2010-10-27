@@ -42,6 +42,12 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 // Keep an array of functions to call when shutting down
 let unloaders = [];
+function addUnloader(unload) unloaders.push(unload) - 1;
+function addUnloaderForWindow(window, unload) {
+  let index = addUnloader(unload);
+  // Remove unload func from unloaders if window is closed.
+  window.addEventListener("unload", function() unloaders[index] = null, false);
+}
 
 // Keep a sorted list of keywords to suggest
 let sortedKeywords = [];
@@ -67,7 +73,7 @@ function addKeywordSuggestions(window) {
   let deleting = false;
 
   // Look for deletes to handle them better on input
-  listen(urlBar, "keypress", function(event) {
+  listen(window, urlBar, "keypress", function(event) {
     switch (event.keyCode) {
       case event.DOM_VK_BACK_SPACE:
       case event.DOM_VK_DELETE:
@@ -77,7 +83,7 @@ function addKeywordSuggestions(window) {
   });
 
   // Watch for urlbar value input changes to suggest keywords
-  listen(urlBar, "input", function(event) {
+  listen(window, urlBar, "input", function(event) {
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
       deleting = false;
@@ -173,10 +179,10 @@ function addEnterSelects(window) {
       lastSearch = gURLBar.trimmedSearch;
     };
 
-    unloaders.push(function() popup._appendCurrentResult = orig);
+    addUnloaderForWindow(window, function() popup._appendCurrentResult = orig);
   }
 
-  listen(gURLBar, "keydown", function(aEvent) {
+  listen(window, gURLBar, "keydown", function(aEvent) {
     let KeyEvent = aEvent;
     switch (aEvent.keyCode) {
       // For movement keys, unselect the first item to allow editing
@@ -224,9 +230,11 @@ function addEnterSelects(window) {
 /**
  * Helper that adds event listeners and remembers to remove on unload
  */
-function listen(node, event, func) {
+function listen(window, node, event, func) {
   node.addEventListener(event, func, true);
-  unloaders.push(function() node.removeEventListener(event, func, true));
+  addUnloaderForWindow(window, function() {
+    node.removeEventListener(event, func, true);
+  });
 }
 
 /**
@@ -347,5 +355,5 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
  * Handle the add-on being deactivated on uninstall/disable
  */
 function shutdown(data, reason) {
-  unloaders.forEach(function(unload) unload());
+  unloaders.forEach(function(unload) unload && unload());
 }
