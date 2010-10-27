@@ -85,12 +85,7 @@ function addKeywordSuggestions(window) {
   listen(urlBar, "input", function(event) {
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
-      // Clear out the last letter (in addition to the now-removed selection)
-      if (suggesting) {
-        urlBar.value = urlBar.value.slice(0, -1);
-        suggesting = false;
-      }
-      deleting = false;
+      suggesting = deleting = false;
       return;
     }
 
