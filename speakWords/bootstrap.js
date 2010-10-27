@@ -127,9 +127,7 @@ function addEnterSelects(window) {
   popup.__defineGetter__("noResults", function() {
     return this._matchCount == 0;
   });
-  gURLBar.__defineGetter__("trimmedSearch", function() {
-    return this.value.replace(/^\s+|\s+$/g, "");
-  });
+  gURLBar.__defineGetter__("trimmedSearch", function() this.value.trim());
   gURLBar.__defineGetter__("willHandle", function() {
     // Potentially it's a url if there's no spaces
     let search = this.trimmedSearch;
