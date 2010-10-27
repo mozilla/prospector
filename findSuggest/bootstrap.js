@@ -38,6 +38,8 @@
 const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
 
+const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
 const PREF_BRANCH = "extensions.prospector.findSuggest.";
 const PREFS = {
   minWordLength: 1,
@@ -174,7 +176,7 @@ function addFindSuggestions(window) {
         continue;
 
       // Show these suggestions in the findbar
-      let suggestion = window.document.createElement("label");
+      let suggestion = window.document.createElementNS(XUL_NS, "label");
       suggestion.setAttribute("class", "findbar-suggestion");
       suggestion.setAttribute("style", "margin: 2px 2px 0;");
       suggestion.setAttribute("value", word);
