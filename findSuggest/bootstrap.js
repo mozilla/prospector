@@ -43,7 +43,8 @@ const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 const PREF_BRANCH = "extensions.prospector.findSuggest.";
 const PREFS = {
   minWordLength: 1,
-  maxResults: 100
+  maxResults: 100,
+  splitter: "[#0-/:-@[-`{-#191#8192-#8303]+", // !alphanum ASCII + punctuation
 };
 
 /**
@@ -106,9 +107,12 @@ function getSortedWords(content) {
   let text = selection.toString();
   range.collapse(true);
 
+  // Prefs can't hold unicode values, so encode them as #<decimal value>
+  let splitter = RegExp(getPref("splitter").replace(/#\d+/g, function(str) {
+    return String.fromCharCode(Number(str.slice(1)));
+  }));
+
   // Count up how many times each word is used ignoring edge punctuation
-  let edges = "[\u2010-\u201f\"',.:;?!()]*";
-  let splitter = RegExp(edges + "\\s+" + edges);
   let words = text.trim().toLowerCase().split(splitter);
   let wordFrequency = {};
   let minWordLength = getPref("minWordLength");
