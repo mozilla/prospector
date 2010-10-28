@@ -118,7 +118,9 @@ function addEnterSelects(window) {
   popup.__defineGetter__("noResults", function() {
     return this._matchCount == 0;
   });
-  gURLBar.__defineGetter__("trimmedSearch", function() this.value.trim());
+  gURLBar.__defineGetter__("trimmedSearch", function() {
+    return this.controller.searchString.trim();
+  });
   gURLBar.__defineGetter__("willHandle", function() {
     // Potentially it's a url if there's no spaces
     let search = this.trimmedSearch;
@@ -218,10 +220,8 @@ function addEnterSelects(window) {
       return;
     }
 
-    // Pretend the user pressed right in the location bar which will cause
-    // the selected index to be filled in. If the user has already pressed
-    // down to some other selection, it'll just show the same value.
-    gURLBar.controller.handleKeyNavigation(KeyEvent.DOM_VK_RIGHT);
+    // Calling handleEnter will cause the selected popup item to be used
+    gURLBar.controller.handleEnter(true);
   });
 }
 
