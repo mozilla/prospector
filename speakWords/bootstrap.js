@@ -65,7 +65,6 @@ function getKeyword(query) {
 function addKeywordSuggestions(window) {
   let urlBar = window.gURLBar;
   let deleting = false;
-  let suggesting = false;
 
   // Look for deletes to handle them better on input
   listen(urlBar, "keypress", function(event) {
@@ -74,10 +73,6 @@ function addKeywordSuggestions(window) {
       case event.DOM_VK_DELETE:
         deleting = true;
         break;
-      case event.DOM_VK_LEFT:
-      case event.DOM_VK_RIGHT:
-        suggesting = false;
-        break;
     }
   });
 
@@ -85,22 +80,19 @@ function addKeywordSuggestions(window) {
   listen(urlBar, "input", function(event) {
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
-      suggesting = deleting = false;
+      deleting = false;
       return;
     }
 
     // See if we can suggest a keyword if it isn't the current query
     let query = urlBar.textValue.toLowerCase();
     let keyword = getKeyword(query);
-    if (keyword == null || keyword == query) {
-      suggesting = false;
+    if (keyword == null || keyword == query)
       return;
-    }
 
     // Select the end of the suggestion to allow over-typing
     urlBar.value = keyword;
     urlBar.selectTextRange(query.length, keyword.length);
-    suggesting = true;
 
     // Make sure the search suggestions show up
     Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
