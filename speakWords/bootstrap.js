@@ -42,9 +42,17 @@ Cu.import("resource://gre/modules/Services.jsm");
 let unloaders = [];
 function addUnloader(unload) unloaders.push(unload) - 1;
 function addUnloaderForWindow(window, unload) {
-  let index = addUnloader(unload);
-  // Remove unload func from unloaders if window is closed.
-  window.addEventListener("unload", function() unloaders[index] = null, false);
+  let index1 = addUnloader(unload);
+  let index2 = addUnloader(function() {
+    window.removeEventListener("unload", winUnload, false);
+  });
+
+  // Remove unload funcs above if the window is closed.
+  function winUnload() {
+    unloaders[index1] = null;
+    unloaders[index2] = null;
+  }
+  window.addEventListener("unload", winUnload, false);
 }
 
 // Keep a sorted list of keywords to suggest
