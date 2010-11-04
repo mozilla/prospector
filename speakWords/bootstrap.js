@@ -271,6 +271,9 @@ function trackOpenAndNewWindows(callback) {
 function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   Cu.import("resource://services-sync/util.js");
 
+  // XXX Force a QI until bug 609139 is fixed
+  Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
+
   // Add suggestions to all windows
   trackOpenAndNewWindows(addKeywordSuggestions);
   // Add enter-selects functionality to all windows
