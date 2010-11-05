@@ -50,11 +50,52 @@ function addPreviews(window) {
   let richBox = urlBar.popup.richlistbox;
 
   let preview;
+  // Provide a way to get rid of the preview from the current tab
   function removePreview() {
     if (preview != null) {
       preview.parentNode.removeChild(preview);
       preview = null;
     }
+  }
+
+  // Provide a way to replace the current tab with the preview
+  function persistPreview() {
+    if (preview == null)
+      return;
+
+    // Mostly copied from tabbrowser.xml swapBrowsersAndCloseOther
+    let selectedTab = browser.selectedTab;
+    let selectedBrowser = selectedTab.linkedBrowser;
+
+    // Unhook our progress listener
+    let selectedIndex = selectedTab._tPos;
+    const filter = browser.mTabFilters[selectedIndex];
+    let tabListener = browser.mTabListeners[selectedIndex];
+    selectedBrowser.webProgress.removeProgressListener(filter);
+    filter.removeProgressListener(tabListener);
+    let tabListenerBlank = tabListener.mBlank;
+
+    // Restore current registered open URI.
+    if (selectedBrowser.registeredOpenURI)
+      browser.mBrowserHistory.unregisterOpenPage(selectedBrowser.registeredOpenURI);
+    browser.mBrowserHistory.registerOpenPage(preview.currentURI);
+    selectedBrowser.registeredOpenURI = preview.currentURI;
+
+    // Swap the docshells then fix up various properties
+    selectedBrowser.swapDocShells(preview);
+    selectedBrowser.attachFormFill();
+    browser.setTabTitle(selectedTab);
+    browser.updateCurrentBrowser(true);
+    browser.useDefaultIcon(selectedTab);
+    urlBar.value = selectedBrowser.currentURI.spec;
+
+    // Restore the progress listener
+    tabListener = browser.mTabProgressListener(selectedTab, selectedBrowser, tabListenerBlank);
+    browser.mTabListeners[selectedIndex] = tabListener;
+    filter.addProgressListener(tabListener, Ci.nsIWebProgress.NOTIFY_ALL);
+    selectedBrowser.webProgress.addProgressListener(filter, Ci.nsIWebProgress.NOTIFY_ALL);
+
+    removePreview();
   }
 
   // Provide callbacks to stop checking the popup
@@ -123,42 +164,7 @@ function addPreviews(window) {
     switch (event.keyCode) {
       case event.DOM_VK_ENTER:
       case event.DOM_VK_RETURN:
-        if (preview == null)
-          break;
-
-        // Mostly copied from tabbrowser.xml swapBrowsersAndCloseOther
-        let selectedTab = browser.selectedTab;
-        let selectedBrowser = selectedTab.linkedBrowser;
-
-        // Unhook our progress listener
-        let selectedIndex = selectedTab._tPos;
-        const filter = browser.mTabFilters[selectedIndex];
-        let tabListener = browser.mTabListeners[selectedIndex];
-        selectedBrowser.webProgress.removeProgressListener(filter);
-        filter.removeProgressListener(tabListener);
-        let tabListenerBlank = tabListener.mBlank;
-
-        // Restore current registered open URI.
-        if (selectedBrowser.registeredOpenURI)
-          browser.mBrowserHistory.unregisterOpenPage(selectedBrowser.registeredOpenURI);
-        browser.mBrowserHistory.registerOpenPage(preview.currentURI);
-        selectedBrowser.registeredOpenURI = preview.currentURI;
-
-        // Swap the docshells then fix up various properties
-        selectedBrowser.swapDocShells(preview);
-        selectedBrowser.attachFormFill();
-        browser.setTabTitle(selectedTab);
-        browser.updateCurrentBrowser(true);
-        browser.useDefaultIcon(selectedTab);
-        urlBar.value = selectedBrowser.currentURI.spec;
-
-        // Restore the progress listener
-        tabListener = browser.mTabProgressListener(selectedTab, selectedBrowser, tabListenerBlank);
-        browser.mTabListeners[selectedIndex] = tabListener;
-        filter.addProgressListener(tabListener, Ci.nsIWebProgress.NOTIFY_ALL);
-        selectedBrowser.webProgress.addProgressListener(filter, Ci.nsIWebProgress.NOTIFY_ALL);
-
-        removePreview();
+        persistPreview();
         break;
     }
   });
