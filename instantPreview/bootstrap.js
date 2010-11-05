@@ -117,18 +117,20 @@ function addPreviews(window) {
   // Provide callbacks to stop checking the popup
   let stop = false;
   function stopIt() stop = true;
-  addUnloaderForWindow(window, stopIt);
+  addUnloaderForWindow(window, function() {
+    stopIt();
+    removePreview();
+  });
 
   // Keep checking if the popup has something to preview
-  (function watchPopup() Utils.delay(function() {
-    // Stop if unloading
+  listen(window, popup, "popuphidden", stopIt);
+  listen(window, popup, "popupshown", function() {
+    // Only recursively go again for a repeating check if not stopping
     if (stop) {
-      removePreview();
+      stop = false;
       return;
     }
-
-    // Recursively go again for a repeating check
-    watchPopup();
+    Utils.delay(arguments.callee, 100);
 
     // Short circuit if there's no suggestions but don't remove the preview
     if (!urlBar.popupOpen)
@@ -173,7 +175,7 @@ function addPreviews(window) {
     // Load the url if new
     if (preview.getAttribute("src") != url)
       preview.setAttribute("src", url);
-  }, 100))();
+  });
 
   // Make the preview permanent on enter
   listen(window, urlBar, "keypress", function(event) {
