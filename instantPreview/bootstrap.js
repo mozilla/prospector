@@ -61,7 +61,8 @@ function addUnloaderForWindow(window, unload) {
 function addPreviews(window) {
   let browser = window.gBrowser;
   let urlBar = window.gURLBar;
-  let richBox = urlBar.popup.richlistbox;
+  let popup = urlBar.popup;
+  let richBox = popup.richlistbox;
 
   let preview;
   // Provide a way to get rid of the preview from the current tab
@@ -129,11 +130,9 @@ function addPreviews(window) {
     // Recursively go again for a repeating check
     watchPopup();
 
-    // Hide the preview if there's no suggestions
-    if (!urlBar.popupOpen) {
-      removePreview();
+    // Short circuit if there's no suggestions but don't remove the preview
+    if (!urlBar.popupOpen)
       return;
-    }
 
     // Make sure we have something selected to show
     let result = richBox.selectedItem;
@@ -161,6 +160,9 @@ function addPreviews(window) {
 
       // Prevent title changes from showing during a preview
       preview.addEventListener("DOMTitleChanged", function(e) e.stopPropagation(), true);
+
+      // The user clicking or tabbinb to the content should indicate persist
+      preview.addEventListener("focus", persistPreview, true);
     }
 
     // Move the preview to the current tab if switched
@@ -180,8 +182,23 @@ function addPreviews(window) {
       case event.DOM_VK_RETURN:
         persistPreview();
         break;
+
+      // Remove the preview on cancel or edits
+      case event.DOM_VK_CANCEL:
+      case event.DOM_VK_ESCAPE:
+      case event.DOM_VK_BACK_SPACE:
+      case event.DOM_VK_DELETE:
+      case event.DOM_VK_END:
+      case event.DOM_VK_HOME:
+      case event.DOM_VK_LEFT:
+      case event.DOM_VK_RIGHT:
+        removePreview();
+        break;
     }
   });
+
+  // Clicking a result will save the preview
+  listen(window, popup, "click", persistPreview);
 }
 
 /**
