@@ -40,6 +40,20 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 // Keep an array of functions to call when shutting down
 let unloaders = [];
+function addUnloader(unload) unloaders.push(unload) - 1;
+function addUnloaderForWindow(window, unload) {
+  let index1 = addUnloader(unload);
+  let index2 = addUnloader(function() {
+    window.removeEventListener("unload", winUnload, false);
+  });
+
+  // Remove unload funcs above if the window is closed.
+  function winUnload() {
+    unloaders[index1] = null;
+    unloaders[index2] = null;
+  }
+  window.addEventListener("unload", winUnload, false);
+}
 
 /**
  * Start showing a preview of the selected location bar suggestion
@@ -102,8 +116,7 @@ function addPreviews(window) {
   // Provide callbacks to stop checking the popup
   let stop = false;
   function stopIt() stop = true;
-  listen(window, "unload", stopIt);
-  unloaders.push(stopIt);
+  addUnloaderForWindow(window, stopIt);
 
   // Keep checking if the popup has something to preview
   (function watchPopup() Utils.delay(function() {
@@ -161,7 +174,7 @@ function addPreviews(window) {
   }, 100))();
 
   // Make the preview permanent on enter
-  listen(urlBar, "keypress", function(event) {
+  listen(window, urlBar, "keypress", function(event) {
     switch (event.keyCode) {
       case event.DOM_VK_ENTER:
       case event.DOM_VK_RETURN:
@@ -189,9 +202,11 @@ function shutdown(data, reason) {
 /**
  * Helper that adds event listeners and remembers to remove on unload
  */
-function listen(node, event, func) {
-  node.addEventListener(event, func, false);
-  unloaders.push(function() node.removeEventListener(event, func, false));
+function listen(window, node, event, func) {
+  node.addEventListener(event, func, true);
+  addUnloaderForWindow(window, function() {
+    node.removeEventListener(event, func, true);
+  });
 }
 
 /**
