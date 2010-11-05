@@ -60,63 +60,69 @@ function addPreviews(window) {
   // Provide callbacks to stop checking the popup
   let stop = false;
   function stopIt() stop = true;
+  listen(urlBar.popup, "popuphidden", stopIt);
   listen(window, "unload", stopIt);
   unloaders.push(stopIt);
 
   // Keep checking if the popup has something to preview
-  (function watchPopup() Utils.delay(function() {
-    // Stop if unloading
-    if (stop) {
-      removePreview();
-      return;
-    }
+  function watchPopup() {
+    stop = false;
 
-    // Recursively go again for a repeating check
-    watchPopup();
+    (function watchFunc() {
+      // Stop if unloading
+      if (stop) {
+        removePreview();
+        return;
+      }
 
-    // Hide the preview if there's no suggestions
-    if (!urlBar.popupOpen) {
-      removePreview();
-      return;
-    }
+      // Recursively go again for a repeating check
+      Utils.delay(watchFunc, 500);
 
-    // Make sure we have something selected to show
-    let result = richBox.selectedItem;
-    if (result == null) {
-      removePreview();
-      return;
-    }
+      // Hide the preview if there's no suggestions
+      if (!urlBar.popupOpen) {
+        removePreview();
+        return;
+      }
 
-    // Only auto-load some types of uris
-    let url = result.getAttribute("url");
-    if (url.search(/^(data|ftp|https?):/) == -1) {
-      removePreview();
-      return;
-    }
+      // Make sure we have something selected to show
+      let result = richBox.selectedItem;
+      if (result == null) {
+        removePreview();
+        return;
+      }
 
-    // Create the preview if it's missing
-    if (preview == null) {
-      preview = window.document.createElement("browser");
-      preview.setAttribute("type", "content");
+      // Only auto-load some types of uris
+      let url = result.getAttribute("url");
+      if (url.search(/^(data|ftp|https?):/) == -1) {
+        removePreview();
+        return;
+      }
 
-      // Copy some inherit properties of normal tabbrowsers
-      preview.setAttribute("autocompletepopup", browser.getAttribute("autocompletepopup"));
-      preview.setAttribute("contextmenu", browser.getAttribute("contentcontextmenu"));
-      preview.setAttribute("tooltip", browser.getAttribute("contenttooltip"));
+      // Create the preview if it's missing
+      if (preview == null) {
+        preview = window.document.createElement("browser");
+        preview.setAttribute("type", "content");
 
-      // Prevent title changes from showing during a preview
-      preview.addEventListener("DOMTitleChanged", function(e) e.stopPropagation(), true);
-    }
+        // Copy some inherit properties of normal tabbrowsers
+        preview.setAttribute("autocompletepopup", browser.getAttribute("autocompletepopup"));
+        preview.setAttribute("contextmenu", browser.getAttribute("contentcontextmenu"));
+        preview.setAttribute("tooltip", browser.getAttribute("contenttooltip"));
 
-    // Move the preview to the current tab if switched
-    let selectedStack = browser.selectedBrowser.parentNode;
-    if (selectedStack != preview.parentNode)
-      selectedStack.appendChild(preview);
+        // Prevent title changes from showing during a preview
+        preview.addEventListener("DOMTitleChanged", function(e) e.stopPropagation(), true);
+      }
 
-    // Load the url if new
-    if (preview.getAttribute("src") != url)
-      preview.setAttribute("src", url);
-  }, 100))();
+      // Move the preview to the current tab if switched
+      let selectedStack = browser.selectedBrowser.parentNode;
+      if (selectedStack != preview.parentNode)
+        selectedStack.appendChild(preview);
+
+      // Load the url if new
+      if (preview.getAttribute("src") != url)
+        preview.setAttribute("src", url);
+    })();
+  }
+  listen(urlBar.popup, "popupshown", watchPopup);
 
   // Make the preview permanent on enter
   listen(urlBar, "keypress", function(event) {
