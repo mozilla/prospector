@@ -66,6 +66,7 @@ function addPreviews(window) {
     // Mostly copied from tabbrowser.xml swapBrowsersAndCloseOther
     let selectedTab = browser.selectedTab;
     let selectedBrowser = selectedTab.linkedBrowser;
+    selectedBrowser.stop();
 
     // Unhook our progress listener
     let selectedIndex = selectedTab._tPos;
