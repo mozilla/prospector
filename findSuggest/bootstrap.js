@@ -267,3 +267,6 @@ function addUnloaderForWindow(window, unload) {
 function shutdown() {
   unloaders.forEach(function(unload) unload && unload());
 }
+
+function install(){}
+function uninstall(){}

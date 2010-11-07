@@ -367,3 +367,6 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 function shutdown(data, reason) {
   unloaders.forEach(function(unload) unload && unload());
 }
+
+function install(){}
+function uninstall(){}
