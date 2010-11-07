@@ -121,3 +121,6 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     addon.uninstall();
   }, false);
 });
+
+function install(){}
+function uninstall(){}
