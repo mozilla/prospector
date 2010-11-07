@@ -64,6 +64,7 @@ function getPref(key) {
     case "string":
       return getPref.branch.getCharPref(key);
   }
+  return null;
 }
 
 /**
