@@ -182,9 +182,14 @@ function addFindSuggestions(window) {
 
     // Provide a callback to handle clicks that recursively suggests
     function suggestionClick(event) {
-      let word = findField.value = event.target.value;
-      findBar._find();
-      suggest(word, content);
+      let suggestion = event.target.value;
+      if (findField.value === suggestion) {
+        findBar.onFindAgainCommand(false);
+      } else {
+        let word = findField.value = suggestion;
+        findBar._find();
+        suggest(word, content);
+      }
     }
 
     // Figure out which words to show for the given query
