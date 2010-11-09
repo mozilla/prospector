@@ -164,6 +164,13 @@ function addFindSuggestions(window) {
   }
   listen(window, findField, "focus", onFind);
   listen(window, findField, "input", onFind);
+  // Show suggestions when the find bar is opened
+  listen(window, findBar, "DOMAttrModified", function(event) {
+    if (findBar != event.target || !window.isElementVisible(findBar)
+        || (event.attrName != "hidden" && event.attrName != "collapsed"))
+      return;
+    onFind();
+  });
 
   // Clear out the suggestions when removing the add-on
   function clearSuggestions() {
@@ -173,7 +180,11 @@ function addFindSuggestions(window) {
         findContainer.removeChild(node);
     });
   }
-  listen(window, window.gBrowser.tabContainer, "TabSelect", clearSuggestions);
+  listen(window, window.gBrowser.tabContainer, "TabSelect", function() {
+    clearSuggestions();
+    if (!window.isElementVisible(findBar)) return;
+    onFind();
+  });
   addUnloaderForWindow(window, clearSuggestions);
 
   // Show suggestions for the provided word
@@ -221,6 +232,10 @@ function addFindSuggestions(window) {
         break;
     }
   }
+
+  // if the find bar is open, then make suggestions
+  if (window.isElementVisible(findBar))
+    onFind();
 }
 
 /**
