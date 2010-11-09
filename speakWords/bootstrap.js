@@ -205,8 +205,10 @@ function addEnterSelects(window) {
       case KeyEvent.DOM_VK_RETURN:
         break;
 
-      // For anything else, just ignore
+      // For anything else, deselect the entry if the search changed
       default:
+        if (lastSearch != gURLBar.trimmedSearch)
+          popup.selectedIndex = -1;
         return;
     }
 
