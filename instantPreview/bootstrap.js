@@ -262,5 +262,5 @@ function trackOpenAndNewWindows(callback) {
   unloaders.push(function() Services.ww.unregisterNotification(windowWatcher));
 }
 
-function install(){}
-function uninstall(){}
+function install() {}
+function uninstall() {}

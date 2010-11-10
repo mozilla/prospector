@@ -370,5 +370,5 @@ function shutdown(data, reason) {
   unloaders.forEach(function(unload) unload && unload());
 }
 
-function install(){}
-function uninstall(){}
+function install() {}
+function uninstall() {}
