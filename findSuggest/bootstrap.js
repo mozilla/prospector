@@ -191,8 +191,10 @@ function addFindSuggestions(window) {
       // Show these suggestions in the findbar
       let suggestion = window.document.createElementNS(XUL_NS, "label");
       suggestion.setAttribute("class", "findbar-suggestion");
-      suggestion.setAttribute("style", "margin: 2px 2px 0;");
       suggestion.setAttribute("value", word);
+      suggestion.style.margin = "2px";
+      suggestion.style.cursor = "pointer";
+      if (word == lowerQuery) suggestion.style.fontWeight = "bold";
       findContainer.appendChild(suggestion);
 
       // Fill in the word when clicking on it
