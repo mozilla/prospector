@@ -182,7 +182,11 @@ function addPreviews(window) {
     switch (event.keyCode) {
       case event.DOM_VK_ENTER:
       case event.DOM_VK_RETURN:
-        persistPreview();
+        // Only use the preview if there aren't special key combinations
+        if (event.shiftKey || event.ctrlKey || event.metaKey)
+          removePreview();
+        else
+          persistPreview();
         break;
 
       // Remove the preview on cancel or edits
