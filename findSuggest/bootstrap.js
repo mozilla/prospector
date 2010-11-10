@@ -193,6 +193,7 @@ function addFindSuggestions(window) {
       suggestion.setAttribute("class", "findbar-suggestion");
       suggestion.setAttribute("value", word);
       suggestion.style.margin = "2px";
+      suggestion.style.cursor = "pointer";
       findContainer.appendChild(suggestion);
 
       // Fill in the word when clicking on it
