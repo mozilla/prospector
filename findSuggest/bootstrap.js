@@ -88,12 +88,9 @@ function setDefaultPrefs() {
 }
 
 /**
- * Get all the words in the content window sorted by frequency
+ * Get text from a content window
  */
-function getSortedWords(content) {
-  if (content.sortedWords != null)
-    return content.sortedWords;
-
+function getText(content) {
   // Use the selection object to get strings separate by whitespace
   let selection = content.getSelection();
   let range;
@@ -102,11 +99,24 @@ function getSortedWords(content) {
   }
   catch(ex) {
     // Blank page throws an error, so do not return any words
-    return [];
+    return "";
   }
   range.selectNode(content.document.body);
   let text = selection.toString();
   range.collapse(true);
+  return text.trim();
+}
+
+/**
+ * Get all the words in the content window sorted by frequency
+ */
+function getSortedWords(content) {
+  if (content.sortedWords != null)
+    return content.sortedWords;
+
+  let text = getText(content);
+  if (!text)
+    return [];
 
   // Prefs can't hold unicode values, so encode them as #<decimal value>
   let splitter = RegExp(getPref("splitter").replace(/#\d+/g, function(str) {
@@ -114,7 +124,7 @@ function getSortedWords(content) {
   }));
 
   // Count up how many times each word is used ignoring edge punctuation
-  let words = text.trim().toLowerCase().split(splitter);
+  let words = text.toLowerCase().split(splitter);
   let wordFrequency = {};
   let minWordLength = getPref("minWordLength");
   words.forEach(function(word) {
