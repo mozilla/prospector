@@ -194,6 +194,7 @@ function addFindSuggestions(window) {
       suggestion.setAttribute("value", word);
       suggestion.style.margin = "2px";
       suggestion.style.cursor = "pointer";
+      if (word == lowerQuery) suggestion.style.fontWeight = "bold";
       findContainer.appendChild(suggestion);
 
       // Fill in the word when clicking on it
