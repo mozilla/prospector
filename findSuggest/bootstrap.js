@@ -278,8 +278,9 @@ function addUnloaderForWindow(window, unload) {
 /**
  * Handle the add-on being deactivated on uninstall/disable
  */
-function shutdown() {
-  unloaders.forEach(function(unload) unload && unload());
+function shutdown(data, reason) {
+  if (reason !== APP_SHUTDOWN)
+    unloaders.forEach(function(unload) unload && unload());
 }
 
 function install() {}

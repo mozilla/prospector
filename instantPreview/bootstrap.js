@@ -219,7 +219,8 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
  * Handle the add-on being deactivated on uninstall/disable
  */
 function shutdown(data, reason) {
-  unloaders.forEach(function(unload) unload());
+  if (reason !== APP_SHUTDOWN)
+    unloaders.forEach(function(unload) unload());
 }
 
 /**
