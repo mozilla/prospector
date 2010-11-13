@@ -194,11 +194,16 @@ function addEnterSelects(window) {
   listen(window, gURLBar, "keydown", function(aEvent) {
     let KeyEvent = aEvent;
     switch (aEvent.keyCode) {
-      // For movement keys, unselect the first item to allow editing
+      // For horizontal movement, unselect the first item to allow editing
       case KeyEvent.DOM_VK_LEFT:
       case KeyEvent.DOM_VK_RIGHT:
       case KeyEvent.DOM_VK_HOME:
         popup.selectedIndex = -1;
+        return;
+
+      // For vertical movement, do nothing
+      case KeyEvent.DOM_VK_UP:
+      case KeyEvent.DOM_VK_DOWN:
         return;
 
       // We're interested in handling enter (return), do so below
