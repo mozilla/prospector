@@ -220,7 +220,7 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
  */
 function shutdown(data, reason) {
   if (reason !== APP_SHUTDOWN)
-    unloaders.forEach(function(unload) unload());
+    unloaders.forEach(function(unload) unload && unload());
 }
 
 /**
