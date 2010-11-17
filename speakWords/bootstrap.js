@@ -218,7 +218,7 @@ function addEnterSelects(window) {
     }
 
     // Ignore special key combinations
-    if (aEvent.shiftKey || aEvent.ctrlKey || aEvent.metaKey)
+    if (aEvent.shiftKey || aEvent.altKey || aEvent.ctrlKey || aEvent.metaKey)
       return;
 
     // Deselect if the selected result isn't for the current search
