@@ -64,6 +64,13 @@ function addPreviews(window) {
   let popup = urlBar.popup;
   let richBox = popup.richlistbox;
 
+  // Shorten the results so that previews are visible
+  let origRows = urlBar.getAttribute("maxrows");
+  urlBar.setAttribute("maxrows", 3);
+  addUnloaderForWindow(window, function() {
+    urlBar.setAttribute("maxrows", origRows);
+  });
+
   let preview;
   // Provide a way to get rid of the preview from the current tab
   function removePreview() {
