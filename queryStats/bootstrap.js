@@ -34,93 +34,190 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const Cu = Components.utils;
+const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
+Cu.import("resource://gre/modules/DownloadUtils.jsm");
+Cu.import("resource://gre/modules/Services.jsm");
+
+// Keep an array of functions to call when shutting down
+let unloaders = [];
+
+/**
+ * Apply a callback to each open and new browser windows
+ */
+function trackOpenAndNewWindows(callback) {
+  // Add functionality to existing windows
+  let browserWindows = Services.wm.getEnumerator("navigator:browser");
+  while (browserWindows.hasMoreElements()) {
+    // On restart, the browser window might not be ready yet, so wait... :(
+    let browserWindow = browserWindows.getNext();
+    Utils.delay(function() callback(browserWindow), 1000);
+  }
+
+  // Watch for new browser windows opening
+  function windowWatcher(subject, topic) {
+    if (topic != "domwindowopened")
+      return;
+
+    subject.addEventListener("load", function() {
+      subject.removeEventListener("load", arguments.callee, false);
+
+      // Now that the window has loaded, only register on browser windows
+      let doc = subject.document.documentElement;
+      if (doc.getAttribute("windowtype") == "navigator:browser")
+        callback(subject);
+    }, false);
+  }
+  Services.ww.registerNotification(windowWatcher);
+  unloaders.push(function() Services.ww.unregisterNotification(windowWatcher));
+}
+
+/**
+ * Analyze form history with web history and output results
+ */
+function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
+  // Show a page visit with an icon and linkify
+  function addEntry(container, url, text, extra) {
+    let div = container.appendChild(doc.createElement("div"));
+    let a = div.appendChild(doc.createElement("a"));
+    a.href = url;
+    let img = a.appendChild(doc.createElement("img"));
+    img.style.height = "16px";
+    img.style.paddingRight = "4px";
+    img.style.width = "16px";
+    img.src = Svc.Favicon.getFaviconImageForPage(Utils.makeURI(url)).spec;
+    a.appendChild(doc.createTextNode(text));
+    div.appendChild(doc.createTextNode(extra || ""));
+    return div;
+  }
+
+  // Recursively follow link clicks to some depth
+  function addLinks(container, visitId, depth, numObj) {
+    if (depth > maxDepth)
+      return;
+
+    // Initialze a number object pass by reference
+    if (numObj == null)
+      numObj = {val: 0};
+
+    // Find pages from the current visit
+    let stm = Utils.createStatement(Svc.History.DBConnection,
+      "SELECT *, v.id as nextVisit " +
+      "FROM moz_historyvisits v " +
+      "JOIN moz_places h ON h.id = v.place_id " +
+      "WHERE v.from_visit = :visitId " +
+      "LIMIT :breadth");
+    stm.params.visitId = visitId;
+    stm.params.breadth = maxBreadth;
+    Utils.queryAsync(stm, ["url", "title", "nextVisit"]).forEach(function({url, title, nextVisit}) {
+      // Follow the redirect to find a page with a title
+      if (title == null) {
+        addLinks(container, nextVisit, depth, numObj);
+        return;
+      }
+
+      let count = "";
+      if (++numObj.val > 1)
+        count = " (click " + numObj.val+ ")";
+
+      // Add the result that we found then add its links
+      let resultDiv = addEntry(container, url, title, count);
+      resultDiv.style.marginLeft = "2em";
+      addLinks(resultDiv, nextVisit, depth + 1);
+    });
+  }
+
+  let results = doc.getElementById("results");
+  results.innerHTML = "";
+
+  // Get the last most recently used form history items
+  let stm = Utils.createStatement(Svc.Form.DBConnection,
+    "SELECT * " +
+    "FROM moz_formhistory " +
+    "ORDER BY lastUsed DESC " +
+    "LIMIT :count");
+  stm.params.count = maxCount;
+  Utils.queryAsync(stm, ["value", "fieldname"]).forEach(function({value, fieldname}) {
+    let queries = 0;
+    let queryField = fieldname == "searchbar-history" ? "" : fieldname.slice(-7);
+    let queryVal = value.replace(/ /g, "+");
+
+    // Find the pages that used those form history queries
+    let stm = Utils.createStatement(Svc.History.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection,
+      "SELECT *, v.id as startVisit " +
+      "FROM moz_places h " +
+      "JOIN moz_historyvisits v ON v.place_id = h.id " +
+      "WHERE url LIKE :query AND visit_type = 1 " +
+      "ORDER BY visit_date DESC " +
+      "LIMIT :repeat");
+    stm.params.query = "%" + queryField + "=" + queryVal + "%";
+    stm.params.repeat = maxRepeat;
+    Utils.queryAsync(stm, ["url", "title", "startVisit", "visit_date"]).forEach(function({url, title, startVisit, visit_date}) {
+      let host = Utils.makeURI(url).host.replace(/www\./, "");
+      let timeDiff = Date.now() - visit_date / 1000;
+      let ago = DownloadUtils.convertTimeUnits(timeDiff / 1000).join(" ");
+
+      let count = "";
+      if (++queries > 1)
+        count = "(repeat " + queries + ")";
+
+      // Add an entry for this search query and its related clicks
+      let searchDiv = addEntry(results, url, value, [" @", host, ago, "ago", count].join(" "));
+      addLinks(searchDiv, startVisit, 1);
+    });
+  });
+}
 
 /**
  * Handle the add-on being activated on install/enable
  */
-function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
+function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon) {
   Cu.import("resource://services-sync/util.js");
-
-  // Fetch the value and usage count of searchbar entries
-  let query = "SELECT * FROM moz_formhistory " +
-              "WHERE fieldname = 'searchbar-history' " +
-              "ORDER BY timesUsed DESC, lastUsed DESC";
-  let cols = ["value", "timesUsed"];
-  let stmt = Utils.createStatement(Svc.Form.DBConnection, query);
-  let entries = Utils.queryAsync(stmt, cols);
-
-  // Create a mapping of each word used to the query string value
-  let words = {};
-  entries.forEach(function(entry) {
-    entry.value.split(/\s+/).forEach(function(word) {
-      // Avoid special js keywords (e.g., __proto__) by using a different key
-      let key = "w" + word;
-      if (words[key] == null)
-        words[key] = [entry];
-      else
-        words[key].push(entry);
-    });
-  });
-
-  // Count the distinct entries for a given word
-  function countDistinct(key) {
-    return words[key].length;
-  }
-
-  // Sum up the number of times a word is used across multiple form entries
-  function countUsed(key) {
-    return words[key].reduce(function(prev, entry) {
-      return prev + entry.timesUsed - 1;
-    }, 0);
-  }
-
-  // Display some data sorted by some scoring mechanism
-  function output(document, title, score, rows, examples) {
-    let table = document.createElement("table");
-    let tr = document.createElement("tr");
-    let th = document.createElement("th");
-    th.setAttribute("colspan", 2);
-    th.textContent = title;
-    tr.appendChild(th);
-    table.appendChild(tr);
-
-    // Sort the words by the scoring and pick the first several
-    Object.keys(words).sort(function(a, b) {
-      return score(b) - score(a);
-    }).slice(0, rows).forEach(function(key) {
-      let tr = document.createElement("tr");
-      let th = document.createElement("th");
-      th.textContent = key.slice(1);
-      tr.appendChild(th);
-
-      let td = document.createElement("td");
-      let entries = words[key].slice(0, examples);
-      td.textContent = entries.map(function(entry) entry.value).join(", ");
-      tr.appendChild(td);
-      table.appendChild(tr);
-    });
-    document.body.appendChild(table);
-  }
-
-  // Open up a new tab for showing data
-  Cu.import("resource://gre/modules/Services.jsm");
   let gBrowser = Services.wm.getMostRecentWindow("navigator:browser").gBrowser;
-  let tab = gBrowser.selectedTab = gBrowser.addTab();
-  let browser = tab.linkedBrowser;
-  browser.addEventListener("DOMContentLoaded", function() {
-    browser.removeEventListener("DOMContentLoaded", arguments.callee, false);
 
-    let document = browser.contentWindow.document;
-    document.title = addon.name;
-    output(document, "Unique search queries", countDistinct, 10, 5);
-    output(document, "Repeated search queries", countUsed, 10, 5);
+  // Open a tab with chrome privileges to replace the content
+  let tab = gBrowser.selectedTab = gBrowser.addTab("chrome://browser/content/aboutHome.xhtml");
+  tab.linkedBrowser.addEventListener("load", function() {
+    tab.linkedBrowser.removeEventListener("load", arguments.callee, true);
+    let doc = tab.linkedBrowser.contentDocument;
+    doc.body.innerHTML = '<style>span { display: inline-block; width: 7em; } input:not(#go) { width: 2em; }</style>' +
+      '<form id="form">' +
+      '<span>Query Count:</span><input id="count" value="20"/> Number of search queries to look through<br/>' +
+      '<span>Query Repeat:</span><input id="repeat" value="5"/> Number of repeat searches of each search query<br/>' +
+      '<span>Link Depth:</span><input id="depth" value="4"/> Follow link clicks through how many pages?<br/>' +
+      '<span>Link Breadth:</span><input id="breadth" value="10"/> Follow how many clicks from the same page?<br/>' +
+      '<input id="go" type="submit" value="Analyze Search Queries!"/>' +
+      '</form>' +
+      '<div id="results"></div>';
 
-    // We're done so uninstall ourself!
-    addon.uninstall();
-  }, false);
+    function $(id) parseInt(doc.getElementById(id).value) || 0;
+    let go = doc.getElementById("go");
+
+    // Fetch the form fields and visibly disable the form when analyzing
+    function doAnalyze() {
+      go.disabled = true;
+      analyze(doc, $("count"), $("repeat"), $("depth"), $("breadth"));
+      go.disabled = false;
+    }
+
+    // Analyze on enter/click and immediately
+    doc.getElementById("form").addEventListener("submit", function(event) {
+      event.preventDefault();
+      doAnalyze();
+    }, false);
+    doAnalyze();
+  }, true);
+
+  // Disable after running
+  addon.userDisabled = true;
 });
+
+/**
+ * Handle the add-on being deactivated on uninstall/disable
+ */
+function shutdown(data, reason) {
+  unloaders.forEach(function(unload) unload());
+}
 
 function install() {}
 function uninstall() {}
