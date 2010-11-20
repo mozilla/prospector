@@ -156,6 +156,8 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
 
     let doc = tab.linkedBrowser.contentDocument;
     doc.body.innerHTML = '<style>span { display: inline-block; width: 7em; } input:not(#go) { width: 2em; }</style>' +
+      '<a href="https://mozillalabs.com/prospector/2010/11/19/analyze-your-search-behavior/">Check Mozilla Labs "Analyze Your Search Behavior" for more information</a><br/>' +
+      '<em>(This add-on deactivates itself after running once; use the <a href="about:addons">Add-ons Manager</a> to reactivate.)</em><br/>' +
       '<form id="form">' +
       '<span>Query Count:</span><input id="count" value="20"/> Number of search queries to look through<br/>' +
       '<span>Query Repeat:</span><input id="repeat" value="5"/> Number of repeat searches of each search query<br/>' +
