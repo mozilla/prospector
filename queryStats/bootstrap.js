@@ -143,7 +143,7 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   let gBrowser = Services.wm.getMostRecentWindow("navigator:browser").gBrowser;
 
   // Open a tab with chrome privileges to replace the content
-  let tab = gBrowser.selectedTab = gBrowser.addTab("chrome://browser/content/aboutHome.xhtml");
+  let tab = gBrowser.selectedTab = gBrowser.addTab("about:home");
   tab.linkedBrowser.addEventListener("load", function() {
     tab.linkedBrowser.removeEventListener("load", arguments.callee, true);
     let doc = tab.linkedBrowser.contentDocument;
