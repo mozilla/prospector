@@ -142,6 +142,10 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   Cu.import("resource://services-sync/util.js");
   let gBrowser = Services.wm.getMostRecentWindow("navigator:browser").gBrowser;
 
+  // In the edge case where gBrowser is null just disable
+  if (!gBrowser)
+    return addon.userDisabled = true;
+
   // Open a tab with chrome privileges to replace the content
   let tab = gBrowser.selectedTab = gBrowser.addTab("chrome://browser/content/aboutHome.xhtml");
   tab.linkedBrowser.addEventListener("load", function() {
