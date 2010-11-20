@@ -40,36 +40,6 @@ Cu.import("resource://gre/modules/DownloadUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 /**
- * Apply a callback to each open and new browser windows
- */
-function trackOpenAndNewWindows(callback) {
-  // Add functionality to existing windows
-  let browserWindows = Services.wm.getEnumerator("navigator:browser");
-  while (browserWindows.hasMoreElements()) {
-    // On restart, the browser window might not be ready yet, so wait... :(
-    let browserWindow = browserWindows.getNext();
-    Utils.delay(function() callback(browserWindow), 1000);
-  }
-
-  // Watch for new browser windows opening
-  function windowWatcher(subject, topic) {
-    if (topic != "domwindowopened")
-      return;
-
-    subject.addEventListener("load", function() {
-      subject.removeEventListener("load", arguments.callee, false);
-
-      // Now that the window has loaded, only register on browser windows
-      let doc = subject.document.documentElement;
-      if (doc.getAttribute("windowtype") == "navigator:browser")
-        callback(subject);
-    }, false);
-  }
-  Services.ww.registerNotification(windowWatcher);
-  unloaders.push(function() Services.ww.unregisterNotification(windowWatcher));
-}
-
-/**
  * Analyze form history with web history and output results
  */
 function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
