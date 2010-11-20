@@ -39,9 +39,6 @@ Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/DownloadUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-// Keep an array of functions to call when shutting down
-let unloaders = [];
-
 /**
  * Apply a callback to each open and new browser windows
  */
@@ -212,12 +209,6 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   addon.userDisabled = true;
 });
 
-/**
- * Handle the add-on being deactivated on uninstall/disable
- */
-function shutdown(data, reason) {
-  unloaders.forEach(function(unload) unload());
-}
-
+function shutdown() {}
 function install() {}
 function uninstall() {}
