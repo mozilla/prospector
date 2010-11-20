@@ -150,6 +150,9 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   let tab = gBrowser.selectedTab = gBrowser.addTab("chrome://browser/content/aboutHome.xhtml");
   tab.linkedBrowser.addEventListener("load", function() {
     tab.linkedBrowser.removeEventListener("load", arguments.callee, true);
+    // overwrite onLoad function in chrome://browser/content/aboutHome.js
+    tab.linkedBrowser.contentWindow.onLoad = function(){};
+
     let doc = tab.linkedBrowser.contentDocument;
     doc.body.innerHTML = '<style>span { display: inline-block; width: 7em; } input:not(#go) { width: 2em; }</style>' +
       '<form id="form">' +
