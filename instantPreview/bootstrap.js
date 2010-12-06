@@ -104,6 +104,26 @@ function addPreviews(window) {
     browser.mBrowserHistory.registerOpenPage(preview.currentURI);
     selectedBrowser.registeredOpenURI = preview.currentURI;
 
+    // Save the last history entry from the preview if it has loaded
+    let history = preview.sessionHistory.QueryInterface(Ci.nsISHistoryInternal);
+    let entry;
+    if (history.count > 0) {
+      entry = history.getEntryAtIndex(history.index, false);
+      history.PurgeHistory(history.count);
+    }
+
+    // Copy over the history from the current tab if it's not empty
+    let origHistory = selectedBrowser.sessionHistory;
+    for (let i = 0; i <= origHistory.index; i++) {
+      let origEntry = origHistory.getEntryAtIndex(i, false);
+      if (origEntry.URI.spec != "about:blank")
+        history.addEntry(origEntry, true);
+    }
+
+    // Add the last entry from the preview; in-progress preview will add itself
+    if (entry != null)
+      history.addEntry(entry, true);
+
     // Swap the docshells then fix up various properties
     selectedBrowser.swapDocShells(preview);
     selectedBrowser.attachFormFill();
