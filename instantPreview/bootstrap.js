@@ -110,7 +110,8 @@ function addPreviews(window) {
     browser.setTabTitle(selectedTab);
     browser.updateCurrentBrowser(true);
     browser.useDefaultIcon(selectedTab);
-    urlBar.value = selectedBrowser.currentURI.spec;
+    urlBar.value = (selectedBrowser.currentURI.spec != "about:blank") ?
+        selectedBrowser.currentURI.spec : preview.getAttribute("src");
 
     // Restore the progress listener
     tabListener = browser.mTabProgressListener(selectedTab, selectedBrowser, tabListenerBlank);
