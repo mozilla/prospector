@@ -100,10 +100,15 @@ function addPreviews(window) {
     filter.removeProgressListener(tabListener);
     let tabListenerBlank = tabListener.mBlank;
 
+    // Pick out the correct interface for before/after Firefox 4b8pre
+    let openPage = browser.mBrowserHistory || browser._placesAutocomplete;
+
     // Restore current registered open URI.
-    if (selectedBrowser.registeredOpenURI)
-      browser.mBrowserHistory.unregisterOpenPage(selectedBrowser.registeredOpenURI);
-    browser.mBrowserHistory.registerOpenPage(preview.currentURI);
+    if (selectedBrowser.registeredOpenURI) {
+      openPage.unregisterOpenPage(selectedBrowser.registeredOpenURI);
+      delete selectedBrowser.registeredOpenURI;
+    }
+    openPage.registerOpenPage(preview.currentURI);
     selectedBrowser.registeredOpenURI = preview.currentURI;
 
     // Save the last history entry from the preview if it has loaded
