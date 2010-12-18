@@ -146,6 +146,9 @@ function addPreviews(window) {
     filter.addProgressListener(tabListener, Ci.nsIWebProgress.NOTIFY_ALL);
     selectedBrowser.webProgress.addProgressListener(filter, Ci.nsIWebProgress.NOTIFY_ALL);
 
+    // Move focus out of the preview to the tab's browser before removing it
+    preview.blur();
+    selectedBrowser.focus();
     removePreview();
   }
 
