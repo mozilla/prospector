@@ -8,7 +8,7 @@
     <iconURL>http://mozillalabs.com/wp-content/themes/labs_project/img/prospector-header.png</iconURL>
     <id>speak.words@prospector.labs.mozilla</id>
     <name>Mozilla Labs: Prospector - Speak Words</name>
-    <version>3</version>
+    <version>4</version>
 
     <bootstrap>true</bootstrap>
     <type>2</type>
