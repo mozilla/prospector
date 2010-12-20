@@ -313,6 +313,9 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     });
   }
 
+  let tagSvc = Cc["@mozilla.org/browser/tagging-service;1"].
+    getService(Ci.nsITaggingService);
+
   // Keep a nested array of array of keywords -- 2 arrays per entry
   let allKeywords = [];
   Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
@@ -323,13 +326,19 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     if (wordLen == 0)
       return;
 
+    // Need a nsIURI for various interfaces to get tags
+    let URI = Services.io.newURI(url, null, null);
+    let tags = tagSvc.getTagsForURI(URI);
+
+    // Only use the parts that match the beginning of the word
     function addKeywords(parts) {
       allKeywords.push(parts.filter(function(part) {
         return part.slice(0, wordLen) == word;
       }));
     }
 
-    // Add keywords from url (ignoring protocol) and title
+    // Add keywords from tags, url (ignoring protocol), title
+    addKeywords(tags);
     addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
     addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
   });
@@ -350,6 +359,14 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   addDomains("AND typed = 1 ORDER BY frecency DESC");
   addDomains("ORDER BY visit_count DESC LIMIT 100");
   addDomains("ORDER BY last_visit_date DESC LIMIT 100");
+
+  // Add bookmark keywords to the list of potential keywords
+  let query = "SELECT * FROM moz_keywords";
+  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let cols = ["keyword"];
+  Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
+    allKeywords.push([keyword]);
+  });
 
   // Do a breadth first traversal of the keywords
   do {
