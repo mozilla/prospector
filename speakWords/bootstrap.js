@@ -39,23 +39,6 @@ const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-// Keep an array of functions to call when shutting down
-let unloaders = [];
-function addUnloader(unload) unloaders.push(unload) - 1;
-function addUnloaderForWindow(window, unload) {
-  let index1 = addUnloader(unload);
-  let index2 = addUnloader(function() {
-    window.removeEventListener("unload", winUnload, false);
-  });
-
-  // Remove unload funcs above if the window is closed.
-  function winUnload() {
-    unloaders[index1] = null;
-    unloaders[index2] = null;
-  }
-  window.addEventListener("unload", winUnload, false);
-}
-
 // Keep a sorted list of keywords to suggest
 let sortedKeywords = [];
 
@@ -188,7 +171,7 @@ function addEnterSelects(window) {
       lastSearch = gURLBar.trimmedSearch;
     };
 
-    addUnloaderForWindow(window, function() popup._appendCurrentResult = orig);
+    unload(function() popup._appendCurrentResult = orig, window);
   }
 
   listen(window, gURLBar, "keydown", function(aEvent) {
@@ -246,39 +229,117 @@ function addEnterSelects(window) {
  */
 function listen(window, node, event, func) {
   node.addEventListener(event, func, true);
-  addUnloaderForWindow(window, function() {
-    node.removeEventListener(event, func, true);
-  });
+  unload(function() node.removeEventListener(event, func, true), window);
 }
 
 /**
- * Apply a callback to each open and new browser windows
+ * Apply a callback to each open and new browser windows.
+ *
+ * @usage watchWindows(callback): Apply a callback to each browser window.
+ * @param [function] callback: 1-parameter function that gets a browser window.
  */
-function trackOpenAndNewWindows(callback) {
+function watchWindows(callback) {
+  // Wrap the callback in a function that ignores failures
+  function watcher(window) {
+    try {
+      callback(window);
+    }
+    catch(ex) {}
+  }
+
+  // Wait for the window to finish loading before running the callback
+  function runOnLoad(window) {
+    // Listen for one load event before checking the window type
+    window.addEventListener("load", function() {
+      window.removeEventListener("load", arguments.callee, false);
+
+      // Now that the window has loaded, only handle browser windows
+      let doc = window.document.documentElement;
+      if (doc.getAttribute("windowtype") == "navigator:browser")
+        watcher(window);
+    }, false);
+  }
+
   // Add functionality to existing windows
   let browserWindows = Services.wm.getEnumerator("navigator:browser");
   while (browserWindows.hasMoreElements()) {
-    // On restart, the browser window might not be ready yet, so wait... :(
+    // Only run the watcher immediately if the browser is completely loaded
     let browserWindow = browserWindows.getNext();
-    Utils.delay(function() callback(browserWindow), 1000);
+    if (browserWindow.document.readyState == "complete")
+      watcher(browserWindow);
+    // Wait for the window to load before continuing
+    else
+      runOnLoad(browserWindow);
   }
 
-  // Watch for new browser windows opening
+  // Watch for new browser windows opening then wait for it to load
   function windowWatcher(subject, topic) {
-    if (topic != "domwindowopened")
-      return;
-
-    subject.addEventListener("load", function() {
-      subject.removeEventListener("load", arguments.callee, false);
-
-      // Now that the window has loaded, only register on browser windows
-      let doc = subject.document.documentElement;
-      if (doc.getAttribute("windowtype") == "navigator:browser")
-        callback(subject);
-    }, false);
+    if (topic == "domwindowopened")
+      runOnLoad(subject);
   }
   Services.ww.registerNotification(windowWatcher);
-  unloaders.push(function() Services.ww.unregisterNotification(windowWatcher));
+
+  // Make sure to stop watching for windows if we're unloading
+  unload(function() Services.ww.unregisterNotification(windowWatcher));
+}
+
+/**
+ * Save callbacks to run when unloading. Optionally scope the callback to a
+ * container, e.g., window. Provide a way to run all the callbacks.
+ *
+ * @usage unload(): Run all callbacks and release them.
+ *
+ * @usage unload(callback): Add a callback to run on unload.
+ * @param [function] callback: 0-parameter function to call on unload.
+ * @return [function]: A 0-parameter function that undoes adding the callback.
+ *
+ * @usage unload(callback, container) Add a scoped callback to run on unload.
+ * @param [function] callback: 0-parameter function to call on unload.
+ * @param [node] container: Remove the callback when this container unloads.
+ * @return [function]: A 0-parameter function that undoes adding the callback.
+ */
+function unload(callback, container) {
+  // Initialize the array of unloaders on the first usage
+  let unloaders = unload.unloaders;
+  if (unloaders == null)
+    unloaders = unload.unloaders = [];
+
+  // Calling with no arguments runs all the unloader callbacks
+  if (callback == null) {
+    unloaders.slice().forEach(function(unloader) unloader());
+    unloaders.length = 0;
+    return;
+  }
+
+  // The callback is bound to the lifetime of the container if we have one
+  if (container != null) {
+    // Remove the unloader when the container unloads
+    container.addEventListener("unload", removeUnloader, false);
+
+    // Wrap the callback to additionally remove the unload listener
+    let origCallback = callback;
+    callback = function() {
+      container.removeEventListener("unload", removeUnloader, false);
+      origCallback();
+    }
+  }
+
+  // Wrap the callback in a function that ignores failures
+  function unloader() {
+    try {
+      callback();
+    }
+    catch(ex) {}
+  }
+  unloaders.push(unloader);
+
+  // Provide a way to remove the unloader
+  function removeUnloader() {
+    let index = unloaders.indexOf(unloader);
+    if (index != -1)
+      unloaders.splice(index, 1);
+  }
+  return removeUnloader;
 }
 
 /**
@@ -291,9 +352,9 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Add suggestions to all windows
-  trackOpenAndNewWindows(addKeywordSuggestions);
+  watchWindows(addKeywordSuggestions);
   // Add enter-selects functionality to all windows
-  trackOpenAndNewWindows(addEnterSelects);
+  watchWindows(addEnterSelects);
 
   // Use input history to discover keywords from typed letters
   let query = "SELECT * " +
@@ -389,8 +450,9 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
  * Handle the add-on being deactivated on uninstall/disable
  */
 function shutdown(data, reason) {
-  if (reason !== APP_SHUTDOWN)
-    unloaders.forEach(function(unload) unload && unload());
+  // Clean up with unloaders when we're deactivating
+  if (reason != APP_SHUTDOWN)
+    unload();
 }
 
 function install() {}
