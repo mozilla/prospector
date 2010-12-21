@@ -40,6 +40,9 @@ const {interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+// Track the top urls to preview instantly without waiting
+let topUrls = [];
+
 /**
  * Start showing a preview of the selected location bar suggestion
  */
@@ -141,6 +144,9 @@ function addPreviews(window) {
     removePreview();
   }, window);
 
+  // Track what delayed url and when to load it
+  let delayedUrl, delayUntil;
+
   // Keep checking if the popup has something to preview
   listen(window, popup, "popuphidden", stopIt);
   listen(window, popup, "popupshown", function() {
@@ -191,9 +197,30 @@ function addPreviews(window) {
     if (selectedStack != preview.parentNode)
       selectedStack.appendChild(preview);
 
-    // Load the url if new
-    if (preview.getAttribute("src") != url)
-      preview.setAttribute("src", url);
+    // Only bother loading the url if new
+    if (preview.getAttribute("src") == url)
+      return;
+
+    // If we don't want to show the preview immediately..
+    if (result.getAttribute("type") == "favicon" && topUrls.indexOf(url) == -1) {
+      let now = Date.now();
+
+      // Wait some more for the same url if we haven't waited long enough
+      if (url == delayedUrl && now < delayUntil)
+        return;
+      // Got a new url to delay, so track a new time to wait until
+      else if (url != delayedUrl) {
+        delayedUrl = url;
+        delayUntil = now + 5000;
+        return;
+      }
+    }
+
+    // Must have waited long enough or no need to delay
+    delayedUrl = null;
+    delayUntil = null;
+
+    preview.setAttribute("src", url);
   });
 
   // Make the preview permanent on enter
@@ -342,6 +369,19 @@ function unload(callback, container) {
 function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon) {
   Cu.import("resource://services-sync/util.js");
   watchWindows(addPreviews);
+
+  // XXX Force a QI until bug 609139 is fixed
+  Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
+
+  let query = "SELECT * " +
+              "FROM moz_places " +
+              "ORDER BY frecency DESC " +
+              "LIMIT 100";
+  let cols = ["url"];
+  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  Utils.queryAsync(stmt, cols).forEach(function({url}) {
+    topUrls.push(url);
+  });
 });
 
 /**
