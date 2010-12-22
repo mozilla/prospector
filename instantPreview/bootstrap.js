@@ -231,7 +231,7 @@ function addPreviews(window) {
  * Handle the add-on being activated on install/enable
  */
 function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon) {
-  Services.scriptloader.loadSubScript(Services.io.newFileURI(data.installPath).spec + "includes/utils.js", global);
+  Services.scriptloader.loadSubScript(addon.getResourceURI("includes/utils.js").spec, global);
   Cu.import("resource://services-sync/util.js");
   watchWindows(addPreviews);
 });
