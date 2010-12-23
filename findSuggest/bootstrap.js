@@ -37,55 +37,10 @@
 
 const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/AddonManager.jsm");
 
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-
-const PREF_BRANCH = "extensions.prospector.findSuggest.";
-const PREFS = {
-  minWordLength: 1,
-  maxResults: 100,
-  splitter: "[#0-/:-@[-`{-#191#8192-#8303]+", // !alphanum ASCII + punctuation
-};
-
-/**
- * Get the preference value of type specified in PREFS
- */
-function getPref(key) {
-  // Cache the prefbranch after first use
-  if (getPref.branch == null)
-    getPref.branch = Services.prefs.getBranch(PREF_BRANCH);
-
-  // Figure out what type of pref to fetch
-  switch (typeof PREFS[key]) {
-    case "boolean":
-      return getPref.branch.getBoolPref(key);
-    case "number":
-      return getPref.branch.getIntPref(key);
-    case "string":
-      return getPref.branch.getCharPref(key);
-  }
-  return null;
-}
-
-/**
- * Initialize default preferences specified in PREFS
- */
-function setDefaultPrefs() {
-  let branch = Services.prefs.getDefaultBranch(PREF_BRANCH);
-  for (let [key, val] in Iterator(PREFS)) {
-    switch (typeof val) {
-      case "boolean":
-        branch.setBoolPref(key, val);
-        break;
-      case "number":
-        branch.setIntPref(key, val);
-        break;
-      case "string":
-        branch.setCharPref(key, val);
-        break;
-    }
-  }
-}
+const global = this;
 
 /**
  * Get text from a content window
@@ -239,133 +194,18 @@ function addFindSuggestions(window) {
 }
 
 /**
- * Helper that adds event listeners and remembers to remove on unload
- */
-function listen(window, node, event, func) {
-  node.addEventListener(event, func, false);
-  unload(function() node.removeEventListener(event, func, false), window);
-}
-
-/**
- * Apply a callback to each open and new browser windows.
- *
- * @usage watchWindows(callback): Apply a callback to each browser window.
- * @param [function] callback: 1-parameter function that gets a browser window.
- */
-function watchWindows(callback) {
-  // Wrap the callback in a function that ignores failures
-  function watcher(window) {
-    try {
-      callback(window);
-    }
-    catch(ex) {}
-  }
-
-  // Wait for the window to finish loading before running the callback
-  function runOnLoad(window) {
-    // Listen for one load event before checking the window type
-    window.addEventListener("load", function() {
-      window.removeEventListener("load", arguments.callee, false);
-
-      // Now that the window has loaded, only handle browser windows
-      let doc = window.document.documentElement;
-      if (doc.getAttribute("windowtype") == "navigator:browser")
-        watcher(window);
-    }, false);
-  }
-
-  // Add functionality to existing windows
-  let browserWindows = Services.wm.getEnumerator("navigator:browser");
-  while (browserWindows.hasMoreElements()) {
-    // Only run the watcher immediately if the browser is completely loaded
-    let browserWindow = browserWindows.getNext();
-    if (browserWindow.document.readyState == "complete")
-      watcher(browserWindow);
-    // Wait for the window to load before continuing
-    else
-      runOnLoad(browserWindow);
-  }
-
-  // Watch for new browser windows opening then wait for it to load
-  function windowWatcher(subject, topic) {
-    if (topic == "domwindowopened")
-      runOnLoad(subject);
-  }
-  Services.ww.registerNotification(windowWatcher);
-
-  // Make sure to stop watching for windows if we're unloading
-  unload(function() Services.ww.unregisterNotification(windowWatcher));
-}
-
-/**
- * Save callbacks to run when unloading. Optionally scope the callback to a
- * container, e.g., window. Provide a way to run all the callbacks.
- *
- * @usage unload(): Run all callbacks and release them.
- *
- * @usage unload(callback): Add a callback to run on unload.
- * @param [function] callback: 0-parameter function to call on unload.
- * @return [function]: A 0-parameter function that undoes adding the callback.
- *
- * @usage unload(callback, container) Add a scoped callback to run on unload.
- * @param [function] callback: 0-parameter function to call on unload.
- * @param [node] container: Remove the callback when this container unloads.
- * @return [function]: A 0-parameter function that undoes adding the callback.
- */
-function unload(callback, container) {
-  // Initialize the array of unloaders on the first usage
-  let unloaders = unload.unloaders;
-  if (unloaders == null)
-    unloaders = unload.unloaders = [];
-
-  // Calling with no arguments runs all the unloader callbacks
-  if (callback == null) {
-    unloaders.slice().forEach(function(unloader) unloader());
-    unloaders.length = 0;
-    return;
-  }
-
-  // The callback is bound to the lifetime of the container if we have one
-  if (container != null) {
-    // Remove the unloader when the container unloads
-    container.addEventListener("unload", removeUnloader, false);
-
-    // Wrap the callback to additionally remove the unload listener
-    let origCallback = callback;
-    callback = function() {
-      container.removeEventListener("unload", removeUnloader, false);
-      origCallback();
-    }
-  }
-
-  // Wrap the callback in a function that ignores failures
-  function unloader() {
-    try {
-      callback();
-    }
-    catch(ex) {}
-  }
-  unloaders.push(unloader);
-
-  // Provide a way to remove the unloader
-  function removeUnloader() {
-    let index = unloaders.indexOf(unloader);
-    if (index != -1)
-      unloaders.splice(index, 1);
-  }
-  return removeUnloader;
-}
-
-/**
  * Handle the add-on being activated on install/enable
  */
-function startup() {
+function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
+  Services.scriptloader.loadSubScript(addon.getResourceURI("includes/utils.js").spec, global);
+  Services.scriptloader.loadSubScript(addon.getResourceURI("includes/prefs.js").spec, global);
+
   // Always set the default prefs as they disappear on restart
   setDefaultPrefs();
 
   // Add functionality to existing and new windows
   watchWindows(addFindSuggestions);
-}
+});
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
