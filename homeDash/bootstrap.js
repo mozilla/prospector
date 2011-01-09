@@ -41,6 +41,9 @@ const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+// Keep a reference to various packaged images
+const images = {};
+
 /**
  * Remove all existing chrome of the browser window
  */
@@ -65,19 +68,151 @@ function removeChrome(window) {
 }
 
 /**
+ * Add a dashboard that shows up over the main browsing area
+ */
+function addDashboard(window) {
+  let {document, gBrowser} = window;
+
+  function createNode(node) {
+    const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+    return document.createElementNS(XUL, node);
+  }
+
+  //// Add Firefox icon + notifications layer
+
+  let notificationBox = createNode("vbox");
+  notificationBox.setAttribute("left", 0);
+  notificationBox.setAttribute("top", 0);
+
+  let fxIcon = createNode("image");
+  fxIcon.setAttribute("src", images["firefox22.png"]);
+  fxIcon.style.height = "22px";
+  fxIcon.style.opacity = ".3";
+  fxIcon.style.width = "22px";
+  fxIcon.addEventListener("mouseover", function() {
+    fxIcon.style.opacity = "1";
+  }, false);
+  fxIcon.addEventListener("mouseout", function() {
+    fxIcon.style.opacity = ".3";
+  }, false);
+  notificationBox.appendChild(fxIcon);
+
+  let stack = gBrowser.selectedBrowser.parentNode;
+  stack.appendChild(notificationBox);
+  unload(function() notificationBox.parentNode.removeChild(notificationBox), window);
+
+  function notifyTab(tab, callback) {
+    // Check if we already have a notification for the tab
+    let exists = Array.some(notificationBox.childNodes, function(icon) {
+      if (icon.tab != tab)
+        return false;
+
+      // Add the callback to this tab's notification
+      icon.callbacks.push(callback);
+      return true;
+    });
+    if (exists)
+      return;
+
+    // Add an icon for the tab and track various properties
+    let tabIcon = createNode("box");
+    notificationBox.appendChild(tabIcon);
+    let callbacks = tabIcon.callbacks = [];
+    tabIcon.tab = tab;
+
+    function updateIcon() {
+      let src = getTabIcon(tab);
+      if (src != updateIcon.lastSrc) {
+        tabIcon.style.backgroundImage = "url(" + src + ")";
+        updateIcon.lastSrc = src;
+      }
+    }
+    updateIcon();
+
+    tabIcon.style.backgroundColor = "rgba(0, 0, 0, .3)";
+    tabIcon.style.backgroundPosition = "1px center";
+    tabIcon.style.backgroundRepeat = "no-repeat";
+    tabIcon.style.height = "22px";
+    tabIcon.style.width = "22px";
+    tabIcon.style.borderRadius = "0 100% 100% 0";
+
+    // Add some callbacks to run when the tab is selected
+    if (typeof callback == "function")
+      callbacks.push(callback);
+    callbacks.push(function() notificationBox.removeChild(tabIcon));
+
+    // Run all the callbacks including removing the tab icon
+    function runCallbacks() {
+      callbacks.forEach(function(callback) callback());
+    }
+
+    // Run callbacks and remove notification and listeners on close or select
+    callbacks.push(listen(window, tab, "TabClose", runCallbacks));
+    callbacks.push(listen(window, tab, "TabSelect", runCallbacks));
+
+    // Update the notification icon if the tab's icon changes
+    callbacks.push(listen(window, tab, "TabAttrModified", updateIcon));
+
+    // Switch to the tab when the notification icon is clicked
+    tabIcon.addEventListener("click", function() {
+      gBrowser.selectedTab = tab;
+    }, false);
+  }
+
+  // Watch for title changes in background tabs
+  listen(window, gBrowser, "DOMTitleChanged", function(event) {
+    // Only care about top-level title changes
+    let content = event.target.defaultView;
+    if (content != content.top)
+      return;
+
+    // No need to notify for the current tab
+    let tab = gBrowser._getTabForContentWindow(content);
+    if (tab == gBrowser.selectedTab)
+      return;
+
+    // Don't notify or update the count if we already triggered
+    const CHANGE_THRESHOLD = 3;
+    let count = (tab.HDtitleChangedCount || 0) + 1;
+    if (count > CHANGE_THRESHOLD)
+      return;
+    tab.HDtitleChangedCount = count;
+
+    if (count == CHANGE_THRESHOLD)
+      notifyTab(tab, function() tab.HDtitleChangedCount = 0);
+  });
+
+  // Watch for tabs being opened in the background
+  listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
+    notifyTab(event.target);
+  });
+
+  // Clear out any state we set on external objects
+  unload(function() {
+    Array.forEach(gBrowser.tabs, function(tab) tab.HDtitleChangedCount = 0);
+  });
+}
+
+/**
  * Handle the add-on being activated on install/enable
  */
 function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   Cu.import("resource://services-sync/util.js");
 
+  // Get references to the packaged images
+  ["defaultFavicon.png", "firefox22.png"].forEach(function(fileName) {
+    images[fileName] = addon.getResourceURI("images/" + fileName).spec;
+  });
+
   // Load various javascript includes for helper functions
-  ["utils"].forEach(function(fileName) {
+  ["helper", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
 
   // Change the main browser windows
   watchWindows(removeChrome);
+  watchWindows(addDashboard);
 })
 
 /**
