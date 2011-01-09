@@ -101,6 +101,11 @@ function addDashboard(window) {
   stack.appendChild(notificationBox);
   unload(function() notificationBox.parentNode.removeChild(notificationBox), window);
 
+  // Move the notification box whenever the tab switches
+  listen(window, gBrowser.tabContainer, "TabSelect", function() {
+    gBrowser.selectedBrowser.parentNode.appendChild(notificationBox);
+  });
+
   function notifyTab(tab, callback) {
     // Check if we already have a notification for the tab
     let exists = Array.some(notificationBox.childNodes, function(icon) {
