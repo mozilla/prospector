@@ -78,6 +78,8 @@ function addDashboard(window) {
     return document.createElementNS(XUL, node);
   }
 
+  //// Add master stack containing all 7 layers of the dashboard
+
   let masterStack = createNode("stack");
   masterStack.style.pointerEvents = "none";
 
@@ -90,6 +92,16 @@ function addDashboard(window) {
 
   // Make sure we're in the right tab stack whenever the tab switches
   listen(window, gBrowser.tabContainer, "TabSelect", moveMasterStack);
+
+  //// 1: Search preview #1
+
+  //// 2: Search preview #2
+
+  //// 3: Page and tab previews
+
+  //// 4: Main dashboard
+
+  //// 5: Status line
 
   let statusLine = createNode("label");
   statusLine.setAttribute("left", 0);
@@ -127,6 +139,8 @@ function addDashboard(window) {
     statusLine.value = text;
     statusLine.style.display = "";
   }
+
+  //// 6: Notification area
 
   let notificationBox = createNode("vbox");
   notificationBox.setAttribute("left", 0);
@@ -285,6 +299,8 @@ function addDashboard(window) {
   unload(function() {
     Array.forEach(gBrowser.tabs, function(tab) tab.HDtitleChangedCount = 0);
   });
+
+  //// 7: Firefox icon
 
   let fxIcon = createNode("image");
   fxIcon.setAttribute("left", 0);
