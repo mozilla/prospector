@@ -78,6 +78,8 @@ function addDashboard(window) {
     return document.createElementNS(XUL, node);
   }
 
+  let sixthWidth = gBrowser.boxObject.width / 6;
+
   //// Add master stack containing all 7 layers of the dashboard
 
   let masterStack = createNode("stack");
@@ -96,17 +98,50 @@ function addDashboard(window) {
 
   //// 1: Search preview #1
 
+  // Create a preview-stack and add it to the master stack
+  function createPreviewStack(left, right) {
+    // Previews consist of the browser and a click-screen contained in a stack
+    let stack = createNode("stack");
+    stack.setAttribute("left", left + "");
+    stack.setAttribute("right", right + "");
+    stack.style.display = "none";
+    masterStack.appendChild(stack);
+
+    // Create and set some common preview listeners and attributes
+    let browser = stack.browser = createNode("browser");
+    browser.addEventListener("DOMTitleChanged", function(event) {
+      event.stopPropagation();
+    }, true);
+    browser.setAttribute("disablehistory", "true");
+    browser.setAttribute("type", "content");
+    browser.style.overflow = "hidden";
+    stack.appendChild(browser);
+
+    // Put a screen over the browser to accept clicks
+    let screen = stack.screen = createNode("box");
+    screen.style.pointerEvents = "auto";
+    stack.appendChild(screen);
+
+    return stack;
+  }
+
+  let searchPreview1 = createPreviewStack(0, 2 * sixthWidth);
+
   //// 2: Search preview #2
 
+  let searchPreview2 = createPreviewStack(3 * sixthWidth, -sixthWidth);
+
   //// 3: Page and tab previews
+
+  let pagePreview = createPreviewStack(2 * sixthWidth, -sixthWidth);
 
   //// 4: Main dashboard
 
   //// 5: Status line
 
   let statusLine = createNode("label");
-  statusLine.setAttribute("left", 0);
-  statusLine.setAttribute("top", 0);
+  statusLine.setAttribute("left", "0");
+  statusLine.setAttribute("top", "0");
   masterStack.appendChild(statusLine);
 
   statusLine.style.backgroundColor = "rgba(224, 224, 224, .8)";
@@ -213,8 +248,8 @@ function addDashboard(window) {
   //// 6: Notification area
 
   let notificationBox = createNode("vbox");
-  notificationBox.setAttribute("left", 0);
-  notificationBox.setAttribute("top", 22);
+  notificationBox.setAttribute("left", "0");
+  notificationBox.setAttribute("top", "22");
   masterStack.appendChild(notificationBox);
   notificationBox.style.pointerEvents = "auto";
 
@@ -338,13 +373,13 @@ function addDashboard(window) {
     if (content != content.top)
       return;
 
-    // No need to notify for the current tab
+    // No need to notify for fake tabs or the current tab
     let tab = gBrowser._getTabForContentWindow(content);
-    if (tab == gBrowser.selectedTab)
+    if (tab == null || tab == gBrowser.selectedTab)
       return;
 
     // Don't notify or update the count if we already triggered
-    const CHANGE_THRESHOLD = 3;
+    const CHANGE_THRESHOLD = 2;
     let count = (tab.HDtitleChangedCount || 0) + 1;
     if (count > CHANGE_THRESHOLD)
       return;
@@ -373,8 +408,8 @@ function addDashboard(window) {
   //// 7: Firefox icon
 
   let fxIcon = createNode("image");
-  fxIcon.setAttribute("left", 0);
-  fxIcon.setAttribute("top", 0);
+  fxIcon.setAttribute("left", "0");
+  fxIcon.setAttribute("top", "0");
   masterStack.appendChild(fxIcon);
 
   fxIcon.setAttribute("src", images["firefox22.png"]);
