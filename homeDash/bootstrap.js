@@ -71,7 +71,7 @@ function removeChrome(window) {
  * Add a dashboard that shows up over the main browsing area
  */
 function addDashboard(window) {
-  let {document, gBrowser} = window;
+  let {clearInterval, document, gBrowser, setInterval} = window;
 
   function createNode(node) {
     const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
@@ -106,6 +106,7 @@ function addDashboard(window) {
     gBrowser.selectedBrowser.parentNode.appendChild(notificationBox);
   });
 
+  // Provide a way to add a notification icon for a tab
   function notifyTab(tab, callback) {
     // Check if we already have a notification for the tab
     let exists = Array.some(notificationBox.childNodes, function(icon) {
@@ -124,6 +125,7 @@ function addDashboard(window) {
     notificationBox.appendChild(tabIcon);
     let callbacks = tabIcon.callbacks = [];
     tabIcon.tab = tab;
+    tabIcon.state = 0;
 
     function updateIcon() {
       let src = getTabIcon(tab);
@@ -163,6 +165,53 @@ function addDashboard(window) {
       gBrowser.selectedTab = tab;
     }, false);
   }
+
+  // Keep updating notification icons and remove old ones
+  let pauseUpdate = false;
+  let notifyInt = setInterval(function() {
+    // Nothing to update if it's just the Firefox icon
+    if (notificationBox.childNodes.length == 1)
+      return;
+
+    let notifications = Array.slice(notificationBox.childNodes, 1);
+    notifications.forEach(function(notification) {
+      // Don't update the state if we should be paused
+      if (pauseUpdate)
+        return;
+
+      // Skip notifications that aren't visible anyway
+      if (notification.collapsed)
+        return;
+
+      // Update until 600 iterations (60 seconds)
+      let state = ++notification.state;
+      // NB: Check for >= 600 as the notification can be unhidden
+      if (state >= 600)
+        notification.collapsed = true;
+      else {
+        // Icon opacity: abs(cos(x^4)) [positive, repeating, decreasing period]
+        let opacity = Math.abs(Math.cos(Math.pow(state / 250, 4)));
+        // Decrease opacity to 0 as state -> 600
+        opacity = Math.pow(opacity * Math.pow(1 - state / 600, .3), .2);
+        notification.style.opacity = opacity;
+      }
+    });
+  }, 100);
+  unload(function() clearInterval(notifyInt), window);
+
+  // Pause updating opacity if the user might click
+  notificationBox.addEventListener("mouseover", function() {
+    pauseUpdate = true;
+
+    // Make all notifications opaque
+    let notifications = Array.slice(notificationBox.childNodes, 1);
+    notifications.forEach(function(notification) {
+      notification.style.opacity = "1";
+    });
+  }, false);
+  notificationBox.addEventListener("mouseout", function() {
+    pauseUpdate = false;
+  }, false);
 
   // Watch for title changes in background tabs
   listen(window, gBrowser, "DOMTitleChanged", function(event) {
