@@ -156,11 +156,14 @@ function addDashboard(window) {
       // Hide if already open
       if (dashboard.open) {
         dashboard.style.display = "none";
+        gBrowser.selectedBrowser.focus();
         notifications.paused = false;
       }
       // Show if currently closed
       else {
         dashboard.style.display = "";
+        dashboard.focus();
+        input.focus();
         notifications.paused = true;
       }
     }
@@ -170,6 +173,30 @@ function addDashboard(window) {
   dashboard.toggle = function() {
     dashboard.open = !dashboard.open;
   };
+
+
+  //// 4.1: Search controls
+
+  let input = createNode("textbox");
+  input.setAttribute("left", "30");
+  input.setAttribute("top", "30");
+  dashboard.appendChild(input);
+
+  input.setAttribute("timeout", "1");
+  input.setAttribute("type", "search");
+  input.style.pointerEvents = "auto";
+
+  // Handle the user searching for stuff
+  input.addEventListener("command", function() {
+  }, false);
+
+  //// 4.2: History results
+
+  //// 4.3: Top sites
+
+  //// 4.4: Tabs
+
+  //// 4.5: Browser controls
 
   //// 5: Status line
 
