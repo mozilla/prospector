@@ -122,6 +122,22 @@ function addDashboard(window) {
     screen.style.pointerEvents = "auto";
     stack.appendChild(screen);
 
+    // Save the preview when clicked
+    screen.addEventListener("click", function() {
+      // TODO swapDocShell stuff
+      gBrowser.selectedBrowser.setAttribute("src", browser.getAttribute("src"));
+      dashboard.open = false;
+    }, false);
+
+    // Indicate what clicking will do
+    screen.addEventListener("mouseover", function() {
+      statusLine.set("select", browser.contentDocument.title);
+    }, false);
+
+    screen.addEventListener("mouseout", function() {
+      statusLine.set();
+    }, false);
+
     return stack;
   }
 
@@ -130,6 +146,46 @@ function addDashboard(window) {
   //// 2: Search preview #2
 
   let searchPreview2 = createPreviewStack(3 * sixthWidth, -sixthWidth);
+
+  // Add some helper properties and functions to search previews
+  function addSearchFunctionality(searchPreview) {
+    // Helper to update engine icon state when changing
+    Object.defineProperty(searchPreview, "engineIcon", {
+      get: function() searchPreview._engineIcon,
+      set: function(val) {
+        // Inform the icon to deactivate if being replaced
+        if (searchPreview.engineIcon != null)
+          searchPreview.engineIcon.active = false;
+
+        // Save the engine icon to the preview
+        searchPreview._engineIcon = val;
+
+        // Inform the icon to activate
+        if (searchPreview.engineIcon != null)
+          searchPreview.engineIcon.active = true;
+      }
+    });
+
+    // Handle search queries to show a preview
+    searchPreview.search = function(query) {
+      // Nothing to search or to search with, so hide
+      if (query == "" || searchPreview.engineIcon == null) {
+        searchPreview.style.display = "none";
+        return;
+      }
+
+      // Unhide if necessary
+      if (searchPreview.style.display == "none")
+        this.style.display = "";
+
+      // Use the search engine to get a url and show it
+      let url = searchPreview.engineIcon.getSearchUrl(query);
+      searchPreview.browser.setAttribute("src", url);
+    };
+  }
+
+  addSearchFunctionality(searchPreview1);
+  addSearchFunctionality(searchPreview2);
 
   //// 3: Page and tab previews
 
@@ -157,6 +213,7 @@ function addDashboard(window) {
       if (dashboard.open) {
         dashboard.style.display = "none";
         gBrowser.selectedBrowser.focus();
+        input.reset();
         notifications.paused = false;
       }
       // Show if currently closed
@@ -174,21 +231,128 @@ function addDashboard(window) {
     dashboard.open = !dashboard.open;
   };
 
-
   //// 4.1: Search controls
+
+  let searchBox = createNode("vbox");
+  searchBox.setAttribute("left", "30");
+  searchBox.setAttribute("right", Math.ceil(4 * sixthWidth) + "");
+  searchBox.setAttribute("top", "30");
+  dashboard.appendChild(searchBox);
+
+  searchBox.style.backgroundColor = "rgba(224, 224, 224, .3)";
+  searchBox.style.borderRadius = "5px";
+  searchBox.style.padding = "5px";
 
   let input = createNode("textbox");
   input.setAttribute("left", "30");
   input.setAttribute("top", "30");
-  dashboard.appendChild(input);
+  searchBox.appendChild(input);
 
   input.setAttribute("timeout", "1");
   input.setAttribute("type", "search");
   input.style.pointerEvents = "auto";
 
+  // Allow clearing out any old search results
+  input.reset = function() {
+    input.nextPreview = 2;
+    input.value = "";
+    searchPreview1.engineIcon = null;
+    searchPreview1.style.display = "none";
+    searchPreview2.engineIcon = null;
+    searchPreview2.style.display = "none";
+  };
+  input.reset();
+
+  // Allow toggling a search engine (up to two visible at a time)
+  input.toggleEngine = function(engineIcon) {
+    // Set the new engine for the preview and what preview to use next
+    function replaceEngine(preview, newEngineIcon, nextPreview) {
+      preview.engineIcon = newEngineIcon;
+      input.nextPreview = nextPreview;
+    }
+
+    // Deactivate the engine if it's already active
+    if (searchPreview1.engineIcon == engineIcon)
+      replaceEngine(searchPreview1, null, 1);
+    else if (searchPreview2.engineIcon == engineIcon)
+      replaceEngine(searchPreview2, null, 2);
+    // Activate the engine in the next preview slot
+    else if (input.nextPreview == 1)
+      replaceEngine(searchPreview1, engineIcon, 2);
+    else
+      replaceEngine(searchPreview2, engineIcon, 1);
+
+    // Update search results with new/removed engines
+    input.updatePreviews();
+  };
+
+  // Allow updating search results on command and toggle
+  input.updatePreviews = function() {
+    searchPreview1.search(input.value);
+    searchPreview2.search(input.value);
+  };
+
   // Handle the user searching for stuff
   input.addEventListener("command", function() {
+    input.updatePreviews();
   }, false);
+
+  // Create a list of search engines to toggle
+  let engines = createNode("hbox");
+  searchBox.appendChild(engines);
+
+  engines.style.marginTop = "3px";
+  engines.style.overflow = "hidden";
+
+  // Add an icon for each search engine
+  Services.search.getVisibleEngines().forEach(function(engine) {
+    let engineIcon = createNode("box");
+    engines.appendChild(engineIcon);
+
+    // Style the search engine icon
+    engineIcon.style.backgroundColor = "rgba(0, 0, 0, .3)";
+    engineIcon.style.backgroundImage = "url(" + engine.iconURI.spec + ")";
+    engineIcon.style.backgroundPosition = "center center";
+    engineIcon.style.backgroundSize = "16px 16px";
+    engineIcon.style.backgroundRepeat = "no-repeat";
+    engineIcon.style.borderRadius = "5px";
+    engineIcon.style.height = "22px";
+    engineIcon.style.margin = "2px";
+    engineIcon.style.pointerEvents = "auto";
+    engineIcon.style.width = "22px";
+
+    Object.defineProperty(engineIcon, "active", {
+      get: function() engineIcon.style.opacity != "0.5",
+      set: function(val) {
+        // Don't do work if we're already of that state
+        val = !!val;
+        if (val == engineIcon.active)
+          return;
+
+        // Toggle based on opacity
+        engineIcon.style.opacity = engineIcon.active ? "0.5" : "1";
+      }
+    });
+    engineIcon.active = false;
+
+    engineIcon.getSearchUrl= function(query) {
+      return engine.getSubmission(query).uri.spec;
+    };
+
+    // Inform the input to change engines
+    engineIcon.addEventListener("click", function() {
+      input.toggleEngine(engineIcon);
+    }, false);
+
+    // Indicate what clicking will do
+    engineIcon.addEventListener("mouseover", function() {
+      statusLine.set("toggle", engine.name);
+    }, false);
+
+    engineIcon.addEventListener("mouseout", function() {
+      statusLine.set();
+    }, false);
+  });
 
   //// 4.2: History results
 
@@ -233,6 +397,10 @@ function addDashboard(window) {
 
       case "reload":
         text = "Reload " + text;
+        break;
+
+      case "select":
+        text = "Select " + text;
         break;
 
       case "switch":
@@ -359,12 +527,13 @@ function addDashboard(window) {
     }
     updateIcon();
 
+    // Style the tab notification icon
     tabIcon.style.backgroundColor = "rgba(0, 0, 0, .3)";
     tabIcon.style.backgroundPosition = "1px center";
     tabIcon.style.backgroundRepeat = "no-repeat";
+    tabIcon.style.borderRadius = "0 100% 100% 0";
     tabIcon.style.height = "22px";
     tabIcon.style.width = "22px";
-    tabIcon.style.borderRadius = "0 100% 100% 0";
 
     // Add some callbacks to run when the tab is selected
     if (typeof callback == "function")
