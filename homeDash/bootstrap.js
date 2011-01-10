@@ -392,7 +392,11 @@ function addDashboard(window) {
   // Don't switch to the tab on modal and show a notification instead
   listen(window, window, "DOMWillOpenModalDialog", function(event) {
     event.stopPropagation();
-    notifyTab(gBrowser._getTabForContentWindow(event.target.top));
+
+    // Only show notification for background tabs
+    let tab = gBrowser._getTabForContentWindow(event.target.top);
+    if (tab != gBrowser.selectedTab)
+      notifyTab(tab);
   });
 
   // Watch for tabs being opened in the background
