@@ -236,6 +236,12 @@ function addDashboard(window) {
       notifyTab(tab, function() tab.HDtitleChangedCount = 0);
   });
 
+  // Don't switch to the tab on modal and show a notification instead
+  listen(window, window, "DOMWillOpenModalDialog", function(event) {
+    event.stopPropagation();
+    notifyTab(gBrowser._getTabForContentWindow(event.target.top));
+  });
+
   // Watch for tabs being opened in the background
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
     notifyTab(event.target);
