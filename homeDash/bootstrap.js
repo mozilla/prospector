@@ -78,33 +78,61 @@ function addDashboard(window) {
     return document.createElementNS(XUL, node);
   }
 
-  //// Add Firefox icon + notifications layer
+  let masterStack = createNode("stack");
+  masterStack.style.pointerEvents = "none";
+
+  // Add the stack to the current tab on first load
+  function moveMasterStack() {
+    gBrowser.selectedBrowser.parentNode.appendChild(masterStack);
+  }
+  moveMasterStack();
+  unload(function() masterStack.parentNode.removeChild(masterStack), window);
+
+  // Make sure we're in the right tab stack whenever the tab switches
+  listen(window, gBrowser.tabContainer, "TabSelect", moveMasterStack);
+
+  let statusLine = createNode("label");
+  statusLine.setAttribute("left", 0);
+  statusLine.setAttribute("top", 0);
+  masterStack.appendChild(statusLine);
+
+  statusLine.style.backgroundColor = "rgba(224, 224, 224, .8)";
+  statusLine.style.borderBottomRightRadius = "10px";
+  statusLine.style.display = "none";
+  statusLine.style.fontSize = "16px";
+  statusLine.style.margin = "0";
+  statusLine.style.padding = "0 3px 2px 28px";
+
+  // Helper function to set the status text for a given action
+  function setStatus(action, text) {
+    switch (action) {
+      case "switch":
+        text = "Switch to " + text;
+        break;
+
+      // Just use the provided text
+      case "text":
+        break;
+
+      case "toggle":
+        text = "Toggle " + text;
+        break;
+
+      // Hide the status for no action/text
+      default:
+        statusLine.style.display = "none";
+        return;
+    }
+
+    statusLine.value = text;
+    statusLine.style.display = "";
+  }
 
   let notificationBox = createNode("vbox");
   notificationBox.setAttribute("left", 0);
-  notificationBox.setAttribute("top", 0);
-
-  let fxIcon = createNode("image");
-  fxIcon.setAttribute("src", images["firefox22.png"]);
-  fxIcon.style.height = "22px";
-  fxIcon.style.opacity = ".3";
-  fxIcon.style.width = "22px";
-  fxIcon.addEventListener("mouseover", function() {
-    fxIcon.style.opacity = "1";
-  }, false);
-  fxIcon.addEventListener("mouseout", function() {
-    fxIcon.style.opacity = ".3";
-  }, false);
-  notificationBox.appendChild(fxIcon);
-
-  let stack = gBrowser.selectedBrowser.parentNode;
-  stack.appendChild(notificationBox);
-  unload(function() notificationBox.parentNode.removeChild(notificationBox), window);
-
-  // Move the notification box whenever the tab switches
-  listen(window, gBrowser.tabContainer, "TabSelect", function() {
-    gBrowser.selectedBrowser.parentNode.appendChild(notificationBox);
-  });
+  notificationBox.setAttribute("top", 22);
+  masterStack.appendChild(notificationBox);
+  notificationBox.style.pointerEvents = "auto";
 
   // Provide a way to add a notification icon for a tab
   function notifyTab(tab, callback) {
@@ -127,6 +155,7 @@ function addDashboard(window) {
     tabIcon.tab = tab;
     tabIcon.state = 0;
 
+    // Use the favicon or a default page icon
     function updateIcon() {
       let src = getTabIcon(tab);
       if (src != updateIcon.lastSrc) {
@@ -164,21 +193,26 @@ function addDashboard(window) {
     tabIcon.addEventListener("click", function() {
       gBrowser.selectedTab = tab;
     }, false);
+
+    // Indicate what clicking will do
+    tabIcon.addEventListener("mouseover", function() {
+      setStatus("switch", tab.getAttribute("label"));
+    }, false);
+
+    tabIcon.addEventListener("mouseout", function() {
+      setStatus();
+    }, false);
   }
 
   // Keep updating notification icons and remove old ones
   let pauseUpdate = false;
   let notifyInt = setInterval(function() {
-    // Nothing to update if it's just the Firefox icon
-    if (notificationBox.childNodes.length == 1)
+    // Don't update the state when paused
+    if (pauseUpdate)
       return;
 
-    let notifications = Array.slice(notificationBox.childNodes, 1);
-    notifications.forEach(function(notification) {
-      // Don't update the state if we should be paused
-      if (pauseUpdate)
-        return;
-
+    // Figure out opaqueness of all notifications
+    Array.forEach(notificationBox.childNodes, function(notification) {
       // Skip notifications that aren't visible anyway
       if (notification.collapsed)
         return;
@@ -204,11 +238,11 @@ function addDashboard(window) {
     pauseUpdate = true;
 
     // Make all notifications opaque
-    let notifications = Array.slice(notificationBox.childNodes, 1);
-    notifications.forEach(function(notification) {
+    Array.forEach(notificationBox.childNodes, function(notification) {
       notification.style.opacity = "1";
     });
   }, false);
+
   notificationBox.addEventListener("mouseout", function() {
     pauseUpdate = false;
   }, false);
@@ -251,6 +285,28 @@ function addDashboard(window) {
   unload(function() {
     Array.forEach(gBrowser.tabs, function(tab) tab.HDtitleChangedCount = 0);
   });
+
+  let fxIcon = createNode("image");
+  fxIcon.setAttribute("left", 0);
+  fxIcon.setAttribute("top", 0);
+  masterStack.appendChild(fxIcon);
+
+  fxIcon.setAttribute("src", images["firefox22.png"]);
+  fxIcon.style.height = "22px";
+  fxIcon.style.opacity = ".3";
+  fxIcon.style.pointerEvents = "auto";
+  fxIcon.style.width = "22px";
+
+  // Indicate what clicking will do
+  fxIcon.addEventListener("mouseover", function() {
+    fxIcon.style.opacity = "1";
+    setStatus("toggle", "Home Dash");
+  }, false);
+
+  fxIcon.addEventListener("mouseout", function() {
+    fxIcon.style.opacity = ".3";
+    setStatus();
+  }, false);
 }
 
 /**
