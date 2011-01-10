@@ -297,6 +297,12 @@ function addDashboard(window) {
     input.updatePreviews();
   }, false);
 
+  // Close the dashboard when hitting escape from an empty input box
+  input.addEventListener("keydown", function(event) {
+    if (event.keyCode == event.DOM_VK_ESCAPE && input.value == "")
+      dashboard.open = false;
+  }, false);
+
   // Create a list of search engines to toggle
   let engines = createNode("hbox");
   searchBox.appendChild(engines);
