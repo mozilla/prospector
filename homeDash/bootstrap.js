@@ -151,7 +151,16 @@ function addDashboard(window) {
 
   // Helper to toggle the dashboard open/close
   dashboard.toggle = function() {
-    dashboard.style.display = dashboard.open ? "none" : "";
+    // Hide if already open
+    if (dashboard.open) {
+      dashboard.style.display = "none";
+      notifications.paused = false;
+    }
+    // Show if currently closed
+    else {
+      dashboard.style.display = "";
+      notifications.paused = true;
+    }
   };
 
   //// 5: Status line
@@ -354,11 +363,32 @@ function addDashboard(window) {
     }, false);
   };
 
+  // Provide a way to pause/unpause
+  Object.defineProperty(notifications, "paused", {
+    get: function() notifications._paused,
+    set: function(val) {
+      // Don't do work if we're already of that state
+      val = !!val;
+      if (val == notifications.paused)
+        return;
+      notifications._paused = val;
+
+      // Nothing more to do if we're unpausing
+      if (!notifications.paused)
+        return;
+
+      // Make all notifications opaque
+      Array.forEach(notifications.childNodes, function(notification) {
+        notification.style.opacity = "1";
+      });
+    }
+  });
+  notifications._paused = false;
+
   // Keep updating notification icons and remove old ones
-  let pauseUpdate = false;
   let notifyInt = setInterval(function() {
     // Don't update the state when paused
-    if (pauseUpdate)
+    if (notifications.paused)
       return;
 
     // Figure out opaqueness of all notifications
@@ -385,16 +415,11 @@ function addDashboard(window) {
 
   // Pause updating opacity if the user might click
   notifications.addEventListener("mouseover", function() {
-    pauseUpdate = true;
-
-    // Make all notifications opaque
-    Array.forEach(notifications.childNodes, function(notification) {
-      notification.style.opacity = "1";
-    });
+    notifications.paused = true;
   }, false);
 
   notifications.addEventListener("mouseout", function() {
-    pauseUpdate = false;
+    notifications.paused = false;
   }, false);
 
   // Watch for title changes in background tabs
