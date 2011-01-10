@@ -36,6 +36,33 @@
 
 "use strict";
 
+// Extract the sub/domains of a URI
+function getHostText(URI) {
+  let host = URI.host;
+  try {
+    // Strip the suffix unless there is no suffix (e.g., localhost)
+    let suffix = Services.eTLD.getPublicSuffix(URI);
+    let noSuffix = host;
+    if (suffix != host)
+      noSuffix = host.slice(0, (host + "/").lastIndexOf(suffix) - 1);
+
+    // Ignore "www"-like subdomains
+    let domains = noSuffix.split(".");
+    if (domains[0].search(/^www\d*$/) == 0)
+      domains.shift();
+
+    let newScheme = URI.scheme;
+    if (newScheme.indexOf("http") == -1)
+      domains.push(newScheme);
+
+    // Upper-case each first letter and put subdomains in reverse order
+    return upperFirst(domains.reverse());
+  }
+  // eTLD will throw if it's an IP address, so just use the host
+  catch(ex) {}
+  return host;
+}
+
 // Get a favicon for a tab
 function getTabIcon(tab) {
   // Use the favicon from the tab if it's there
@@ -45,4 +72,11 @@ function getTabIcon(tab) {
 
   // Use the default tab favicon
   return images["defaultFavicon.png"];
+}
+
+// Get a upper-case-first-of-word string from an array of strings
+function upperFirst(strArray) {
+  return strArray.map(function(part) {
+    return part.slice(0, 1).toUpperCase() + part.slice(1);
+  }).join(" ");
 }

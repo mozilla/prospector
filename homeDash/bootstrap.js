@@ -81,6 +81,7 @@ function addDashboard(window) {
   //// Add master stack containing all 7 layers of the dashboard
 
   let masterStack = createNode("stack");
+  masterStack.style.overflow = "hidden";
   masterStack.style.pointerEvents = "none";
 
   // Add the stack to the current tab on first load
@@ -118,6 +119,18 @@ function addDashboard(window) {
   // Helper function to set the status text for a given action
   function setStatus(action, text) {
     switch (action) {
+      case "loadpage":
+        text = "View " + text;
+        break;
+
+      case "loadsecure":
+        text = "Go to secure " + text;
+        break;
+
+      case "loadsite":
+        text = "Go to " + text;
+        break;
+
       case "switch":
         text = "Switch to " + text;
         break;
@@ -138,6 +151,63 @@ function addDashboard(window) {
 
     statusLine.value = text;
     statusLine.style.display = "";
+  }
+
+  let (orig = window.XULBrowserWindow.setOverLink) {
+    window.XULBrowserWindow.setOverLink = function(url, anchor) {
+      // Clear the status if there's nothing to show
+      if (url == "") {
+        setStatus();
+        return;
+      }
+
+      // Figure out what kind of action and text to show
+      let action = "loadpage";
+      let text = anchor && anchor.textContent.trim();
+
+      let curURI = gBrowser.selectedBrowser.currentURI;
+      let newURI = Services.io.newURI(url, null, null);
+      if (curURI.scheme != newURI.scheme || curURI.hostPort != newURI.hostPort) {
+        action = newURI.scheme == "https" ? "loadsecure" : "loadsite";
+
+        // Get the sub/domains of the new uri
+        text = getHostText(newURI);
+      }
+
+      // Figure out a text for missing anchor or same domain pages
+      if (text == null || text == "") {
+        let path = newURI.path;
+
+        // Find out the end of the path part before query or hash
+        let end = path.indexOf("?");
+        if (end == -1)
+          end = path.indexOf("#");
+
+        // Default to the end unless it's a trailing slash
+        if (end == -1)
+          end = path.length;
+        if (path[end - 1] == "/")
+          end--;
+
+        // Get the last part after the last "/" of the path
+        let lastPart = path.slice(path.lastIndexOf("/", end - 1) + 1, end);
+
+        // Remove the file extension if necessary
+        let extDot = lastPart.indexOf(".");
+        if (extDot != -1)
+          lastPart = lastPart.slice(0, extDot);
+
+        // Upper-case each word of the last part
+        text = upperFirst(lastPart.split(/[-_.+]+/));
+
+        // Must be the root page path
+        if (text == "")
+          text = getHostText(newURI) + "'s home page";
+      }
+
+      setStatus(action, text);
+    };
+    unload(function() window.XULBrowserWindow.setOverLink = orig, window);
   }
 
   //// 6: Notification area
