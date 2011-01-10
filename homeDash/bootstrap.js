@@ -207,19 +207,18 @@ function addDashboard(window) {
       // Figure out what kind of action and text to show
       let action = "loadpage";
       let text = anchor && anchor.textContent.trim();
-
-      // Figure out if we're switching sites
       let curURI = gBrowser.selectedBrowser.currentURI;
       let newURI = Services.io.newURI(url, null, null);
-      if (curURI.scheme != newURI.scheme || curURI.hostPort != newURI.hostPort) {
+
+      // Figure out if we're switching sites
+      if (curURI.scheme != newURI.scheme || hosty(curURI) != hosty(newURI)) {
         action = newURI.scheme == "https" ? "loadsecure" : "loadsite";
 
         // Get the sub/domains of the new uri
         text = getHostText(newURI);
       }
-
       // Figure out if it's a reference change
-      if (curURI instanceof Ci.nsIURL && newURI instanceof Ci.nsIURL) {
+      else if (curURI instanceof Ci.nsIURL && newURI instanceof Ci.nsIURL) {
         if (curURI.filePath == newURI.filePath && curURI.query == newURI.query)
           action = curURI.ref == newURI.ref ? "reload" : "loadref";
       }

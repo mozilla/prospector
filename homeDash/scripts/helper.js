@@ -38,7 +38,7 @@
 
 // Extract the sub/domains of a URI
 function getHostText(URI) {
-  let host = URI.host;
+  let host = hosty(URI, true);
   try {
     // Strip the suffix unless there is no suffix (e.g., localhost)
     let suffix = Services.eTLD.getPublicSuffix(URI);
@@ -51,15 +51,16 @@ function getHostText(URI) {
     if (domains[0].search(/^www\d*$/) == 0)
       domains.shift();
 
-    let newScheme = URI.scheme;
-    if (newScheme.indexOf("http") == -1)
-      domains.push(newScheme);
-
     // Upper-case each first letter and put subdomains in reverse order
-    return upperFirst(domains.reverse());
+    host = upperFirst(domains.reverse());
   }
   // eTLD will throw if it's an IP address, so just use the host
   catch(ex) {}
+
+  // Add the scheme if it's not http(s)
+  let scheme = URI.scheme;
+  if (scheme.indexOf("http") == -1)
+    host = scheme + ": " + host;
   return host;
 }
 
@@ -72,6 +73,17 @@ function getTabIcon(tab) {
 
   // Use the default tab favicon
   return images["defaultFavicon.png"];
+}
+
+// Get something that is host-y-ish
+function hosty(URI, noPort) {
+  try {
+    return noPort ? URI.host : URI.hostPort;
+  }
+  catch(ex) {}
+
+  // Some URIs don't have a host, so fallback to path
+  return URI.path;
 }
 
 // Get a upper-case-first-of-word string from an array of strings
