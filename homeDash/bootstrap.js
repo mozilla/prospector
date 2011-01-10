@@ -147,20 +147,28 @@ function addDashboard(window) {
   // Helper to check if the dashboard is open
   Object.defineProperty(dashboard, "open", {
     get: function() dashboard.style.display != "none",
+    set: function(val) {
+      // Don't do work if we're already of that state
+      val = !!val;
+      if (val == dashboard.open)
+        return;
+
+      // Hide if already open
+      if (dashboard.open) {
+        dashboard.style.display = "none";
+        notifications.paused = false;
+      }
+      // Show if currently closed
+      else {
+        dashboard.style.display = "";
+        notifications.paused = true;
+      }
+    }
   });
 
   // Helper to toggle the dashboard open/close
   dashboard.toggle = function() {
-    // Hide if already open
-    if (dashboard.open) {
-      dashboard.style.display = "none";
-      notifications.paused = false;
-    }
-    // Show if currently closed
-    else {
-      dashboard.style.display = "";
-      notifications.paused = true;
-    }
+    dashboard.open = !dashboard.open;
   };
 
   //// 5: Status line
