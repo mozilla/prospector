@@ -87,14 +87,14 @@ function addDashboard(window) {
   masterStack.style.pointerEvents = "none";
 
   // Add the stack to the current tab on first load
-  function moveMasterStack() {
+  masterStack.move = function() {
     gBrowser.selectedBrowser.parentNode.appendChild(masterStack);
-  }
-  moveMasterStack();
+  };
+  masterStack.move();
   unload(function() masterStack.parentNode.removeChild(masterStack), window);
 
   // Make sure we're in the right tab stack whenever the tab switches
-  listen(window, gBrowser.tabContainer, "TabSelect", moveMasterStack);
+  listen(window, gBrowser.tabContainer, "TabSelect", masterStack.move);
 
   //// 1: Search preview #1
 
@@ -137,6 +137,23 @@ function addDashboard(window) {
 
   //// 4: Main dashboard
 
+  let dashboard = createNode("stack");
+  masterStack.appendChild(dashboard);
+
+  dashboard.style.backgroundColor = "rgba(0, 0, 0, .3)";
+  dashboard.style.display = "none";
+  dashboard.style.pointerEvents = "none";
+
+  // Helper to check if the dashboard is open
+  Object.defineProperty(dashboard, "open", {
+    get: function() dashboard.style.display != "none",
+  });
+
+  // Helper to toggle the dashboard open/close
+  dashboard.toggle = function() {
+    dashboard.style.display = dashboard.open ? "none" : "";
+  };
+
   //// 5: Status line
 
   let statusLine = createNode("label");
@@ -152,7 +169,7 @@ function addDashboard(window) {
   statusLine.style.padding = "0 3px 2px 28px";
 
   // Helper function to set the status text for a given action
-  function setStatus(action, text) {
+  statusLine.set = function(action, text) {
     switch (action) {
       case "loadpage":
         text = "View " + text;
@@ -194,13 +211,13 @@ function addDashboard(window) {
 
     statusLine.value = text;
     statusLine.style.display = "";
-  }
+  };
 
   let (orig = window.XULBrowserWindow.setOverLink) {
     window.XULBrowserWindow.setOverLink = function(url, anchor) {
       // Clear the status if there's nothing to show
       if (url == "") {
-        setStatus();
+        statusLine.set();
         return;
       }
 
@@ -254,23 +271,23 @@ function addDashboard(window) {
           text = getHostText(newURI) + "'s home page";
       }
 
-      setStatus(action, text);
+      statusLine.set(action, text);
     };
     unload(function() window.XULBrowserWindow.setOverLink = orig, window);
   }
 
   //// 6: Notification area
 
-  let notificationBox = createNode("vbox");
-  notificationBox.setAttribute("left", "0");
-  notificationBox.setAttribute("top", "22");
-  masterStack.appendChild(notificationBox);
-  notificationBox.style.pointerEvents = "auto";
+  let notifications = createNode("vbox");
+  notifications.setAttribute("left", "0");
+  notifications.setAttribute("top", "22");
+  masterStack.appendChild(notifications);
+  notifications.style.pointerEvents = "auto";
 
   // Provide a way to add a notification icon for a tab
-  function notifyTab(tab, callback) {
+  notifications.addTab = function(tab, callback) {
     // Check if we already have a notification for the tab
-    let exists = Array.some(notificationBox.childNodes, function(icon) {
+    let exists = Array.some(notifications.childNodes, function(icon) {
       if (icon.tab != tab)
         return false;
 
@@ -283,7 +300,7 @@ function addDashboard(window) {
 
     // Add an icon for the tab and track various properties
     let tabIcon = createNode("box");
-    notificationBox.appendChild(tabIcon);
+    notifications.appendChild(tabIcon);
     let callbacks = tabIcon.callbacks = [];
     tabIcon.tab = tab;
     tabIcon.state = 0;
@@ -308,7 +325,7 @@ function addDashboard(window) {
     // Add some callbacks to run when the tab is selected
     if (typeof callback == "function")
       callbacks.push(callback);
-    callbacks.push(function() notificationBox.removeChild(tabIcon));
+    callbacks.push(function() notifications.removeChild(tabIcon));
 
     // Run all the callbacks including removing the tab icon
     function runCallbacks() {
@@ -329,13 +346,13 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     tabIcon.addEventListener("mouseover", function() {
-      setStatus("switch", tab.getAttribute("label"));
+      statusLine.set("switch", tab.getAttribute("label"));
     }, false);
 
     tabIcon.addEventListener("mouseout", function() {
-      setStatus();
+      statusLine.set();
     }, false);
-  }
+  };
 
   // Keep updating notification icons and remove old ones
   let pauseUpdate = false;
@@ -345,7 +362,7 @@ function addDashboard(window) {
       return;
 
     // Figure out opaqueness of all notifications
-    Array.forEach(notificationBox.childNodes, function(notification) {
+    Array.forEach(notifications.childNodes, function(notification) {
       // Skip notifications that aren't visible anyway
       if (notification.collapsed)
         return;
@@ -367,16 +384,16 @@ function addDashboard(window) {
   unload(function() clearInterval(notifyInt), window);
 
   // Pause updating opacity if the user might click
-  notificationBox.addEventListener("mouseover", function() {
+  notifications.addEventListener("mouseover", function() {
     pauseUpdate = true;
 
     // Make all notifications opaque
-    Array.forEach(notificationBox.childNodes, function(notification) {
+    Array.forEach(notifications.childNodes, function(notification) {
       notification.style.opacity = "1";
     });
   }, false);
 
-  notificationBox.addEventListener("mouseout", function() {
+  notifications.addEventListener("mouseout", function() {
     pauseUpdate = false;
   }, false);
 
@@ -400,7 +417,7 @@ function addDashboard(window) {
     tab.HDtitleChangedCount = count;
 
     if (count == CHANGE_THRESHOLD)
-      notifyTab(tab, function() tab.HDtitleChangedCount = 0);
+      notifications.addTab(tab, function() tab.HDtitleChangedCount = 0);
   });
 
   // Don't switch to the tab on modal and show a notification instead
@@ -410,12 +427,12 @@ function addDashboard(window) {
     // Only show notification for background tabs
     let tab = gBrowser._getTabForContentWindow(event.target.top);
     if (tab != gBrowser.selectedTab)
-      notifyTab(tab);
+      notifications.addTab(tab);
   });
 
   // Watch for tabs being opened in the background
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
-    notifyTab(event.target);
+    notifications.addTab(event.target);
   });
 
   // Clear out any state we set on external objects
@@ -436,15 +453,20 @@ function addDashboard(window) {
   fxIcon.style.pointerEvents = "auto";
   fxIcon.style.width = "22px";
 
+  // Allow toggling the dashboard by clicking
+  fxIcon.addEventListener("click", function() {
+    dashboard.toggle();
+  }, false);
+
   // Indicate what clicking will do
   fxIcon.addEventListener("mouseover", function() {
     fxIcon.style.opacity = "1";
-    setStatus("toggle", "Home Dash");
+    statusLine.set("toggle", "Home Dash");
   }, false);
 
   fxIcon.addEventListener("mouseout", function() {
-    fxIcon.style.opacity = ".3";
-    setStatus();
+    fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
+    statusLine.set();
   }, false);
 }
 
