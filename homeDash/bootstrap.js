@@ -158,12 +158,20 @@ function addDashboard(window) {
         text = "View " + text;
         break;
 
+      case "loadref":
+        text = "Jump to " + text;
+        break;
+
       case "loadsecure":
         text = "Go to secure " + text;
         break;
 
       case "loadsite":
         text = "Go to " + text;
+        break;
+
+      case "reload":
+        text = "Reload " + text;
         break;
 
       case "switch":
@@ -200,6 +208,7 @@ function addDashboard(window) {
       let action = "loadpage";
       let text = anchor && anchor.textContent.trim();
 
+      // Figure out if we're switching sites
       let curURI = gBrowser.selectedBrowser.currentURI;
       let newURI = Services.io.newURI(url, null, null);
       if (curURI.scheme != newURI.scheme || curURI.hostPort != newURI.hostPort) {
@@ -207,6 +216,12 @@ function addDashboard(window) {
 
         // Get the sub/domains of the new uri
         text = getHostText(newURI);
+      }
+
+      // Figure out if it's a reference change
+      if (curURI instanceof Ci.nsIURL && newURI instanceof Ci.nsIURL) {
+        if (curURI.filePath == newURI.filePath && curURI.query == newURI.query)
+          action = curURI.ref == newURI.ref ? "reload" : "loadref";
       }
 
       // Figure out a text for missing anchor or same domain pages
