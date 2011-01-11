@@ -75,6 +75,29 @@ function getTabIcon(tab) {
   return images["defaultFavicon.png"];
 }
 
+// Try to find a usable text from a node
+function getTextContent(node) {
+  // Nothing to do with nothing
+  if (node == null)
+    return "";
+
+  // Use plain text content or alternative text when available
+  if (node.textContent.trim() != "")
+    return node.textContent.trim();
+  if (node.alt != null && node.alt.trim() != "")
+    return node.alt.trim();
+
+  // Go through child nodes to find the first useful text
+  let ret = "";
+  Array.some(node.childNodes, function(child) {
+    ret = getTextContent(child);
+    if (ret != "")
+      return true;
+    return false;
+  });
+  return ret;
+}
+
 // Get something that is host-y-ish
 function hosty(URI, noPort) {
   try {

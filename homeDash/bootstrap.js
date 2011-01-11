@@ -677,7 +677,7 @@ function addDashboard(window) {
 
       // Figure out what kind of action and text to show
       let action = "loadpage";
-      let text = anchor && (anchor.textContent || anchor.alt).trim();
+      let text = getTextContent(anchor);
       let curURI = gBrowser.selectedBrowser.currentURI;
       let newURI = Services.io.newURI(url, null, null);
 
