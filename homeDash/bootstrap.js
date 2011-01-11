@@ -584,10 +584,6 @@ function addDashboard(window) {
         text = "Jump to " + text;
         break;
 
-      case "loadsecure":
-        text = "Go to secure " + text;
-        break;
-
       case "loadsite":
         text = "Go to " + text;
         break;
@@ -632,16 +628,34 @@ function addDashboard(window) {
 
       // Figure out what kind of action and text to show
       let action = "loadpage";
-      let text = anchor && anchor.textContent.trim();
+      let text = anchor && (anchor.textContent || anchor.alt).trim();
       let curURI = gBrowser.selectedBrowser.currentURI;
       let newURI = Services.io.newURI(url, null, null);
 
       // Figure out if we're switching sites
       if (curURI.scheme != newURI.scheme || hosty(curURI) != hosty(newURI)) {
-        action = newURI.scheme == "https" ? "loadsecure" : "loadsite";
+        // Specially handle certain protocols
+        switch (newURI.scheme) {
+          case "data":
+            action = "loadsite";
+            text = "data: resource";
+            break;
 
-        // Get the sub/domains of the new uri
-        text = getHostText(newURI);
+          case "https":
+            action = "loadsite";
+            text = "secure " + getHostText(newURI);
+            break;
+
+          case "javascript":
+            action = "text";
+            text = "Run script";
+            break;
+
+          default:
+            action = "loadsite";
+            text = getHostText(newURI);
+            break;
+        }
       }
       // Figure out if it's a reference change
       else if (curURI instanceof Ci.nsIURL && newURI instanceof Ci.nsIURL) {
