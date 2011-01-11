@@ -104,8 +104,8 @@ function addDashboard(window) {
     let stack = createNode("stack");
     stack.setAttribute("left", left + "");
     stack.setAttribute("right", right + "");
-    stack.style.display = "none";
     masterStack.appendChild(stack);
+    stack.collapsed = true;
 
     // Create and set some common preview listeners and attributes
     let browser = stack.browser = createNode("browser");
@@ -138,6 +138,57 @@ function addDashboard(window) {
       statusLine.set();
     }, false);
 
+    // Create a set of callbacks to add/remove load a listener
+    function addLoadListener() {
+      stack.browser.addEventListener("DOMContentLoaded", handleLoad, false);
+    }
+
+    function removeLoadListener() {
+      stack.browser.removeEventListener("DOMContentLoaded", handleLoad, false);
+    }
+
+    // Show the preview when content is loaded
+    function handleLoad() {
+      removeLoadListener();
+      stack.collapsed = false;
+    }
+
+    // Provide a way to load a url into the preview
+    stack.load = function(url) {
+      // Nothing to load, so hide
+      if (url == null || url == "") {
+        stack.reset();
+        return;
+      }
+
+      // If we're already on the right url, just show it
+      if (url == stack.browser.getAttribute("src")) {
+        stack.collapsed = false;
+        return;
+      }
+
+      // Start loading the provided url
+      stack.browser.setAttribute("src", url);
+
+      // Wait until the page loads to show the preview
+      if (stack.collapsed)
+        addLoadListener();
+    };
+
+    // Hide and stop the preview
+    stack.reset = function() {
+      stack.collapsed = true;
+
+      // We might have a load listener if we just started a preview
+      // NB: Don't clear the attribute so re-showing the same page is fast
+      if (stack.browser.getAttribute("src") != "")
+        removeLoadListener();
+
+      // Stop the preview in-case it's loading, but only if we can
+      if (stack.browser.stop != null)
+        stack.browser.stop();
+    };
+
     return stack;
   }
 
@@ -169,18 +220,13 @@ function addDashboard(window) {
     // Handle search queries to show a preview
     searchPreview.search = function(query) {
       // Nothing to search or to search with, so hide
-      if (query == "" || searchPreview.engineIcon == null) {
-        searchPreview.style.display = "none";
+      if (query == null || query == "" || searchPreview.engineIcon == null) {
+        searchPreview.reset();
         return;
       }
 
-      // Unhide if necessary
-      if (searchPreview.style.display == "none")
-        this.style.display = "";
-
       // Use the search engine to get a url and show it
-      let url = searchPreview.engineIcon.getSearchUrl(query);
-      searchPreview.browser.setAttribute("src", url);
+      searchPreview.load(searchPreview.engineIcon.getSearchUrl(query));
     };
   }
 
@@ -196,13 +242,13 @@ function addDashboard(window) {
   let dashboard = createNode("stack");
   masterStack.appendChild(dashboard);
 
+  dashboard.collapsed = true;
   dashboard.style.backgroundColor = "rgba(0, 0, 0, .3)";
-  dashboard.style.display = "none";
   dashboard.style.pointerEvents = "none";
 
   // Helper to check if the dashboard is open
   Object.defineProperty(dashboard, "open", {
-    get: function() dashboard.style.display != "none",
+    get: function() !dashboard.collapsed,
     set: function(val) {
       // Don't do work if we're already of that state
       val = !!val;
@@ -211,14 +257,18 @@ function addDashboard(window) {
 
       // Hide if already open
       if (dashboard.open) {
-        dashboard.style.display = "none";
+        dashboard.collapsed = true;
         gBrowser.selectedBrowser.focus();
         input.reset();
         notifications.paused = false;
+        pagePreview.reset();
+        searchPreview1.reset();
+        searchPreview2.reset();
+        sites.reset();
       }
       // Show if currently closed
       else {
-        dashboard.style.display = "";
+        dashboard.collapsed = false;
         dashboard.focus();
         input.focus();
         notifications.paused = true;
@@ -257,9 +307,7 @@ function addDashboard(window) {
     input.nextPreview = 2;
     input.value = "";
     searchPreview1.engineIcon = null;
-    searchPreview1.style.display = "none";
     searchPreview2.engineIcon = null;
-    searchPreview2.style.display = "none";
   };
   input.reset();
 
@@ -295,6 +343,7 @@ function addDashboard(window) {
   // Handle the user searching for stuff
   input.addEventListener("command", function() {
     input.updatePreviews();
+    sites.search(input.value);
   }, false);
 
   // Close the dashboard when hitting escape from an empty input box
@@ -372,6 +421,140 @@ function addDashboard(window) {
 
   //// 4.3: Top sites
 
+  let sites = createNode("stack");
+  sites.setAttribute("left", "800");
+  sites.setAttribute("top", "450");
+  dashboard.appendChild(sites);
+
+  // Define the positions and size of the top sites
+  const sizeScale = 60;
+  const siteSizes = [
+    [-2, -2, 2],
+    [ 2, -2, 2],
+    [-2,  2, 2],
+    [ 2,  2, 2],
+    [-5, -5, 1],
+    [-3, -5, 1],
+    [-1, -5, 1],
+    [ 1, -5, 1],
+    [ 3, -5, 1],
+    [ 5, -5, 1],
+    [-5, -3, 1],
+    [ 5, -3, 1],
+    [-5, -1, 1],
+    [ 5, -1, 1],
+    [-5,  1, 1],
+    [ 5,  1, 1],
+    [-5,  3, 1],
+    [ 5,  3, 1],
+    [-5,  5, 1],
+    [-3,  5, 1],
+    [-1,  5, 1],
+    [ 1,  5, 1],
+    [ 3,  5, 1],
+    [ 5,  5, 1]
+  ];
+
+  // Place the top sites in-order at pre-defined locations/sizes
+  topSites.forEach(function(pageInfo, index) {
+    // Can't show the site if we don't know where to put it
+    if (index >= siteSizes.length)
+      return;
+
+    let [leftBase, topBase, size] = siteSizes[index];
+
+    let width = sizeScale * size * 2;
+    let height = sizeScale * size * 3 / 4 * 2;
+    let left = sizeScale * leftBase - width / 2;
+    let top = sizeScale * topBase * 3 / 4 - height / 2;
+
+    let siteBox = createNode("box");
+    siteBox.setAttribute("left", left + "");
+    siteBox.setAttribute("top", top + "");
+    sites.appendChild(siteBox);
+
+    siteBox.pageInfo = pageInfo;
+
+    siteBox.style.backgroundColor = "rgba(244, 244, 244, .3)";
+    siteBox.style.borderRadius = "10px";
+    siteBox.style.opacity = ".5";
+    siteBox.style.overflow = "hidden";
+    siteBox.style.pointerEvents = "auto";
+
+    let siteThumb = createNode("image");
+    siteBox.appendChild(siteThumb);
+    siteThumb.setAttribute("src", pageInfo.icon);
+    siteThumb.style.height = height + "px";
+    siteThumb.style.width = width + "px";
+
+    siteBox.addEventListener("click", function() {
+      // TODO swapDocShell stuff
+      gBrowser.selectedBrowser.setAttribute("src", pageInfo.url);
+      dashboard.open = false;
+    }, false);
+
+    // Indicate what clicking will do
+    siteBox.addEventListener("mouseover", function() {
+      statusLine.set("select", pageInfo.title);
+      sites.highlight(siteBox);
+      pagePreview.load(pageInfo.url);
+    }, false);
+
+    siteBox.addEventListener("mouseout", function() {
+      statusLine.set();
+      sites.highlight();
+      pagePreview.reset();
+    }, false);
+  });
+
+  // Highlight just one site box
+  sites.highlight = function(targetBox) {
+    // Not highlighting anything, so revert to the last query
+    if (targetBox == null) {
+      sites.search(sites.lastQuery);
+      return;
+    }
+
+    // Fade out all the other boxes except the target made brighter
+    Array.forEach(sites.childNodes, function(siteBox) {
+      siteBox.style.opacity = siteBox == targetBox ? ".9" : ".1";
+    });
+  };
+
+  // Allow clearing out any old state
+  sites.reset = function() {
+    sites.lastQuery = "";
+  };
+  sites.reset();
+
+  // Search through the top sites to filter out non-matches
+  sites.search = function(query) {
+    // Remember what query to re-search when un-highlighting
+    sites.lastQuery = query = query || "";
+
+    // Find out which pages match the query
+    let pageMatches = [];
+    Array.forEach(sites.childNodes, function(siteBox) {
+      // Just show the site if there's no query
+      if (query == "") {
+        siteBox.style.opacity = ".4";
+        siteBox.style.pointerEvents = "auto";
+      }
+      // Emphasize the match and record it
+      else if (queryMatchesPage(query, siteBox.pageInfo)) {
+        siteBox.style.opacity = ".7";
+        siteBox.style.pointerEvents = "auto";
+        pageMatches.push(siteBox.pageInfo);
+      }
+      // Almost hide the site if not a match
+      else {
+        siteBox.style.opacity = ".1";
+        siteBox.style.pointerEvents = "none";
+      }
+    });
+    return pageMatches;
+  };
+
   //// 4.4: Tabs
 
   //// 4.5: Browser controls
@@ -383,9 +566,9 @@ function addDashboard(window) {
   statusLine.setAttribute("top", "0");
   masterStack.appendChild(statusLine);
 
+  statusLine.collapsed = true;
   statusLine.style.backgroundColor = "rgba(224, 224, 224, .8)";
   statusLine.style.borderBottomRightRadius = "10px";
-  statusLine.style.display = "none";
   statusLine.style.fontSize = "16px";
   statusLine.style.margin = "0";
   statusLine.style.padding = "0 3px 2px 28px";
@@ -431,12 +614,12 @@ function addDashboard(window) {
 
       // Hide the status for no action/text
       default:
-        statusLine.style.display = "none";
+        statusLine.collapsed = true;
         return;
     }
 
+    statusLine.collapsed = false;
     statusLine.value = text;
-    statusLine.style.display = "";
   };
 
   let (orig = window.XULBrowserWindow.setOverLink) {
@@ -717,7 +900,9 @@ function addDashboard(window) {
  * Handle the add-on being activated on install/enable
  */
 function startup({id}) AddonManager.getAddonByID(id, function(addon) {
+  // XXX Force a QI until bug 609139 is fixed
   Cu.import("resource://services-sync/util.js");
+  Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Get references to the packaged images
   ["defaultFavicon.png", "firefox22.png"].forEach(function(fileName) {
@@ -725,10 +910,13 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   });
 
   // Load various javascript includes for helper functions
-  ["helper", "utils"].forEach(function(fileName) {
+  ["crunch", "helper", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
+
+  // Crunch through some data to use later
+  computeTopSites();
 
   // Change the main browser windows
   watchWindows(removeChrome);

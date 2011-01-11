@@ -86,6 +86,15 @@ function hosty(URI, noPort) {
   return URI.path;
 }
 
+// Check if a query string matches some page information
+function queryMatchesPage(query, {title, url}) {
+  if (title.indexOf(query) != -1)
+    return true;
+  if (url.indexOf(query) != -1)
+    return true;
+  return false;
+}
+
 // Get a upper-case-first-of-word string from an array of strings
 function upperFirst(strArray) {
   return strArray.map(function(part) {
