@@ -150,7 +150,6 @@ function addDashboard(window) {
     stack.setAttribute("left", left + "");
     stack.setAttribute("right", right + "");
     masterStack.appendChild(stack);
-    stack.collapsed = true;
 
     // Create and set some common preview listeners and attributes
     let browser = stack.browser = createNode("browser");
@@ -180,7 +179,7 @@ function addDashboard(window) {
     }, false);
 
     screen.addEventListener("mouseout", function() {
-      statusLine.set();
+      statusLine.reset();
     }, false);
 
     // Create a set of callbacks to add/remove load a listener
@@ -408,7 +407,7 @@ function addDashboard(window) {
   }, false);
 
   input.addEventListener("mouseout", function() {
-    statusLine.set();
+    statusLine.reset();
   }, false);
 
   // Create a list of search engines to toggle
@@ -463,7 +462,7 @@ function addDashboard(window) {
     }, false);
 
     engineIcon.addEventListener("mouseout", function() {
-      statusLine.set();
+      statusLine.reset();
     }, false);
   });
 
@@ -551,7 +550,7 @@ function addDashboard(window) {
     }, false);
 
     siteBox.addEventListener("mouseout", function() {
-      statusLine.set();
+      statusLine.reset();
       sites.highlight();
       pagePreview.reset();
     }, false);
@@ -615,7 +614,6 @@ function addDashboard(window) {
   statusLine.setAttribute("top", "0");
   masterStack.appendChild(statusLine);
 
-  statusLine.collapsed = true;
   statusLine.style.backgroundColor = "rgba(224, 224, 224, .8)";
   statusLine.style.borderBottomRightRadius = "10px";
   statusLine.style.fontSize = "16px";
@@ -657,9 +655,9 @@ function addDashboard(window) {
         text = "Toggle " + text;
         break;
 
-      // Hide the status for no action/text
+      // Hide the status for no/unknown action/text
       default:
-        statusLine.collapsed = true;
+        statusLine.reset();
         return;
     }
 
@@ -667,11 +665,17 @@ function addDashboard(window) {
     statusLine.value = text;
   };
 
+  // Clear out the status line when closing or resetting
+  statusLine.reset = onClose(function() {
+    statusLine.collapsed = true;
+    statusLine.value = "";
+  });
+
   let (orig = window.XULBrowserWindow.setOverLink) {
     window.XULBrowserWindow.setOverLink = function(url, anchor) {
       // Clear the status if there's nothing to show
       if (url == "") {
-        statusLine.set();
+        statusLine.reset();
         return;
       }
 
@@ -823,7 +827,7 @@ function addDashboard(window) {
     }, false);
 
     tabIcon.addEventListener("mouseout", function() {
-      statusLine.set();
+      statusLine.reset();
     }, false);
   };
 
@@ -965,7 +969,7 @@ function addDashboard(window) {
 
   fxIcon.addEventListener("mouseout", function() {
     fxIcon.reset();
-    statusLine.set();
+    statusLine.reset();
   }, false);
 
   // Just go back to the default opacity when closing the dashboard
