@@ -714,6 +714,11 @@ function addDashboard(window) {
             text = "Run script";
             break;
 
+          case "mailto":
+            action = "text";
+            text = "Email " + newURI.path.split("?")[0];
+            break;
+
           default:
             action = "loadsite";
             text = getHostText(newURI);
