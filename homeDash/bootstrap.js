@@ -128,9 +128,6 @@ function addDashboard(window) {
   masterStack.move();
   unload(function() masterStack.parentNode.removeChild(masterStack), window);
 
-  // Make sure we're in the right tab stack whenever the tab switches
-  listen(window, gBrowser.tabContainer, "TabSelect", masterStack.move);
-
   // Allow normal clicking when most of the dashboard is hidden
   onClose(function() {
     masterStack.style.pointerEvents = "none";
@@ -140,6 +137,9 @@ function addDashboard(window) {
   onOpen(function(reason) {
     masterStack.style.pointerEvents = "auto";
   });
+
+  // Make sure we're in the right tab stack whenever the tab switches
+  listen(window, gBrowser.tabContainer, "TabSelect", masterStack.move);
 
   //// 1: Search preview #1
 
@@ -153,34 +153,17 @@ function addDashboard(window) {
 
     // Create and set some common preview listeners and attributes
     let browser = stack.browser = createNode("browser");
-    browser.addEventListener("DOMTitleChanged", function(event) {
-      event.stopPropagation();
-    }, true);
     browser.setAttribute("disablehistory", "true");
     browser.setAttribute("type", "content");
-    browser.style.overflow = "hidden";
     stack.appendChild(browser);
+
+    browser.style.overflow = "hidden";
 
     // Put a screen over the browser to accept clicks
     let screen = stack.screen = createNode("box");
-    screen.style.pointerEvents = "auto";
     stack.appendChild(screen);
 
-    // Save the preview when clicked
-    screen.addEventListener("click", function() {
-      // TODO swapDocShell stuff
-      gBrowser.selectedBrowser.setAttribute("src", browser.getAttribute("src"));
-      dashboard.open = false;
-    }, false);
-
-    // Indicate what clicking will do
-    screen.addEventListener("mouseover", function() {
-      statusLine.set("select", browser.contentDocument.title);
-    }, false);
-
-    screen.addEventListener("mouseout", function() {
-      statusLine.reset();
-    }, false);
+    screen.style.pointerEvents = "auto";
 
     // Create a set of callbacks to add/remove load a listener
     function addLoadListener() {
@@ -232,6 +215,27 @@ function addDashboard(window) {
       if (stack.browser.stop != null)
         stack.browser.stop();
     });
+
+    // Prevent errors from browser.js/xul when it gets unexpected title changes
+    browser.addEventListener("DOMTitleChanged", function(event) {
+      event.stopPropagation();
+    }, true);
+
+    // Save the preview when clicked
+    screen.addEventListener("click", function() {
+      // TODO swapDocShell stuff
+      gBrowser.selectedBrowser.setAttribute("src", browser.getAttribute("src"));
+      dashboard.open = false;
+    }, false);
+
+    // Indicate what clicking will do
+    screen.addEventListener("mouseover", function() {
+      statusLine.set("select", browser.contentDocument.title);
+    }, false);
+
+    screen.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
 
     return stack;
   }
@@ -341,24 +345,10 @@ function addDashboard(window) {
 
   let input = createNode("textbox");
   input.setAttribute("left", "30");
-  input.setAttribute("top", "30");
-  searchBox.appendChild(input);
-
   input.setAttribute("timeout", "1");
+  input.setAttribute("top", "30");
   input.setAttribute("type", "search");
-
-  // Clear out current state when closing
-  onClose(function() {
-    input.nextPreview = 2;
-    input.value = "";
-    searchPreview1.engineIcon = null;
-    searchPreview2.engineIcon = null;
-  });
-
-  // Focus the input box when opening
-  onOpen(function(reason) {
-    input.focus();
-  });
+  searchBox.appendChild(input);
 
   // Allow toggling a search engine (up to two visible at a time)
   input.toggleEngine = function(engineIcon) {
@@ -389,6 +379,19 @@ function addDashboard(window) {
     searchPreview2.search(input.value);
   };
 
+  // Clear out current state when closing
+  onClose(function() {
+    input.nextPreview = 2;
+    input.value = "";
+    searchPreview1.engineIcon = null;
+    searchPreview2.engineIcon = null;
+  });
+
+  // Focus the input box when opening
+  onOpen(function(reason) {
+    input.focus();
+  });
+
   // Handle the user searching for stuff
   input.addEventListener("command", function() {
     input.updatePreviews();
@@ -410,7 +413,8 @@ function addDashboard(window) {
     statusLine.reset();
   }, false);
 
-  // Create a list of search engines to toggle
+  //// 4.1.1 Search engine controls
+
   let engines = createNode("hbox");
   searchBox.appendChild(engines);
 
@@ -426,8 +430,8 @@ function addDashboard(window) {
     engineIcon.style.backgroundColor = "rgba(0, 0, 0, .3)";
     engineIcon.style.backgroundImage = "url(" + engine.iconURI.spec + ")";
     engineIcon.style.backgroundPosition = "center center";
-    engineIcon.style.backgroundSize = "16px 16px";
     engineIcon.style.backgroundRepeat = "no-repeat";
+    engineIcon.style.backgroundSize = "16px 16px";
     engineIcon.style.borderRadius = "5px";
     engineIcon.style.height = "22px";
     engineIcon.style.margin = "2px";
@@ -445,11 +449,16 @@ function addDashboard(window) {
         engineIcon.style.opacity = engineIcon.active ? "0.5" : "1";
       }
     });
-    engineIcon.active = false;
 
-    engineIcon.getSearchUrl= function(query) {
+    // Helper to get a url from a search engine
+    engineIcon.getSearchUrl = function(query) {
       return engine.getSubmission(query).uri.spec;
     };
+
+    // Make sure each engine icon is deactivated initially
+    onClose(function() {
+      engineIcon.active = false;
+    });
 
     // Inform the input to change engines
     engineIcon.addEventListener("click", function() {
@@ -522,8 +531,6 @@ function addDashboard(window) {
     siteBox.setAttribute("top", top + "");
     sites.appendChild(siteBox);
 
-    siteBox.pageInfo = pageInfo;
-
     siteBox.style.backgroundColor = "rgba(244, 244, 244, .3)";
     siteBox.style.borderRadius = "10px";
     siteBox.style.opacity = ".5";
@@ -531,10 +538,13 @@ function addDashboard(window) {
     siteBox.style.pointerEvents = "auto";
 
     let siteThumb = createNode("image");
-    siteBox.appendChild(siteThumb);
     siteThumb.setAttribute("src", pageInfo.icon);
+    siteBox.appendChild(siteThumb);
+
     siteThumb.style.height = height + "px";
     siteThumb.style.width = width + "px";
+
+    siteBox.pageInfo = pageInfo;
 
     siteBox.addEventListener("click", function() {
       // TODO swapDocShell stuff
@@ -570,11 +580,6 @@ function addDashboard(window) {
     });
   };
 
-  // Clear out current state when closing
-  onClose(function() {
-    sites.lastQuery = "";
-  });
-
   // Search through the top sites to filter out non-matches
   sites.search = function(query) {
     // Remember what query to re-search when un-highlighting
@@ -602,6 +607,11 @@ function addDashboard(window) {
     });
     return pageMatches;
   };
+
+  // Clear out current state when closing
+  onClose(function() {
+    sites.lastQuery = "";
+  });
 
   //// 4.4: Tabs
 
@@ -758,6 +768,7 @@ function addDashboard(window) {
   notifications.setAttribute("left", "0");
   notifications.setAttribute("top", "22");
   masterStack.appendChild(notifications);
+
   notifications.style.pointerEvents = "auto";
 
   // Provide a way to add a notification icon for a tab
@@ -947,14 +958,19 @@ function addDashboard(window) {
 
   let fxIcon = createNode("image");
   fxIcon.setAttribute("left", "0");
+  fxIcon.setAttribute("src", images["firefox22.png"]);
   fxIcon.setAttribute("top", "0");
   masterStack.appendChild(fxIcon);
 
-  fxIcon.setAttribute("src", images["firefox22.png"]);
   fxIcon.style.height = "22px";
   fxIcon.style.opacity = ".3";
   fxIcon.style.pointerEvents = "auto";
   fxIcon.style.width = "22px";
+
+  // Just go back to the default opacity when closing the dashboard
+  fxIcon.reset = onClose(function() {
+    fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
+  });
 
   // Allow toggling the dashboard by clicking
   fxIcon.addEventListener("click", function() {
@@ -971,11 +987,6 @@ function addDashboard(window) {
     fxIcon.reset();
     statusLine.reset();
   }, false);
-
-  // Just go back to the default opacity when closing the dashboard
-  fxIcon.reset = onClose(function() {
-    fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
-  });
 
   // Pretend the dashboard just closed to initialize things
   onClose();
