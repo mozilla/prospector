@@ -73,6 +73,42 @@ function removeChrome(window) {
 function addDashboard(window) {
   let {clearInterval, document, gBrowser, setInterval} = window;
 
+  // Track what to do when the dashboard goes away
+  function onClose(callback) {
+    // Initialize the array of onClose listeners
+    let callbacks = onClose.callbacks;
+    if (callbacks == null)
+      callbacks = onClose.callbacks = [];
+
+    // Calling with no arguments runs all the callbacks
+    if (callback == null) {
+      callbacks.forEach(function(callback) callback());
+      return;
+    }
+
+    // Save the callback and give it back
+    callbacks.push(callback);
+    return callback;
+  }
+
+  // Track what to do when the dashboard appears for a reason
+  function onOpen(reasonOrCallback) {
+    // Initialize the array of onOpen listeners
+    let callbacks = onOpen.callbacks;
+    if (callbacks == null)
+      callbacks = onOpen.callbacks = [];
+
+    // Calling with not a function is to trigger the callbacks with the reason
+    if (typeof reasonOrCallback != "function") {
+      callbacks.forEach(function(callback) callback(reasonOrCallback));
+      return;
+    }
+
+    // Save the callback and give it back
+    callbacks.push(reasonOrCallback);
+    return reasonOrCallback;
+  }
+
   function createNode(node) {
     const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
     return document.createElementNS(XUL, node);
@@ -84,7 +120,6 @@ function addDashboard(window) {
 
   let masterStack = createNode("stack");
   masterStack.style.overflow = "hidden";
-  masterStack.style.pointerEvents = "none";
 
   // Add the stack to the current tab on first load
   masterStack.move = function() {
@@ -95,6 +130,16 @@ function addDashboard(window) {
 
   // Make sure we're in the right tab stack whenever the tab switches
   listen(window, gBrowser.tabContainer, "TabSelect", masterStack.move);
+
+  // Allow normal clicking when most of the dashboard is hidden
+  onClose(function() {
+    masterStack.style.pointerEvents = "none";
+  });
+
+  // Don't allow clicking the current tab behind the stack when open
+  onOpen(function(reason) {
+    masterStack.style.pointerEvents = "auto";
+  });
 
   //// 1: Search preview #1
 
@@ -176,7 +221,7 @@ function addDashboard(window) {
     };
 
     // Hide and stop the preview
-    stack.reset = function() {
+    stack.reset = onClose(function() {
       stack.collapsed = true;
 
       // We might have a load listener if we just started a preview
@@ -187,7 +232,7 @@ function addDashboard(window) {
       // Stop the preview in-case it's loading, but only if we can
       if (stack.browser.stop != null)
         stack.browser.stop();
-    };
+    });
 
     return stack;
   }
@@ -246,33 +291,23 @@ function addDashboard(window) {
   dashboard.style.backgroundColor = "rgba(0, 0, 0, .3)";
   dashboard.style.pointerEvents = "none";
 
-  // Helper to check if the dashboard is open
+  // Helper to check if the dashboard is open or open with a reason
   Object.defineProperty(dashboard, "open", {
     get: function() !dashboard.collapsed,
-    set: function(val) {
+    set: function(reason) {
       // Don't do work if we're already of that state
-      val = !!val;
-      if (val == dashboard.open)
+      if (!!reason == dashboard.open)
         return;
 
-      // Hide if already open
+      // Hide the dashboard and run all close callbacks
       if (dashboard.open) {
         dashboard.collapsed = true;
-        gBrowser.selectedBrowser.focus();
-        fxIcon.reset();
-        input.reset();
-        notifications.paused = false;
-        pagePreview.reset();
-        searchPreview1.reset();
-        searchPreview2.reset();
-        sites.reset();
+        onClose();
       }
-      // Show if currently closed
+      // Inform why we're opening
       else {
         dashboard.collapsed = false;
-        dashboard.focus();
-        input.focus();
-        notifications.paused = true;
+        onOpen(reason);
       }
     }
   });
@@ -281,6 +316,16 @@ function addDashboard(window) {
   dashboard.toggle = function() {
     dashboard.open = !dashboard.open;
   };
+
+  // Restore focus to the browser when closing
+  onClose(function() {
+    gBrowser.selectedBrowser.focus();
+  });
+
+  // Move focus to the dashboard when opening
+  onOpen(function(reason) {
+    dashboard.focus();
+  });
 
   //// 4.1: Search controls
 
@@ -303,14 +348,18 @@ function addDashboard(window) {
   input.setAttribute("timeout", "1");
   input.setAttribute("type", "search");
 
-  // Allow clearing out any old search results
-  input.reset = function() {
+  // Clear out current state when closing
+  onClose(function() {
     input.nextPreview = 2;
     input.value = "";
     searchPreview1.engineIcon = null;
     searchPreview2.engineIcon = null;
-  };
-  input.reset();
+  });
+
+  // Focus the input box when opening
+  onOpen(function(reason) {
+    input.focus();
+  });
 
   // Allow toggling a search engine (up to two visible at a time)
   input.toggleEngine = function(engineIcon) {
@@ -522,11 +571,10 @@ function addDashboard(window) {
     });
   };
 
-  // Allow clearing out any old state
-  sites.reset = function() {
+  // Clear out current state when closing
+  onClose(function() {
     sites.lastQuery = "";
-  };
-  sites.reset();
+  });
 
   // Search through the top sites to filter out non-matches
   sites.search = function(query) {
@@ -801,6 +849,16 @@ function addDashboard(window) {
   });
   notifications._paused = false;
 
+  // Continue updating when closing
+  onClose(function() {
+    notifications.paused = false;
+  });
+
+  // Pause updating when opening
+  onOpen(function(reason) {
+    notifications.paused = true;
+  });
+
   // Keep updating notification icons and remove old ones
   let notifyInt = setInterval(function() {
     // Don't update the state when paused
@@ -906,14 +964,17 @@ function addDashboard(window) {
   }, false);
 
   fxIcon.addEventListener("mouseout", function() {
-    fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
+    fxIcon.reset();
     statusLine.set();
   }, false);
 
   // Just go back to the default opacity when closing the dashboard
-  fxIcon.reset = function() {
-    fxIcon.style.opacity = ".3";
-  };
+  fxIcon.reset = onClose(function() {
+    fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
+  });
+
+  // Pretend the dashboard just closed to initialize things
+  onClose();
 }
 
 /**
