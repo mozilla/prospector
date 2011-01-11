@@ -242,6 +242,7 @@ function addDashboard(window) {
   searchBox.style.backgroundColor = "rgba(224, 224, 224, .3)";
   searchBox.style.borderRadius = "5px";
   searchBox.style.padding = "5px";
+  searchBox.style.pointerEvents = "auto";
 
   let input = createNode("textbox");
   input.setAttribute("left", "30");
@@ -250,7 +251,6 @@ function addDashboard(window) {
 
   input.setAttribute("timeout", "1");
   input.setAttribute("type", "search");
-  input.style.pointerEvents = "auto";
 
   // Allow clearing out any old search results
   input.reset = function() {
@@ -303,6 +303,15 @@ function addDashboard(window) {
       dashboard.open = false;
   }, false);
 
+  // Describe the input box
+  input.addEventListener("mouseover", function() {
+    statusLine.set("text", "Search your top sites, open tabs, history, and the web");
+  }, false);
+
+  input.addEventListener("mouseout", function() {
+    statusLine.set();
+  }, false);
+
   // Create a list of search engines to toggle
   let engines = createNode("hbox");
   searchBox.appendChild(engines);
@@ -324,7 +333,6 @@ function addDashboard(window) {
     engineIcon.style.borderRadius = "5px";
     engineIcon.style.height = "22px";
     engineIcon.style.margin = "2px";
-    engineIcon.style.pointerEvents = "auto";
     engineIcon.style.width = "22px";
 
     Object.defineProperty(engineIcon, "active", {
