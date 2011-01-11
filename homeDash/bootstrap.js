@@ -259,6 +259,7 @@ function addDashboard(window) {
       if (dashboard.open) {
         dashboard.collapsed = true;
         gBrowser.selectedBrowser.focus();
+        fxIcon.reset();
         input.reset();
         notifications.paused = false;
         pagePreview.reset();
@@ -908,6 +909,11 @@ function addDashboard(window) {
     fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
     statusLine.set();
   }, false);
+
+  // Just go back to the default opacity when closing the dashboard
+  fxIcon.reset = function() {
+    fxIcon.style.opacity = ".3";
+  };
 }
 
 /**
