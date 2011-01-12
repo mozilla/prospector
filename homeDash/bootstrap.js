@@ -791,9 +791,7 @@ function addDashboard(window) {
 
     siteBox.style.backgroundColor = "rgba(244, 244, 244, .3)";
     siteBox.style.borderRadius = "10px";
-    siteBox.style.opacity = ".5";
     siteBox.style.overflow = "hidden";
-    siteBox.style.pointerEvents = "auto";
 
     let siteThumb = createNode("image");
     siteThumb.setAttribute("src", pageInfo.icon);
@@ -812,26 +810,24 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     siteBox.addEventListener("mouseover", function() {
-      statusLine.set("select", pageInfo.title);
-      sites.highlight(siteBox);
       pagePreview.load(pageInfo.url);
+      statusLine.set("select", pageInfo.title);
+
+      // Emphasize this one site and dim others
+      sites.highlight(siteBox);
     }, false);
 
     siteBox.addEventListener("mouseout", function() {
-      statusLine.reset();
-      sites.highlight();
       pagePreview.reset();
+      statusLine.reset();
+
+      // Revert to the highlighting behavior of the last query
+      sites.search(sites.lastQuery);
     }, false);
   });
 
   // Highlight just one site box
   sites.highlight = function(targetBox) {
-    // Not highlighting anything, so revert to the last query
-    if (targetBox == null) {
-      sites.search(sites.lastQuery);
-      return;
-    }
-
     // Fade out all the other boxes except the target made brighter
     Array.forEach(sites.childNodes, function(siteBox) {
       siteBox.style.opacity = siteBox == targetBox ? ".9" : ".1";
@@ -841,14 +837,14 @@ function addDashboard(window) {
   // Search through the top sites to filter out non-matches
   sites.search = function(query) {
     // Remember what query to re-search when un-highlighting
-    sites.lastQuery = query = query || "";
+    sites.lastQuery = query;
 
     // Find out which pages match the query
     let pageMatches = [];
     Array.forEach(sites.childNodes, function(siteBox) {
       // Just show the site if there's no query
       if (query == "") {
-        siteBox.style.opacity = ".4";
+        siteBox.style.opacity = ".5";
         siteBox.style.pointerEvents = "auto";
       }
       // Emphasize the match and record it
@@ -866,9 +862,9 @@ function addDashboard(window) {
     return pageMatches;
   };
 
-  // Clear out current state when closing
+  // Revert to default styling for the next opening
   onClose(function() {
-    sites.lastQuery = "";
+    sites.search("");
   });
 
   //// 4.4: Tabs
