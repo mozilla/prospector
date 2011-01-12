@@ -92,11 +92,16 @@ function getTextContent(node) {
   if (node == null)
     return "";
 
+  // Remove extra spaces
+  function cleanup(text) {
+    return text.trim().replace(/\s+/, " ");
+  }
+
   // Use plain text content or alternative text when available
   if (node.textContent.trim() != "")
-    return node.textContent.trim();
+    return cleanup(node.textContent);
   if (node.alt != null && node.alt.trim() != "")
-    return node.alt.trim();
+    return cleanup(node.alt);
 
   // Go through child nodes to find the first useful text
   let ret = "";
