@@ -352,8 +352,13 @@ function addDashboard(window) {
 
   // Maybe complete the rest of the word
   input.maybeSuggest = function() {
-    // No need to update if there's no new keyword
+    // If the new query fits in the last query (deleting), don't suggest
     let query = input.value;
+    if (input.lastRawQuery.indexOf(query) == 0)
+      return;
+    input.lastRawQuery = query;
+
+    // No need to update if there's no new keyword
     let keyword = getKeyword(query);
     if (keyword == null || keyword == query)
       return;
@@ -399,6 +404,8 @@ function addDashboard(window) {
 
   // Clear out current state when closing
   onClose(function() {
+    input.lastQuery = "";
+    input.lastRawQuery = "";
     input.nextPreview = 2;
     input.value = "";
     searchPreview1.engineIcon = null;
@@ -416,15 +423,23 @@ function addDashboard(window) {
     if (input.value != "" && !input.willSearch)
       input.maybeSuggest();
 
+    // Skip searches that don't change usefully
+    let query = input.value.trim();
+    if (query == input.lastQuery)
+      return;
+    input.lastQuery = query;
+
     // Update search previews if necessary
     if (searchPreview1.engineIcon != null)
-      searchPreview1.search(input.value);
+      searchPreview1.search(query);
     if (searchPreview2.engineIcon != null)
-      searchPreview2.search(input.value);
+      searchPreview2.search(query);
 
-    // Filter out the sites display as well as get the top site
-    let topSite = sites.search(input.value)[0];
-    history.keepOne(topSite);
+    // Filter out the sites display as well as get the top sites
+    let topMatches = sites.search(query);
+
+    // Do a full history search with a suggested top site
+    history.search(query, topMatches[0]);
   }, false);
 
   // Close the dashboard when hitting escape from an empty input box
@@ -514,9 +529,15 @@ function addDashboard(window) {
 
   // Add a single page info to the list of history results
   history.add = function(pageInfo) {
+    // Don't allow duplicate results with the same url
+    let existingResult = history.resultMap[pageInfo.url];
+    if (existingResult != null)
+      return existingResult;
+
     let entryBox = createNode("hbox");
     entryBox.setAttribute("align", "center");
     history.appendChild(entryBox);
+    history.resultMap[pageInfo.url] = entryBox;
 
     entryBox.pageInfo = pageInfo;
 
@@ -558,25 +579,161 @@ function addDashboard(window) {
       statusLine.reset();
       pagePreview.reset();
     }, false);
+
+    return entryBox;
   };
 
-  // Make sure there is just this one page info
-  history.keepOne = function(pageInfo) {
-    history.reset(pageInfo);
+  // Get all pages by frecency
+  history.allFrecency = Svc.History.DBConnection.createAsyncStatement(
+    "SELECT frecency, title, url " +
+    "FROM moz_places " +
+    "ORDER BY frecency DESC");
 
-    // Add it if it wasn't there already
-    if (history.childNodes.length == 0)
-      history.add(pageInfo);
+  // Get all pages under a frecency
+  history.belowFrecency = Svc.History.DBConnection.createAsyncStatement(
+    "SELECT frecency, title, url " +
+    "FROM moz_places " +
+    "WHERE frecency <= :frecency " +
+    "ORDER BY frecency DESC");
+
+  // Allow canceling an active search
+  history.cancelSearch = function() {
+    if (history.activeSearch == null)
+      return;
+    history.activeSearch.cancel();
+    history.activeSearch = null;
   };
 
-  // Remove all previous history entries on close
-  history.reset = onClose(function(exceptInfo) {
-    Array.slice(history.childNodes).forEach(function(node) {
-      // Remove everything except this one info
-      if (node.pageInfo != exceptInfo)
-        history.removeChild(node);
-    });
+  // Clear out any state like results and active queries
+  history.reset = onClose(function() {
+    history.lastQuery = null;
+    history.lastFrecency = Infinity;
+
+    // Stop any active searches or previews if any
+    history.cancelSearch();
+    pagePreview.reset();
+
+    // Remove all results and their mappings
+    let node;
+    while ((node = history.lastChild) != null)
+      history.removeChild(node);
+    history.resultMap = {};
   });
+
+  // Search through history and add items
+  history.search = function(query, topMatch) {
+    let statement;
+
+    // Filter existing results and continue if entering a longer search
+    if (query.indexOf(history.lastQuery) == 0) {
+      // Make a copy before iterating as we're removing unwanted entries
+      Array.slice(history.childNodes).forEach(function(entryBox) {
+        if (!queryMatchesPage(query, entryBox.pageInfo)) {
+          delete history.resultMap[entryBox.pageInfo.url];
+          history.removeChild(entryBox);
+        }
+      });
+
+      // Make sure the top match exists and is first
+      if (topMatch != null) {
+        let entryBox = history.add(topMatch);
+        history.insertBefore(entryBox, history.firstChild);
+      }
+
+      // Update the query for active and new searches
+      history.lastQuery = query;
+
+      // Nothing left to do as the active search will pick up the query
+      if (history.activeSearch != null)
+        return;
+
+      // Nothing left to do with all pages processed
+      if (history.lastFrecency == -Infinity)
+        return;
+
+      // Continue the search from the last frecency seen
+      statement = history.belowFrecency;
+      statement.params.frecency = history.lastFrecency;
+    }
+    // Query is different enough, so start fresh
+    else {
+      // Stop active search and remove all results
+      history.reset();
+
+      // Don't show any results if it's just the empty search
+      if (query == "")
+        return;
+
+      // Add the top match if we have one
+      if (topMatch != null)
+        history.add(topMatch);
+
+      // Search through all history by frecency
+      statement = history.allFrecency;
+      history.lastQuery = query;
+    }
+
+    // Filter out history results based on the current query
+    let thisSearch = history.activeSearch = statement.executeAsync({
+      handleCompletion: function(reason) {
+        // Only update state if it's still the active search
+        if (thisSearch != history.activeSearch)
+          return;
+
+        // Remember that we finished completely
+        history.activeSearch = null;
+        history.lastFrecency = -Infinity;
+      },
+
+      handleError: function(error) {
+        // Only update state if it's still the active search
+        if (thisSearch != history.activeSearch)
+          return;
+
+        // Just remember that this search is done
+        history.activeSearch = null;
+      },
+
+      handleResult: function(results) {
+        // NB: Use the most recent query in-case it changes since starting
+        let query = history.lastQuery;
+        let frecency;
+
+        let row;
+        while ((row = results.getNextRow()) != null) {
+          // Remember the most recent (smallest) frecency seen
+          frecency = row.getResultByName("frecency");
+
+          // Construct a page info to test and potentially add
+          let pageInfo = {
+            title: row.getResultByName("title") || "",
+            url: row.getResultByName("url")
+          };
+
+          // Determine if we should show add the result
+          if (!queryMatchesPage(query, pageInfo))
+            continue;
+
+          // Fill in some more page info values now that we want it
+          let URI = Services.io.newURI(pageInfo.url, null, null);
+          if (pageInfo.title == "")
+            pageInfo.title = getHostText(URI);
+          pageInfo.icon = Svc.Favicon.getFaviconImageForPage(URI).spec;
+          history.add(pageInfo);
+
+          // Stop processing current and future results if we have enough
+          if (history.childNodes.length > 30) {
+            history.cancelSearch();
+            break;
+          }
+        }
+
+        // Save the frecency that we last saw for future reference
+        if (frecency < history.lastFrecency)
+          history.lastFrecency = frecency;
+      }
+    });
+  };
 
   //// 4.3: Top sites
 
