@@ -64,6 +64,17 @@ function getHostText(URI) {
   return host;
 }
 
+// Lookup a keyword to suggest for the provided query
+function getKeyword(query) {
+  let queryLen = query.length;
+  let sortedLen = sortedKeywords.length;
+  for (let i = 0; i < sortedLen; i++) {
+    let keyword = sortedKeywords[i];
+    if (keyword.slice(0, queryLen) == query)
+      return keyword;
+  }
+}
+
 // Get a favicon for a tab
 function getTabIcon(tab) {
   // Use the favicon from the tab if it's there

@@ -54,3 +54,96 @@ function computeTopSites() {
     });
   });
 }
+
+// Figure out what keywords might be useful to suggest to the user
+let sortedKeywords = [];
+function processAdaptive() {
+  // Use input history to discover keywords from typed letters
+  let query = "SELECT * " +
+              "FROM moz_inputhistory " +
+              "JOIN moz_places " +
+              "ON id = place_id " +
+              "WHERE input NOT NULL " +
+              "ORDER BY frecency DESC";
+  let cols = ["input", "url", "title"];
+  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+
+  // Break a string into individual words separated by the splitter
+  function explode(text, splitter) {
+    return (text || "").toLowerCase().split(splitter).filter(function(word) {
+      // Only interested in not too-short words
+      return word && word.length > 3;
+    });
+  }
+
+  let tagSvc = Cc["@mozilla.org/browser/tagging-service;1"].
+    getService(Ci.nsITaggingService);
+
+  // Keep a nested array of array of keywords -- 2 arrays per entry
+  let allKeywords = [];
+  Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
+    // Add keywords for word parts that start with the input word
+    let word = input.trim().toLowerCase().split(/\s+/)[0];
+    word = word.replace("www.", "");
+    let wordLen = word.length;
+    if (wordLen == 0)
+      return;
+
+    // Need a nsIURI for various interfaces to get tags
+    let URI = Services.io.newURI(url, null, null);
+    let tags = tagSvc.getTagsForURI(URI);
+
+    // Only use the parts that match the beginning of the word
+    function addKeywords(parts) {
+      allKeywords.push(parts.filter(function(part) {
+        return part.slice(0, wordLen) == word;
+      }));
+    }
+
+    // Add keywords from tags, url (ignoring protocol), title
+    addKeywords(tags);
+    addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
+    addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
+  });
+
+  // Add in some typed subdomains/domains as potential keywords
+  function addDomains(extraQuery) {
+    let query = "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery;
+    let cols = ["url"];
+    let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+    Utils.queryAsync(stmt, cols).forEach(function({url}) {
+      try {
+        allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
+      }
+      // Must have be some strange format url that we probably don't care about
+      catch(ex) {}
+    });
+  }
+  addDomains("AND typed = 1 ORDER BY frecency DESC");
+  addDomains("ORDER BY visit_count DESC LIMIT 100");
+  addDomains("ORDER BY last_visit_date DESC LIMIT 100");
+
+  // Add bookmark keywords to the list of potential keywords
+  let query = "SELECT * FROM moz_keywords";
+  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let cols = ["keyword"];
+  Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
+    allKeywords.push([keyword]);
+  });
+
+  // Do a breadth first traversal of the keywords
+  do {
+    // Remove any empty results and stop if there's no more
+    allKeywords = allKeywords.filter(function(keywords) keywords.length > 0);
+    if (allKeywords.length == 0)
+      break;
+
+    // Get the first keyword of each result and add if it doesn't exist
+    allKeywords.map(function(keywords) {
+      let keyword = keywords.shift();
+      if (sortedKeywords.indexOf(keyword) == -1) {
+        sortedKeywords.push(keyword);
+      }
+    });
+  } while (true);
+}

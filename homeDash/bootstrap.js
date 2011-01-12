@@ -350,12 +350,32 @@ function addDashboard(window) {
   input.setAttribute("type", "search");
   searchBox.appendChild(input);
 
+  // Maybe complete the rest of the word
+  input.maybeSuggest = function() {
+    // No need to update if there's no new keyword
+    let query = input.value;
+    let keyword = getKeyword(query);
+    if (keyword == null || keyword == query)
+      return;
+
+    // Put in the suggestion and highlight the completed part
+    input.value = keyword;
+    input.setSelectionRange(query.length, keyword.length);
+  };
+
   // Allow toggling a search engine (up to two visible at a time)
   input.toggleEngine = function(engineIcon) {
     // Set the new engine for the preview and what preview to use next
     function replaceEngine(preview, newEngineIcon, nextPreview) {
       preview.engineIcon = newEngineIcon;
       input.nextPreview = nextPreview;
+
+      // Remove the preview if we deactivated
+      if (newEngineIcon == null)
+        preview.reset();
+      // Start previewing immediately with the current search
+      else
+        preview.search(input.value);
     }
 
     // Deactivate the engine if it's already active
@@ -368,16 +388,14 @@ function addDashboard(window) {
       replaceEngine(searchPreview1, engineIcon, 2);
     else
       replaceEngine(searchPreview2, engineIcon, 1);
-
-    // Update search results with new/removed engines
-    input.updatePreviews();
   };
 
-  // Allow updating search results on command and toggle
-  input.updatePreviews = function() {
-    searchPreview1.search(input.value);
-    searchPreview2.search(input.value);
-  };
+  // Check if either previews will be searching
+  Object.defineProperty(input, "willSearch", {
+    get: function() {
+      return (searchPreview1.engineIcon || searchPreview2.engineIcon) != null;
+    }
+  });
 
   // Clear out current state when closing
   onClose(function() {
@@ -394,7 +412,15 @@ function addDashboard(window) {
 
   // Handle the user searching for stuff
   input.addEventListener("command", function() {
-    input.updatePreviews();
+    // Only suggest if the user started typing and not searching
+    if (input.value != "" && !input.willSearch)
+      input.maybeSuggest();
+
+    // Update search previews if necessary
+    if (searchPreview1.engineIcon != null)
+      searchPreview1.search(input.value);
+    if (searchPreview2.engineIcon != null)
+      searchPreview2.search(input.value);
 
     // Filter out the sites display as well as get the top site
     let topSite = sites.search(input.value)[0];
@@ -1093,6 +1119,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Crunch through some data to use later
   computeTopSites();
+  processAdaptive();
 
   // Change the main browser windows
   watchWindows(removeChrome);
