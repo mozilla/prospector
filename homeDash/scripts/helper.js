@@ -111,6 +111,10 @@ function hosty(URI, noPort) {
 
 // Check if a query string matches some page information
 function queryMatchesPage(query, {title, url}) {
+  query = query.toLowerCase();
+  title = title.toLowerCase();
+  url = url.toLowerCase();
+
   if (title.indexOf(query) != -1)
     return true;
   if (url.indexOf(query) != -1)

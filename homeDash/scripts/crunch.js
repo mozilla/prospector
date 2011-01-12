@@ -46,9 +46,10 @@ function computeTopSites() {
     "ORDER BY frecency DESC " +
     "LIMIT 24");
   Utils.queryAsync(stm, ["url", "title"]).forEach(function({url, title}) {
+    let URI = Services.io.newURI(url, null, null);
     topSites.push({
-      icon: Svc.Favicon.getFaviconImageForPage(Services.io.newURI(url, null, null)).spec,
-      title: title,
+      icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
+      title: title || getHostText(URI),
       url: url
     });
   });

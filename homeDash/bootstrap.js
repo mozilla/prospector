@@ -395,7 +395,10 @@ function addDashboard(window) {
   // Handle the user searching for stuff
   input.addEventListener("command", function() {
     input.updatePreviews();
-    sites.search(input.value);
+
+    // Filter out the sites display as well as get the top site
+    let topSite = sites.search(input.value)[0];
+    history.keepOne(topSite);
   }, false);
 
   // Close the dashboard when hitting escape from an empty input box
@@ -477,10 +480,82 @@ function addDashboard(window) {
 
   //// 4.2: History results
 
+  let history = createNode("vbox");
+  history.setAttribute("left", "30");
+  history.setAttribute("right", Math.ceil(4 * sixthWidth) + "");
+  history.setAttribute("top", "150");
+  dashboard.appendChild(history);
+
+  // Add a single page info to the list of history results
+  history.add = function(pageInfo) {
+    let entryBox = createNode("hbox");
+    entryBox.setAttribute("align", "center");
+    history.appendChild(entryBox);
+
+    entryBox.pageInfo = pageInfo;
+
+    entryBox.style.backgroundColor = "rgba(244, 244, 244, .7)";
+    entryBox.style.opacity = ".7";
+    entryBox.style.pointerEvents = "auto";
+
+    let iconNode = createNode("image");
+    iconNode.setAttribute("src", pageInfo.icon);
+    entryBox.appendChild(iconNode);
+
+    iconNode.style.height = "16px";
+    iconNode.style.marginLeft = "2px";
+    iconNode.style.width = "16px";
+
+    let titleNode = createNode("label");
+    titleNode.setAttribute("crop", "end");
+    titleNode.setAttribute("flex", "1");
+    titleNode.setAttribute("value", pageInfo.title);
+    entryBox.appendChild(titleNode);
+
+    titleNode.style.fontSize = "16px";
+
+    entryBox.addEventListener("click", function() {
+      // TODO swapDocShell stuff
+      gBrowser.selectedBrowser.setAttribute("src", pageInfo.url);
+      dashboard.open = false;
+    }, false);
+
+    // Indicate what clicking will do
+    entryBox.addEventListener("mouseover", function() {
+      entryBox.style.opacity = ".9";
+      statusLine.set("select", pageInfo.title);
+      pagePreview.load(pageInfo.url);
+    }, false);
+
+    entryBox.addEventListener("mouseout", function() {
+      entryBox.style.opacity = ".7";
+      statusLine.reset();
+      pagePreview.reset();
+    }, false);
+  };
+
+  // Make sure there is just this one page info
+  history.keepOne = function(pageInfo) {
+    history.reset(pageInfo);
+
+    // Add it if it wasn't there already
+    if (history.childNodes.length == 0)
+      history.add(pageInfo);
+  };
+
+  // Remove all previous history entries on close
+  history.reset = onClose(function(exceptInfo) {
+    Array.slice(history.childNodes).forEach(function(node) {
+      // Remove everything except this one info
+      if (node.pageInfo != exceptInfo)
+        history.removeChild(node);
+    });
+  });
+
   //// 4.3: Top sites
 
   let sites = createNode("stack");
-  sites.setAttribute("left", "800");
+  sites.setAttribute("left", "850");
   sites.setAttribute("top", "450");
   dashboard.appendChild(sites);
 
