@@ -978,6 +978,11 @@ function addDashboard(window) {
   // Pause updating when opening
   onOpen(function(reason) {
     notifications.paused = true;
+
+    // Re-show the notifications that have been hidden
+    Array.forEach(notifications.childNodes, function(notification) {
+      notification.collapsed = false;
+    });
   });
 
   // Keep updating notification icons and remove old ones
@@ -1014,7 +1019,7 @@ function addDashboard(window) {
   }, false);
 
   notifications.addEventListener("mouseout", function() {
-    notifications.paused = false;
+    notifications.paused = dashboard.open;
   }, false);
 
   // Watch for title changes in background tabs
