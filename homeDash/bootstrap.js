@@ -156,33 +156,21 @@ function addDashboard(window) {
     masterStack.appendChild(stack);
 
     // Create and set some common preview listeners and attributes
-    let browser = stack.browser = createNode("browser");
+    let browser = createNode("browser");
+    browser.setAttribute("autocompletepopup", gBrowser.getAttribute("autocompletepopup"));
+    browser.setAttribute("contextmenu", gBrowser.getAttribute("contentcontextmenu"));
     browser.setAttribute("disablehistory", "true");
+    browser.setAttribute("tooltip", gBrowser.getAttribute("contenttooltip"));
     browser.setAttribute("type", "content");
     stack.appendChild(browser);
 
     browser.style.overflow = "hidden";
 
     // Put a screen over the browser to accept clicks
-    let screen = stack.screen = createNode("box");
+    let screen = createNode("box");
     stack.appendChild(screen);
 
     screen.style.pointerEvents = "auto";
-
-    // Create a set of callbacks to add/remove load a listener
-    function addLoadListener() {
-      stack.browser.addEventListener("DOMContentLoaded", handleLoad, false);
-    }
-
-    function removeLoadListener() {
-      stack.browser.removeEventListener("DOMContentLoaded", handleLoad, false);
-    }
-
-    // Show the preview when content is loaded
-    function handleLoad() {
-      removeLoadListener();
-      stack.collapsed = false;
-    }
 
     // Provide a way to load a url into the preview
     stack.load = function(url) {
@@ -192,33 +180,104 @@ function addDashboard(window) {
         return;
       }
 
-      // If we're already on the right url, just show it
-      if (url == stack.browser.getAttribute("src")) {
-        stack.collapsed = false;
+      // If we're already on the right url, just wait for it to be shown
+      if (url == browser.getAttribute("src"))
+        return;
+
+      // Start loading the provided url
+      browser.setAttribute("src", url);
+      stack.lastRequestedUrl = url;
+
+      // Wait until the page loads to show the preview
+      if (stack.collapsed) {
+        stack.unlisten();
+        stack.listener = function() {
+          stack.unlisten();
+          stack.collapsed = false;
+
+          // Remember the current url that is successfully previewed
+          stack.lastLoadedUrl = url;
+        };
+        browser.addEventListener("DOMContentLoaded", stack.listener, false);
+      }
+    };
+
+    // Persist the preview to where the user wants
+    stack.persistTo = function(targetTab, url) {
+      let targetBrowser = targetTab.linkedBrowser;
+      targetBrowser.stop();
+
+      // If the preview hasn't finished loading, just go there directly
+      if (stack.lastLoadedUrl != url) {
+        targetBrowser.setAttribute("src", url);
         return;
       }
 
-      // Start loading the provided url
-      stack.browser.setAttribute("src", url);
+      // Unhook our progress listener
+      let selectedIndex = targetTab._tPos;
+      const filter = gBrowser.mTabFilters[selectedIndex];
+      let tabListener = gBrowser.mTabListeners[selectedIndex];
+      targetBrowser.webProgress.removeProgressListener(filter);
+      filter.removeProgressListener(tabListener);
+      let tabListenerBlank = tabListener.mBlank;
 
-      // Wait until the page loads to show the preview
-      if (stack.collapsed)
-        addLoadListener();
+      // Restore current registered open URI
+      let previewURI = browser.currentURI;
+      let openPage = gBrowser._placesAutocomplete;
+      if (targetBrowser.registeredOpenURI) {
+        openPage.unregisterOpenPage(targetBrowser.registeredOpenURI);
+        delete targetBrowser.registeredOpenURI;
+      }
+      openPage.registerOpenPage(previewURI);
+      targetBrowser.registeredOpenURI = previewURI;
+
+      // Just take the old history to re-set after swapping
+      // TODO: Add the preview as an entry (disablehistory prevents us for now)
+      let history = targetBrowser.sessionHistory;
+
+      // Swap the docshells then fix up various properties
+      targetBrowser.swapDocShells(browser);
+      targetBrowser.webNavigation.sessionHistory = history;
+      targetBrowser.attachFormFill();
+      gBrowser.setTabTitle(targetTab);
+      gBrowser.updateCurrentBrowser(true);
+      gBrowser.useDefaultIcon(targetTab);
+
+      // Restore the progress listener
+      tabListener = gBrowser.mTabProgressListener(targetTab, targetBrowser, tabListenerBlank);
+      gBrowser.mTabListeners[selectedIndex] = tabListener;
+      filter.addProgressListener(tabListener, Ci.nsIWebProgress.NOTIFY_ALL);
+      targetBrowser.webProgress.addProgressListener(filter, Ci.nsIWebProgress.NOTIFY_ALL);
+
+      // Fix some properties because the preview is different from a tab's browser
+      targetBrowser.style.overflow = "auto";
     };
 
     // Hide and stop the preview
     stack.reset = onClose(function() {
       stack.collapsed = true;
+      stack.lastLoadedUrl = null;
+      stack.lastRequestedUrl = null;
 
       // We might have a load listener if we just started a preview
-      // NB: Don't clear the attribute so re-showing the same page is fast
-      if (stack.browser.getAttribute("src") != "")
-        removeLoadListener();
+      if (browser.hasAttribute("src")) {
+        browser.removeAttribute("src");
+        stack.unlisten();
+      }
 
       // Stop the preview in-case it's loading, but only if we can
-      if (stack.browser.stop != null)
-        stack.browser.stop();
+      if (browser.stop != null)
+        browser.stop();
     });
+
+    // Provide a way to stop listening for the preview load
+    stack.unlisten = function() {
+      if (stack.listener == null)
+        return;
+
+      browser.removeEventListener("DOMContentLoaded", stack.listener, false);
+      stack.listener = null;
+    };
 
     // Prevent errors from browser.js/xul when it gets unexpected title changes
     browser.addEventListener("DOMTitleChanged", function(event) {
@@ -227,9 +286,7 @@ function addDashboard(window) {
 
     // Save the preview when clicked
     screen.addEventListener("click", function() {
-      // TODO swapDocShell stuff
-      gBrowser.selectedBrowser.setAttribute("src", browser.getAttribute("src"));
-      dashboard.open = false;
+      dashboard.usePreview(stack, stack.lastRequestedUrl);
     }, false);
 
     // Indicate what clicking will do
@@ -355,6 +412,12 @@ function addDashboard(window) {
   // Helper to toggle the dashboard open/close
   dashboard.toggle = function() {
     dashboard.open = !dashboard.open;
+  };
+
+  // Persist the preview to the tab the user wants
+  dashboard.usePreview = function(preview, url) {
+    preview.persistTo(gBrowser.selectedTab, url);
+    dashboard.open = false;
   };
 
   // Restore focus to the browser when closing
@@ -601,10 +664,9 @@ function addDashboard(window) {
 
     titleNode.style.fontSize = "16px";
 
+    // Save the page preview when clicked
     entryBox.addEventListener("click", function() {
-      // TODO swapDocShell stuff
-      gBrowser.selectedBrowser.setAttribute("src", pageInfo.url);
-      dashboard.open = false;
+      dashboard.usePreview(pagePreview, pageInfo.url);
     }, false);
 
     // Indicate what clicking will do
@@ -842,10 +904,9 @@ function addDashboard(window) {
 
     siteBox.pageInfo = pageInfo;
 
+    // Save the page preview when clicked
     siteBox.addEventListener("click", function() {
-      // TODO swapDocShell stuff
-      gBrowser.selectedBrowser.setAttribute("src", pageInfo.url);
-      dashboard.open = false;
+      dashboard.usePreview(pagePreview, pageInfo.url);
     }, false);
 
     // Indicate what clicking will do
