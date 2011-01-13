@@ -285,6 +285,39 @@ function addDashboard(window) {
 
   let pagePreview = createPreviewStack(2 * sixthWidth, -sixthWidth);
 
+  let tabPreview = createNode("browser");
+  tabPreview.setAttribute("left", 2 * sixthWidth + "");
+  tabPreview.setAttribute("type", "content");
+  tabPreview.setAttribute("right", -2 * sixthWidth + "");
+  masterStack.appendChild(tabPreview);
+
+  // Borrow a tab's browser until the preview goes away
+  tabPreview.swap = function(tab) {
+    tabPreview.swappedBrowser = tab.linkedBrowser;
+    tabPreview.swapDocShells(tabPreview.swappedBrowser);
+    tabPreview.collapsed = false;
+  };
+
+  // Hide the preview and restore docshells
+  tabPreview.reset = onClose(function() {
+    tabPreview.collapsed = true;
+
+    // Make sure the browser has a docshell to swap in the future
+    if (tabPreview.swappedBrowser == null) {
+      tabPreview.setAttribute("src", "about:blank");
+      return;
+    }
+
+    // Restore the docshell to wherever it came from
+    tabPreview.swapDocShells(tabPreview.swappedBrowser);
+    tabPreview.swappedBrowser = null;
+  });
+
+  // Prevent errors from browser.js/xul when it gets unexpected title changes
+  tabPreview.addEventListener("DOMTitleChanged", function(event) {
+    event.stopPropagation();
+  }, true);
+
   //// 4: Main dashboard
 
   let dashboard = createNode("stack");
@@ -440,6 +473,9 @@ function addDashboard(window) {
 
     // Do a full history search with a suggested top site
     history.search(query, topMatches[0]);
+
+    // Only show the tabs that match
+    tabs.search(query);
   }, false);
 
   // Close the dashboard when hitting escape from an empty input box
@@ -868,6 +904,173 @@ function addDashboard(window) {
   });
 
   //// 4.4: Tabs
+
+  let tabs = createNode("hbox");
+  tabs.setAttribute("left", 2 * sixthWidth + 10 + "");
+  tabs.setAttribute("right", "10");
+  tabs.setAttribute("top", "30");
+  dashboard.appendChild(tabs);
+
+  tabs.style.backgroundColor = "rgba(224, 224, 224, .3)";
+  tabs.style.borderRadius = "5px";
+  tabs.style.overflow = "hidden";
+  tabs.style.pointerEvents = "auto";
+
+  // Keep track of what count to pass down to new tabs
+  tabs.lastSelectCount = 1;
+
+  // Put app tabs first then most often selected sub sorted by most recently
+  tabs.prioritize = function(a, b) {
+    // Pinned tabs have priority over not-pinned but not each other
+    let pinA = a.hasAttribute("pinned");
+    let pinB = b.hasAttribute("pinned");
+    if (pinA && !pinB)
+      return -1;
+    if (pinA && pinB)
+      return 0;
+    if (pinB && !pinA)
+      return 1;
+
+    // For regular tabs, order by most frequently selected first
+    let countDiff = (b.HDselectCount || 0) - (a.HDselectCount || 0);
+    if (countDiff != 0)
+      return countDiff;
+
+    // For ties on selection count, break with more recently selected
+    return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
+  };
+
+  // Find the open tabs that match
+  tabs.search = function(query) {
+    // Remove any existing search results and restore docshell if necessary
+    tabs.reset();
+    tabPreview.reset();
+
+    // Figure out which tabs should be shown
+    let filteredTabs = gBrowser.visibleTabs.filter(function(tab) {
+      return queryMatchesPage(query, {
+        title: tab.getAttribute("label"),
+        url: tab.linkedBrowser.currentURI.spec
+      });
+    });
+
+    // Track some state to determine when to separate tabs
+    let firstNormal = true;
+    let firstTab = true;
+
+    // Organize the tabs then add each one
+    filteredTabs.sort(tabs.prioritize).forEach(function(tab) {
+      // Put in a larger spacer between app-tabs and normal ones
+      let flex = 3;
+      if (!tab.hasAttribute("pinned") && firstNormal) {
+        firstNormal = false;
+        flex = 5;
+      }
+      // Unless it's the first tab, then put in a smaller spacer
+      if (firstTab) {
+        firstTab = false;
+        flex = 1;
+      }
+
+      // Insert a spacer before each tab
+      let spacer = createNode("spacer");
+      spacer.setAttribute("flex", flex + "");
+      tabs.appendChild(spacer);
+
+      let tabBox = createNode("box");
+      tabs.appendChild(tabBox);
+
+      tabBox.style.backgroundColor = "rgba(244, 244, 244, .7)";
+      tabBox.style.border = "1px solid rgba(0, 0, 0, .7)";
+      tabBox.style.borderRadius = "10px";
+      tabBox.style.position = "relative";
+      tabBox.style.opacity = ".5";
+      tabBox.style.overflow = "hidden";
+      tabBox.style.margin = "5px -122px 5px 0";
+
+      let tabThumb = createNode("image");
+      tabThumb.setAttribute("src", getTabIcon(tab));
+      tabThumb.style.height = "90px";
+      tabThumb.style.width = "120px";
+      tabBox.appendChild(tabThumb);
+
+      // Switch to the selected tab
+      tabBox.addEventListener("click", function() {
+        // NB: Closing the dashboard has the tab preview restoring the docshell
+        dashboard.open = false;
+        gBrowser.selectedTab = tab;
+      }, false);
+
+      // Indicate what clicking will do
+      tabBox.addEventListener("mouseover", function() {
+        tabBox.style.opacity = ".9";
+
+        // Don't show a preview of the current tab
+        if (gBrowser.selectedTab == tab) {
+          statusLine.set("text", "Return to the current tab");
+          return;
+        }
+
+        statusLine.set("switch", tab.getAttribute("label"));
+        tabPreview.swap(tab);
+      }, false);
+
+      tabBox.addEventListener("mouseout", function() {
+        statusLine.reset();
+        tabBox.style.opacity = ".5";
+        tabPreview.reset();
+      }, false);
+    });
+
+    // Fix up the right margin of the last tab and insert a spacer
+    let lastTab = tabs.lastChild;
+    if (lastTab != null) {
+      lastTab.style.marginRight = "0";
+
+      let spacer = createNode("spacer");
+      spacer.setAttribute("flex", "1");
+      tabs.appendChild(spacer);
+    }
+  };
+
+  // Clean up any tabs from a search when closing
+  tabs.reset = onClose(function() {
+    let node;
+    while ((node = tabs.lastChild) != null)
+      tabs.removeChild(node);
+  });
+
+  // Show all tabs when opening
+  onOpen(function(reason) {
+    tabs.search("");
+  });
+
+  // Newly opened tabs inherit some properties of the last selected tab
+  listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
+    let tab = event.target;
+
+    // Reduce the count by a little bit but pass down most of the value
+    tabs.lastSelectCount *= .9;
+    tab.HDselectCount = tabs.lastSelectCount;
+  });
+
+  // Count how many times each tab is selected
+  listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
+    let tab = event.target;
+    tab.HDlastSelect = Date.now();
+    tab.HDselectCount = (tab.HDselectCount || 0) + 1;
+
+    // Remember this tab's selection count to inherit later
+    tabs.lastSelectCount = tab.HDselectCount;
+  });
+
+  // Clear out any state we set on external objects
+  unload(function() {
+    Array.forEach(gBrowser.tabs, function(tab) {
+      tab.HDlastSelect = 0;
+      tab.HDselectCount = 0;
+    });
+  });
 
   //// 4.5: Browser controls
 
