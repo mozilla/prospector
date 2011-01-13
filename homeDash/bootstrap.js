@@ -139,7 +139,11 @@ function addDashboard(window) {
   });
 
   // Make sure we're in the right tab stack whenever the tab switches
-  listen(window, gBrowser.tabContainer, "TabSelect", masterStack.move);
+  listen(window, gBrowser.tabContainer, "TabSelect", function() {
+    // Close the dashboard for now as various events/shortcuts can change tabs
+    dashboard.open = false;
+    masterStack.move();
+  });
 
   //// 1: Search preview #1
 
