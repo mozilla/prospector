@@ -416,6 +416,17 @@ function addDashboard(window) {
 
   // Persist the preview to the tab the user wants
   dashboard.usePreview = function(preview, url) {
+    // Open the result in a new tab and switch to it
+    if (dashboard.openReason == "tab") {
+      let newTab = gBrowser.addTab();
+      preview.persistTo(newTab, url);
+
+      // NB: Select the tab *after* persisting, so we don't close too early
+      gBrowser.selectedTab = newTab;
+      return;
+    }
+
+    // Save the preview to the current tab and then close
     preview.persistTo(gBrowser.selectedTab, url);
     dashboard.open = false;
   };
@@ -428,7 +439,42 @@ function addDashboard(window) {
   // Move focus to the dashboard when opening
   onOpen(function(reason) {
     dashboard.focus();
+    dashboard.openReason = reason;
   });
+
+  // Catch various existing browser commands to redirect to the dashboard
+  let commandSet = document.getElementById("mainCommandSet");
+  let commandWatcher = function(event) {
+    // Figure out if it's a command we're stealing
+    let reason = true;
+    switch (event.target.id) {
+      case "Browser:OpenLocation":
+        reason = "location";
+        break;
+
+      case "cmd_newNavigatorTab":
+        reason = "tab";
+        break;
+
+      case "Tools:Search":
+        reason = "search";
+        break;
+
+      // Not something we care about, so nothing to do!
+      default:
+        return;
+    }
+
+    // Open the dashboard with this reason
+    dashboard.open = reason;
+
+    // Prevent the original command from triggering
+    event.stopPropagation();
+  };
+  commandSet.addEventListener("command", commandWatcher, true);
+  unload(function() {
+    commandSet.removeEventListener("command", commandWatcher, true);
+  }, window);
 
   //// 4.1: Search controls
 
@@ -515,6 +561,10 @@ function addDashboard(window) {
   // Focus the input box when opening
   onOpen(function(reason) {
     input.focus();
+
+    // Automatically toggle the default engine if we need to search
+    if (reason == "search")
+      input.toggleEngine(input.defaultEngineIcon);
   });
 
   // Handle the user searching for stuff
@@ -583,6 +633,10 @@ function addDashboard(window) {
     engineIcon.style.height = "22px";
     engineIcon.style.margin = "2px";
     engineIcon.style.width = "22px";
+
+    // Save this engine icon if it's the one the user current uses
+    if (engine == Services.search.currentEngine)
+      input.defaultEngineIcon = engineIcon;
 
     Object.defineProperty(engineIcon, "active", {
       get: function() engineIcon.style.opacity != "0.5",
@@ -1172,7 +1226,10 @@ function addDashboard(window) {
         break;
 
       case "select":
-        text = "Select " + text;
+        if (dashboard.openReason == "tab")
+          text = "Tabify " + text;
+        else
+          text = "Select " + text;
         break;
 
       case "switch":
