@@ -44,6 +44,9 @@ Cu.import("resource://gre/modules/Services.jsm");
 // Keep a reference to various packaged images
 const images = {};
 
+// Define a global shadow to be used for various elements
+const globalShadow = "3px 3px 10px rgba(0, 0, 0, .8)";
+
 /**
  * Remove all existing chrome of the browser window
  */
@@ -164,6 +167,7 @@ function addDashboard(window) {
     browser.setAttribute("type", "content");
     stack.appendChild(browser);
 
+    browser.style.boxShadow = globalShadow;
     browser.style.overflow = "hidden";
 
     // Put a screen over the browser to accept clicks
@@ -352,6 +356,8 @@ function addDashboard(window) {
   tabPreview.setAttribute("right", -2 * sixthWidth + "");
   masterStack.appendChild(tabPreview);
 
+  tabPreview.style.boxShadow = globalShadow;
+
   // Borrow a tab's browser until the preview goes away
   tabPreview.swap = function(tab) {
     tabPreview.swappedBrowser = tab.linkedBrowser;
@@ -484,8 +490,9 @@ function addDashboard(window) {
   searchBox.setAttribute("top", "30");
   dashboard.appendChild(searchBox);
 
-  searchBox.style.backgroundColor = "rgba(224, 224, 224, .3)";
+  searchBox.style.backgroundColor = "rgba(224, 224, 224, .5)";
   searchBox.style.borderRadius = "5px";
+  searchBox.style.boxShadow = globalShadow;
   searchBox.style.padding = "5px";
   searchBox.style.pointerEvents = "auto";
 
@@ -684,6 +691,9 @@ function addDashboard(window) {
   history.setAttribute("top", "150");
   dashboard.appendChild(history);
 
+  history.style.backgroundColor = "rgba(224, 224, 224, .5)";
+  history.style.boxShadow = globalShadow;
+
   // Add a single page info to the list of history results
   history.add = function(pageInfo) {
     // Don't allow duplicate results with the same url
@@ -698,7 +708,7 @@ function addDashboard(window) {
 
     entryBox.pageInfo = pageInfo;
 
-    entryBox.style.backgroundColor = "rgba(244, 244, 244, .7)";
+    entryBox.style.backgroundColor = "rgba(244, 244, 244, .9)";
     entryBox.style.opacity = ".7";
     entryBox.style.pointerEvents = "auto";
 
@@ -945,8 +955,9 @@ function addDashboard(window) {
     siteBox.setAttribute("top", top + "");
     sites.appendChild(siteBox);
 
-    siteBox.style.backgroundColor = "rgba(244, 244, 244, .3)";
+    siteBox.style.backgroundColor = "rgb(244, 244, 244)";
     siteBox.style.borderRadius = "10px";
+    siteBox.style.boxShadow = globalShadow;
     siteBox.style.overflow = "hidden";
 
     let siteThumb = createNode("image");
@@ -999,12 +1010,12 @@ function addDashboard(window) {
     Array.forEach(sites.childNodes, function(siteBox) {
       // Just show the site if there's no query
       if (query == "") {
-        siteBox.style.opacity = ".5";
+        siteBox.style.opacity = ".7";
         siteBox.style.pointerEvents = "auto";
       }
       // Emphasize the match and record it
       else if (queryMatchesPage(query, siteBox.pageInfo)) {
-        siteBox.style.opacity = ".7";
+        siteBox.style.opacity = ".9";
         siteBox.style.pointerEvents = "auto";
         pageMatches.push(siteBox.pageInfo);
       }
@@ -1030,8 +1041,9 @@ function addDashboard(window) {
   tabs.setAttribute("top", "30");
   dashboard.appendChild(tabs);
 
-  tabs.style.backgroundColor = "rgba(224, 224, 224, .3)";
+  tabs.style.backgroundColor = "rgba(224, 224, 224, .9)";
   tabs.style.borderRadius = "5px";
+  tabs.style.boxShadow = globalShadow;
   tabs.style.overflow = "hidden";
   tabs.style.pointerEvents = "auto";
 
@@ -1122,7 +1134,8 @@ function addDashboard(window) {
 
       // Indicate what clicking will do
       tabBox.addEventListener("mouseover", function() {
-        tabBox.style.opacity = ".9";
+        tabBox.style.boxShadow = globalShadow;
+        tabBox.style.opacity = "1";
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
@@ -1135,8 +1148,10 @@ function addDashboard(window) {
       }, false);
 
       tabBox.addEventListener("mouseout", function() {
-        statusLine.reset();
+        tabBox.style.boxShadow = "";
         tabBox.style.opacity = ".5";
+
+        statusLine.reset();
         tabPreview.reset();
       }, false);
     });
