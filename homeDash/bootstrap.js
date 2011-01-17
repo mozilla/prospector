@@ -1142,7 +1142,7 @@ function addDashboard(window) {
       tabBox.style.position = "relative";
       tabBox.style.opacity = ".5";
       tabBox.style.overflow = "hidden";
-      tabBox.style.margin = "5px -122px 5px 0";
+      tabBox.style.margin = "10px -122px 10px 0";
 
       let tabThumb = createNode("image");
       tabThumb.setAttribute("src", getTabIcon(tab));
@@ -1160,7 +1160,11 @@ function addDashboard(window) {
       // Indicate what clicking will do
       tabBox.addEventListener("mouseover", function() {
         tabBox.style.boxShadow = globalShadow;
+        tabBox.style.marginBottom = "0";
+        tabBox.style.marginTop = "0";
         tabBox.style.opacity = "1";
+        tabThumb.style.height = "110px";
+        tabThumb.style.width = "146px";
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
@@ -1174,7 +1178,11 @@ function addDashboard(window) {
 
       tabBox.addEventListener("mouseout", function() {
         tabBox.style.boxShadow = "";
+        tabBox.style.marginBottom = "10px";
+        tabBox.style.marginTop = "10px";
         tabBox.style.opacity = ".5";
+        tabThumb.style.height = "90px";
+        tabThumb.style.width = "120px";
 
         statusLine.reset();
         tabPreview.reset();
