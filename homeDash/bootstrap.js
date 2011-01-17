@@ -972,8 +972,8 @@ function addDashboard(window) {
 
     let width = sizeScale * size * 2;
     let height = sizeScale * size * 3 / 4 * 2;
-    let left = sizeScale * leftBase - width / 2;
-    let top = sizeScale * topBase * 3 / 4 - height / 2;
+    let left = 1.1 * sizeScale * leftBase - width / 2;
+    let top = 1.1 * sizeScale * topBase * 3 / 4 - height / 2;
 
     let siteBox = createNode("box");
     siteBox.setAttribute("left", left + "");
