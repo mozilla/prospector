@@ -446,6 +446,11 @@ function addDashboard(window) {
   onOpen(function(reason) {
     dashboard.focus();
     dashboard.openReason = reason;
+
+    // Restore visibility to various things in the dashboard
+    history.collapsed = false;
+    sites.collapsed = false;
+    tabs.collapsed = false;
   });
 
   // Catch various existing browser commands to redirect to the dashboard
@@ -546,6 +551,26 @@ function addDashboard(window) {
       replaceEngine(searchPreview1, engineIcon, 2);
     else
       replaceEngine(searchPreview2, engineIcon, 1);
+
+    // For side-by-side searches, hide all other information and resize
+    if (searchPreview1.engineIcon != null) {
+      history.collapsed = true;
+      sites.collapsed = true;
+      tabs.collapsed = true;
+
+      searchPreview2.setAttribute("left", sixthWidth * 3 + "");
+    }
+    else {
+      history.collapsed = false;
+      sites.collapsed = false;
+      tabs.collapsed = false;
+
+      searchPreview2.setAttribute("left", sixthWidth * 2 + "");
+    }
+
+    // If both searches aren't being used, make sure the next one is "right"
+    if (searchPreview1.engineIcon == null && searchPreview2.engineIcon == null)
+      input.nextPreview = 2;
   };
 
   // Check if either previews will be searching
