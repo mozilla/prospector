@@ -1243,10 +1243,17 @@ function addDashboard(window) {
 
   //// 5: Status line
 
+  let statusBox = createNode("box");
+  statusBox.setAttribute("left", "0");
+  statusBox.setAttribute("right", "0");
+  statusBox.setAttribute("top", "0");
+  masterStack.appendChild(statusBox);
+
+  statusBox.style.overflow = "hidden";
+  statusBox.style.pointerEvents = "none";
+
   let statusLine = createNode("label");
-  statusLine.setAttribute("left", "0");
-  statusLine.setAttribute("top", "0");
-  masterStack.appendChild(statusLine);
+  statusBox.appendChild(statusLine);
 
   statusLine.style.backgroundColor = "rgba(224, 224, 224, .8)";
   statusLine.style.borderBottomRightRadius = "10px";
