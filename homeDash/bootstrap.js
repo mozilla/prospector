@@ -176,8 +176,17 @@ function addDashboard(window) {
 
     screen.style.pointerEvents = "auto";
 
+    // Keep track of callbacks to run when no longer loading a url
+    let unloadCallbacks = [];
+
+    // Run each unload callback and clear them
+    function runUnload() {
+      unloadCallbacks.slice().forEach(function(callback) callback());
+      unloadCallbacks.length = 0;
+    }
+
     // Provide a way to load a url into the preview
-    stack.load = function(url) {
+    stack.load = function(url, callback) {
       // Nothing to load, so hide
       if (url == null || url == "") {
         stack.reset();
@@ -187,6 +196,13 @@ function addDashboard(window) {
       // If we're already on the right url, just wait for it to be shown
       if (url == browser.getAttribute("src"))
         return;
+
+      // Must be changing urls, so inform whoever needs to know
+      runUnload();
+
+      // Save this new unload callback for later
+      if (typeof callback == "function")
+        unloadCallbacks.push(callback);
 
       // Start loading the provided url
       browser.setAttribute("src", url);
@@ -213,7 +229,9 @@ function addDashboard(window) {
 
       // If the preview hasn't finished loading, just go there directly
       if (stack.lastLoadedUrl != url) {
-        targetBrowser.setAttribute("src", url);
+        // Allow arbitrary queries (invalid urls) to be fixed
+        const flags = Ci.nsIWebNavigation.LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP;
+        targetBrowser.loadURIWithFlags(url, flags);
         return;
       }
 
@@ -259,6 +277,7 @@ function addDashboard(window) {
 
     // Hide and stop the preview
     stack.reset = onClose(function() {
+      runUnload();
       stack.collapsed = true;
       stack.lastLoadedUrl = null;
       stack.lastRequestedUrl = null;
@@ -734,6 +753,7 @@ function addDashboard(window) {
     entryBox.pageInfo = pageInfo;
 
     entryBox.style.backgroundColor = "rgba(244, 244, 244, .9)";
+    entryBox.style.fontSize = "16px";
     entryBox.style.opacity = ".7";
     entryBox.style.pointerEvents = "auto";
 
@@ -751,8 +771,6 @@ function addDashboard(window) {
     titleNode.setAttribute("value", pageInfo.title);
     entryBox.appendChild(titleNode);
 
-    titleNode.style.fontSize = "16px";
-
     // Save the page preview when clicked
     entryBox.addEventListener("click", function() {
       dashboard.usePreview(pagePreview, pageInfo.url);
@@ -761,6 +779,7 @@ function addDashboard(window) {
     // Indicate what clicking will do
     entryBox.addEventListener("mouseover", function() {
       entryBox.style.opacity = ".9";
+      entryBox.style.textDecoration = "underline";
 
       // Show the preview and hide other things covering it
       pagePreview.load(pageInfo.url);
@@ -771,12 +790,57 @@ function addDashboard(window) {
 
     entryBox.addEventListener("mouseout", function() {
       entryBox.style.opacity = ".7";
+      entryBox.style.textDecoration = "";
 
       sites.collapsed = false;
       statusLine.reset();
       pagePreview.reset();
       tabs.collapsed = false;
     }, false);
+
+    return entryBox;
+  };
+
+  // Specially handle adding the single top match result
+  history.addTopMatch = function(pageInfo) {
+    // Remove styling of any previous top match
+    if (history.topMatchBox != null) {
+      history.topMatchBox.style.boxShadow = "";
+      history.topMatchBox.style.fontSize = "16px";
+      history.topMatchBox.style.fontWeight = "";
+      history.topMatchBox.style.margin = "0";
+
+      // Clear out the preview if we're about to switch urls
+      if (pageInfo != null && pageInfo.url != history.topMatchBox.pageInfo.url)
+        pagePreview.reset();
+    }
+
+    // Nothing else to do if there's no page to add
+    if (pageInfo == null) {
+      history.topMatchBox = null;
+      pagePreview.reset();
+      return;
+    }
+
+    // Add the top match and remember it for later
+    let entryBox = history.topMatchBox = history.add(pageInfo);
+
+    // Specially style the top match
+    entryBox.style.boxShadow = globalShadow;
+    entryBox.style.fontSize = "20px";
+    entryBox.style.fontWeight = "bold";
+    entryBox.style.margin = "0 -10px 5px -5px";
+
+    // Start previewing this top match if not doing web searches
+    if (!input.willSearch) {
+      // Load the preview and clean up styles when removed
+      pagePreview.load(pageInfo.url, function() {
+        entryBox.style.textDecoration = "";
+      });
+
+      // Indicate that we're loading
+      entryBox.style.textDecoration = "underline";
+    }
 
     return entryBox;
   };
@@ -806,6 +870,7 @@ function addDashboard(window) {
   history.reset = onClose(function() {
     history.lastQuery = null;
     history.lastFrecency = Infinity;
+    history.topMatchBox = null;
 
     // Stop any active searches or previews if any
     history.cancelSearch();
@@ -833,10 +898,9 @@ function addDashboard(window) {
       });
 
       // Make sure the top match exists and is first
-      if (topMatch != null) {
-        let entryBox = history.add(topMatch);
+      let entryBox = history.addTopMatch(topMatch);
+      if (entryBox != null)
         history.insertBefore(entryBox, history.firstChild);
-      }
 
       // Update the query for active and new searches
       history.lastQuery = query;
@@ -863,8 +927,7 @@ function addDashboard(window) {
         return;
 
       // Add the top match if we have one
-      if (topMatch != null)
-        history.add(topMatch);
+      history.addTopMatch(topMatch);
 
       // Search through all history by frecency
       statement = history.allFrecency;
