@@ -652,6 +652,45 @@ function addDashboard(window) {
       dashboard.open = false;
   }, false);
 
+  // Look for enter after "command" has fired
+  input.addEventListener("keyup", function(event) {
+    // Only care about enter and return
+    switch (event.keyCode) {
+      case event.DOM_VK_ENTER:
+      case event.DOM_VK_RETURN:
+        break;
+
+      default:
+        return;
+    }
+
+    // Figure out which preview to use and url to load
+    let preview, url;
+
+    // Prefer the "left" search engine as it isn't on by default
+    if (searchPreview1.engineIcon != null) {
+      url = searchPreview1.engineIcon.getSearchUrl(input.lastQuery);
+      preview = searchPreview1;
+    }
+    // Fall back to the default search if searches are active
+    else if (searchPreview2.engineIcon != null) {
+      url = searchPreview2.engineIcon.getSearchUrl(input.lastQuery);
+      preview = searchPreview2;
+    }
+    // Use the top match for the query if it exists
+    else if (history.topMatchBox != null) {
+      url = history.topMatchBox.pageInfo.url;
+      preview = pagePreview;
+    }
+    // Just navigate to whatever the user typed in
+    else {
+      url = input.lastQuery;
+      preview = pagePreview;
+    }
+
+    dashboard.usePreview(preview, url);
+  }, false);
+
   // Describe the input box
   input.addEventListener("mouseover", function() {
     statusLine.set("text", "Search your top sites, open tabs, history, and the web");
