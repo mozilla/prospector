@@ -761,14 +761,21 @@ function addDashboard(window) {
     // Indicate what clicking will do
     entryBox.addEventListener("mouseover", function() {
       entryBox.style.opacity = ".9";
-      statusLine.set("select", pageInfo.title);
+
+      // Show the preview and hide other things covering it
       pagePreview.load(pageInfo.url);
+      sites.collapsed = true;
+      statusLine.set("select", pageInfo.title);
+      tabs.collapsed = true;
     }, false);
 
     entryBox.addEventListener("mouseout", function() {
       entryBox.style.opacity = ".7";
+
+      sites.collapsed = false;
       statusLine.reset();
       pagePreview.reset();
+      tabs.collapsed = false;
     }, false);
 
     return entryBox;
@@ -1003,6 +1010,7 @@ function addDashboard(window) {
     siteBox.addEventListener("mouseover", function() {
       pagePreview.load(pageInfo.url);
       statusLine.set("select", pageInfo.title);
+      tabs.collapsed = true;
 
       // Emphasize this one site and dim others
       sites.highlight(siteBox);
@@ -1011,6 +1019,7 @@ function addDashboard(window) {
     siteBox.addEventListener("mouseout", function() {
       pagePreview.reset();
       statusLine.reset();
+      tabs.collapsed = false;
 
       // Revert to the highlighting behavior of the last query
       sites.search(sites.lastQuery);
@@ -1166,6 +1175,9 @@ function addDashboard(window) {
         tabThumb.style.height = "110px";
         tabThumb.style.width = "146px";
 
+        // Show the tab preview and get rid of other things covering
+        sites.collapsed = true;
+
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
           statusLine.set("text", "Return to the current tab");
@@ -1183,6 +1195,8 @@ function addDashboard(window) {
         tabBox.style.opacity = ".5";
         tabThumb.style.height = "90px";
         tabThumb.style.width = "120px";
+
+        sites.collapsed = false;
 
         statusLine.reset();
         tabPreview.reset();
