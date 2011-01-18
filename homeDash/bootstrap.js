@@ -539,6 +539,36 @@ function addDashboard(window) {
   // Add extra behavior for switching to most-recently-used tabs
   listen(window, window, "keydown", function(event) {
     switch (event.keyCode) {
+      // Allow closing of the current tab when tab previews are shown
+      case event.DOM_VK_BACK_SPACE:
+      case event.DOM_VK_DELETE:
+      case event.DOM_VK_W:
+        if (dashboard.tabPreviewer == null)
+          return;
+
+        // Show the next preview while removing the current tab
+        dashboard.tabPreviewer(event.shiftKey, true);
+        break;
+
+      // Provide an alternate way to select the current preview
+      case event.DOM_VK_ENTER:
+      case event.DOM_VK_RETURN:
+      case event.DOM_VK_SPACE:
+        if (dashboard.tabPreviewer == null)
+          return;
+
+        dashboard.tabPreviewer.stop(true);
+        break;
+
+      // Provide a way to cancel out of previewing tabs
+      case event.DOM_VK_ESCAPE:
+      case event.DOM_VK_0:
+        if (dashboard.tabPreviewer == null)
+          return;
+
+        dashboard.tabPreviewer.stop(false);
+        break;
+
       // Watch for ctrl-tab, ctrl-9, cmd-9 to catch tab switching
       case event.DOM_VK_TAB:
       case event.DOM_VK_9:
