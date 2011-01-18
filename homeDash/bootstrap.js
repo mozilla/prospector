@@ -143,8 +143,14 @@ function addDashboard(window) {
 
   // Make sure we're in the right tab stack whenever the tab switches
   listen(window, gBrowser.tabContainer, "TabSelect", function() {
-    // Close the dashboard for now as various events/shortcuts can change tabs
-    dashboard.open = false;
+    // Close the dashboard if the tab previewer isn't active (for tab close)
+    if (dashboard.tabPreviewer == null)
+      dashboard.open = false;
+
+    // Make sure we don't have a tab in a preview as it'll lose its dochsell
+    tabPreview.reset();
+
+    // XXX Move the stack to the current tab even though it kills docshells
     masterStack.move();
   });
 
@@ -369,24 +375,35 @@ function addDashboard(window) {
 
   let pagePreview = createPreviewStack(2 * sixthWidth, -sixthWidth);
 
+  // Create a stack for tab previews that allows swapping in tabs
+  let tabPreviewStack = createNode("stack");
+  tabPreviewStack.setAttribute("left", 2 * sixthWidth + "");
+  tabPreviewStack.setAttribute("right", -2 * sixthWidth + "");
+  masterStack.appendChild(tabPreviewStack);
+
+  // Prepare a browser to hold the docshell for the live preview
   let tabPreview = createNode("browser");
-  tabPreview.setAttribute("left", 2 * sixthWidth + "");
   tabPreview.setAttribute("type", "content");
-  tabPreview.setAttribute("right", -2 * sixthWidth + "");
-  masterStack.appendChild(tabPreview);
+  tabPreviewStack.appendChild(tabPreview);
 
   tabPreview.style.boxShadow = globalShadow;
+
+  // Prevent clicks/mouse events on the tab preview
+  let tabPreviewScreen = createNode("box");
+  tabPreviewStack.appendChild(tabPreviewScreen);
+
+  tabPreviewScreen.style.pointerEvents = "auto";
 
   // Borrow a tab's browser until the preview goes away
   tabPreview.swap = function(tab) {
     tabPreview.swappedBrowser = tab.linkedBrowser;
     tabPreview.swapDocShells(tabPreview.swappedBrowser);
-    tabPreview.collapsed = false;
+    tabPreviewStack.collapsed = false;
   };
 
   // Hide the preview and restore docshells
   tabPreview.reset = onClose(function() {
-    tabPreview.collapsed = true;
+    tabPreviewStack.collapsed = true;
 
     // Make sure the browser has a docshell to swap in the future
     if (tabPreview.swappedBrowser == null) {
@@ -466,8 +483,21 @@ function addDashboard(window) {
     dashboard.focus();
     dashboard.openReason = reason;
 
+    if (reason == "switch") {
+      history.collapsed = true;
+      searchBox.collapsed = true;
+      sites.collapsed = true;
+      tabs.collapsed = true;
+
+      pagePreview.reset();
+      searchPreview1.reset();
+      searchPreview2.reset();
+      return;
+    }
+
     // Restore visibility to various things in the dashboard
     history.collapsed = false;
+    searchBox.collapsed = false;
     sites.collapsed = false;
     tabs.collapsed = false;
   });
@@ -505,6 +535,114 @@ function addDashboard(window) {
   unload(function() {
     commandSet.removeEventListener("command", commandWatcher, true);
   }, window);
+
+  // Add extra behavior for switching to most-recently-used tabs
+  listen(window, window, "keydown", function(event) {
+    switch (event.keyCode) {
+      // Watch for ctrl-tab, ctrl-9, cmd-9 to catch tab switching
+      case event.DOM_VK_TAB:
+      case event.DOM_VK_9:
+        // If neither ctrl or cmd are pressed, ignore this event
+        if (!event.ctrlKey && !event.metaKey)
+          return;
+
+        // Initialize the tab previewer
+        if (dashboard.tabPreviewer == null) {
+          dashboard.open = "switch";
+
+          // Figure out the order of most-recently-used tabs
+          let mruTabs = gBrowser.visibleTabs.sort(function(a, b) {
+            return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
+          });
+
+          // Remove the currently selected tab and treat it as the first preview
+          let previewedTab = mruTabs.shift();
+
+          // Provide a helper to switch through MRU tabs in order or backwards
+          dashboard.tabPreviewer = function(backwards, removeCurrent) {
+            // Remove the current preview if necessary
+            tabPreview.reset();
+
+            // Remove the actual tab that's being previewed
+            if (removeCurrent)
+              gBrowser.removeTab(previewedTab);
+
+            // Pick out the more recently used (or wrap to least)
+            if (backwards) {
+              // Put the current preview on the front of the list
+              if (!removeCurrent)
+                mruTabs.unshift(previewedTab);
+              previewedTab = mruTabs.pop();
+            }
+            // Get the lesser recently used (or wrap to most)
+            else {
+              // Put the current preview on the end of the list
+              if (!removeCurrent)
+                mruTabs.push(previewedTab);
+              previewedTab = mruTabs.shift();
+            }
+
+            // Must have closed the last tab, so abort!
+            if (previewedTab == null) {
+              dashboard.tabPreviewer.stop();
+              return;
+            }
+
+            // Don't show a preview if it's for the current tab
+            if (gBrowser.selectedTab == previewedTab) {
+              statusLine.set("text", "Return to the current tab");
+              return;
+            }
+
+            // Indicate what letting go of the modifier will do
+            statusLine.set("switch", previewedTab.getAttribute("label"));
+            tabPreview.swap(previewedTab);
+          };
+
+          // Provide a way to stop showing the tab previews
+          dashboard.tabPreviewer.stop = function(selectTab) {
+            // NB: Closing the dashboard will restore/reset the tab docshell
+            dashboard.open = false;
+
+            // Remove the added tab preview functionality and state
+            unlisten();
+            dashboard.tabPreviewer = null;
+
+            // Switch to the previewed tab if desired
+            if (selectTab)
+              gBrowser.selectedTab = previewedTab;
+          };
+
+          // Listen for un-modifying keys (ctrl and cmd) to stop previewing
+          let unlisten = listen(window, window, "keyup", function(event) {
+            switch (event.keyCode) {
+              case event.DOM_VK_CONTROL:
+              case event.DOM_VK_META:
+                dashboard.tabPreviewer.stop(true);
+                break;
+            }
+          });
+        }
+
+        // Immediately show the next preview
+        dashboard.tabPreviewer(event.shiftKey, false);
+        break;
+
+      // If it's not a key combo that we care about, abort
+      default:
+        return;
+    }
+
+    // We must have done something special, so don't do what it would have done
+    event.stopPropagation();
+    event.preventDefault();
+  });
+
+  // Prevent the default behavior for ctrl-tab key presses
+  listen(window, window, "keypress", function(event) {
+    if (event.keyCode == event.DOM_VK_TAB && event.ctrlKey)
+      event.stopPropagation();
+  });
 
   //// 4.1: Search controls
 
@@ -611,6 +749,9 @@ function addDashboard(window) {
 
   // Focus the input box when opening
   onOpen(function(reason) {
+    if (reason == "switch")
+      return;
+
     input.focus();
 
     // Automatically toggle the default engine if we need to search
@@ -1185,6 +1326,7 @@ function addDashboard(window) {
 
   // Keep track of what count to pass down to new tabs
   tabs.lastSelectCount = 1;
+  tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
 
   // Put app tabs first then most often selected sub sorted by most recently
   tabs.prioritize = function(a, b) {
@@ -1325,12 +1467,18 @@ function addDashboard(window) {
 
   // Show all tabs when opening
   onOpen(function(reason) {
+    if (reason == "switch")
+      return;
+
     tabs.search("");
   });
 
   // Newly opened tabs inherit some properties of the last selected tab
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
     let tab = event.target;
+
+    // Inherit the full last selection time
+    tab.HDlastSelect = tabs.lastSelectTime;
 
     // Reduce the count by a little bit but pass down most of the value
     tabs.lastSelectCount *= .9;
@@ -1345,6 +1493,7 @@ function addDashboard(window) {
 
     // Remember this tab's selection count to inherit later
     tabs.lastSelectCount = tab.HDselectCount;
+    tabs.lastSelectTime = tab.HDlastSelect;
   });
 
   // Clear out any state we set on external objects
