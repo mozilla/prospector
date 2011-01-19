@@ -74,7 +74,7 @@ function removeChrome(window) {
  * Add a dashboard that shows up over the main browsing area
  */
 function addDashboard(window) {
-  let {clearInterval, document, gBrowser, setInterval} = window;
+  let {clearInterval, clearTimeout, document, gBrowser, setInterval, setTimeout} = window;
 
   // Track what to do when the dashboard goes away
   function onClose(callback) {
@@ -843,6 +843,9 @@ function addDashboard(window) {
     if (query == input.lastQuery)
       return;
     input.lastQuery = query;
+
+    // Prevent accidental mouseover for things already under the pointer
+    mouseSink.capture();
 
     // Update search previews if necessary
     if (searchPreview1.engineIcon != null)
@@ -1963,6 +1966,38 @@ function addDashboard(window) {
     fxIcon.reset();
     statusLine.reset();
   }, false);
+
+  //// 8: Mouseover event sink
+
+  let mouseSink = createNode("box");
+  masterStack.appendChild(mouseSink);
+
+  // Capture mouse events so nodes under the mouse don't mouseover immediately
+  mouseSink.capture = function() {
+    // Direct mouse events to this layer
+    mouseSink.style.pointerEvents = "auto";
+
+    // Don't add another listener
+    if (mouseSink.unmove != null)
+      return;
+
+    // Save a way to remove the mousemove listener
+    mouseSink.unmove = listen(window, mouseSink, "mousemove", mouseSink.reset);
+  };
+
+  // Clean up the listener when stopping
+  mouseSink.reset = onClose(function() {
+    // Restore mouseover/mouseout events to whatever is under the pointer
+    mouseSink.style.pointerEvents = "none";
+
+    // Can't stop the listener multiple times
+    if (mouseSink.unmove == null)
+      return;
+
+    // Stop listening for mousemove
+    mouseSink.unmove();
+    mouseSink.unmove = null;
+  });
 
   // Pretend the dashboard just closed to initialize things
   onClose();
