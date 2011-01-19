@@ -578,12 +578,14 @@ function addDashboard(window) {
           dashboard.open = "switch";
 
           // Figure out the order of most-recently-used tabs
-          let mruTabs = gBrowser.visibleTabs.sort(function(a, b) {
+          let mruTabs = tabs.filter(input.value).sort(function(a, b) {
             return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
           });
 
-          // Remove the currently selected tab and treat it as the first preview
-          let previewedTab = mruTabs.shift();
+          // Treat the current tab as previewed even if it is filtered out
+          let previewedTab = gBrowser.selectedTab;
+          if (previewedTab == mruTabs[0])
+            mruTabs.shift();
 
           // Provide a helper to switch through MRU tabs in order or backwards
           dashboard.tabPreviewer = function(backwards, removeCurrent) {
@@ -628,12 +630,16 @@ function addDashboard(window) {
 
           // Provide a way to stop showing the tab previews
           dashboard.tabPreviewer.stop = function(selectTab) {
-            // NB: Closing the dashboard will restore/reset the tab docshell
-            dashboard.open = false;
-
             // Remove the added tab preview functionality and state
             unlisten();
             dashboard.tabPreviewer = null;
+
+            // Don't close the dashboard and switch tabs if no longer switching
+            if (dashboard.openReason != "switch")
+              return;
+
+            // NB: Closing the dashboard will restore/reset the tab docshell
+            dashboard.open = false;
 
             // Switch to the previewed tab if desired
             if (selectTab)
@@ -1395,6 +1401,16 @@ function addDashboard(window) {
   tabs.lastSelectCount = 1;
   tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
 
+  // Get an array of tabs that match a query
+  tabs.filter = function(query) {
+    return gBrowser.visibleTabs.filter(function(tab) {
+      return queryMatchesPage(query, {
+        title: tab.getAttribute("label"),
+        url: tab.linkedBrowser.currentURI.spec
+      });
+    });
+  };
+
   // Put app tabs first then most often selected sub sorted by most recently
   tabs.prioritize = function(a, b) {
     // Pinned tabs have priority over not-pinned but not each other
@@ -1422,20 +1438,12 @@ function addDashboard(window) {
     tabs.reset();
     tabPreview.reset();
 
-    // Figure out which tabs should be shown
-    let filteredTabs = gBrowser.visibleTabs.filter(function(tab) {
-      return queryMatchesPage(query, {
-        title: tab.getAttribute("label"),
-        url: tab.linkedBrowser.currentURI.spec
-      });
-    });
-
     // Track some state to determine when to separate tabs
     let firstNormal = true;
     let firstTab = true;
 
-    // Organize the tabs then add each one
-    filteredTabs.sort(tabs.prioritize).forEach(function(tab) {
+    // Organize the tabs that match the query then add each one
+    tabs.filter(query).sort(tabs.prioritize).forEach(function(tab) {
       // Put in a larger spacer between app-tabs and normal ones
       let flex = 3;
       if (!tab.hasAttribute("pinned") && firstNormal) {
