@@ -432,22 +432,17 @@ function addDashboard(window) {
 
   // Helper to check if the dashboard is open or open with a reason
   Object.defineProperty(dashboard, "open", {
-    get: function() !dashboard.collapsed,
+    get: function() !!dashboard.openReason,
     set: function(reason) {
-      // Don't do work if we're already of that state
-      if (!!reason == dashboard.open)
-        return;
+      // Update the dashboard state immediately
+      dashboard.openReason = reason;
 
-      // Hide the dashboard and run all close callbacks
-      if (dashboard.open) {
-        dashboard.collapsed = true;
-        onClose();
-      }
       // Inform why we're opening
-      else {
-        dashboard.collapsed = false;
+      if (dashboard.open)
         onOpen(reason);
-      }
+      // Run all close callbacks that include hiding the dashboard
+      else
+        onClose();
     }
   });
 
@@ -475,14 +470,16 @@ function addDashboard(window) {
 
   // Restore focus to the browser when closing
   onClose(function() {
+    dashboard.collapsed = true;
     gBrowser.selectedBrowser.focus();
   });
 
   // Move focus to the dashboard when opening
   onOpen(function(reason) {
+    dashboard.collapsed = false;
     dashboard.focus();
-    dashboard.openReason = reason;
 
+    // Hide all the dashboard data if switching tabs
     if (reason == "switch") {
       history.collapsed = true;
       searchBox.collapsed = true;
@@ -769,7 +766,7 @@ function addDashboard(window) {
 
   // Clear out current state when closing
   onClose(function() {
-    input.lastQuery = "";
+    input.lastQuery = null;
     input.lastRawQuery = "";
     input.nextPreview = 2;
     input.value = "";
@@ -777,16 +774,19 @@ function addDashboard(window) {
     searchPreview2.engineIcon = null;
   });
 
-  // Focus the input box when opening
+  // Figure out if the input should be used for this opening
   onOpen(function(reason) {
+    // Don't do anything if we're switching tabs
     if (reason == "switch")
       return;
-
-    input.focus();
 
     // Automatically toggle the default engine if we need to search
     if (reason == "search")
       input.toggleEngine(input.defaultEngineIcon);
+
+    // Focus the input box when opening and search with anything there
+    input.focus();
+    input.doCommand();
   });
 
   // Handle the user searching for stuff
@@ -1493,14 +1493,6 @@ function addDashboard(window) {
     let node;
     while ((node = tabs.lastChild) != null)
       tabs.removeChild(node);
-  });
-
-  // Show all tabs when opening
-  onOpen(function(reason) {
-    if (reason == "switch")
-      return;
-
-    tabs.search("");
   });
 
   // Newly opened tabs inherit some properties of the last selected tab
