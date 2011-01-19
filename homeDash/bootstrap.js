@@ -776,13 +776,50 @@ function addDashboard(window) {
 
   // Figure out if the input should be used for this opening
   onOpen(function(reason) {
-    // Don't do anything if we're switching tabs
-    if (reason == "switch")
-      return;
+    switch (reason) {
+      // Clear out any searches if changing locations
+      case "location":
+        if (searchPreview1.engineIcon != null)
+          input.toggleEngine(searchPreview1.engineIcon);
+        if (searchPreview2.engineIcon != null)
+          input.toggleEngine(searchPreview2.engineIcon);
+        break;
 
-    // Automatically toggle the default engine if we need to search
-    if (reason == "search")
-      input.toggleEngine(input.defaultEngineIcon);
+      // Automatically toggle the default engine if we need to search
+      case "search":
+        let nextEngineIcon = input.defaultEngineIcon;
+
+        // If the default engine is already active, cycle through other ones
+        if (searchPreview2.engineIcon == nextEngineIcon) {
+          // Get not-default engines
+          let notDefault = Array.filter(engines.childNodes, function(engine) {
+            return engine != nextEngineIcon;
+          });
+
+          // Rotate the list until the secondary engine is first
+          let active1Icon = searchPreview1.engineIcon;
+          if (active1Icon != null) {
+            while (notDefault[0] != active1Icon)
+              notDefault.push(notDefault.shift());
+
+            // Remove the active secondary engine
+            notDefault.shift();
+            input.toggleEngine(active1Icon);
+          }
+
+          // Take the next engine in the order if any
+          if (notDefault.length > 0)
+            nextEngineIcon = notDefault.shift();
+        }
+
+        // Activate the next engine
+        input.toggleEngine(nextEngineIcon);
+        break;
+
+      // Don't do anything if we're switching tabs
+      case "switch":
+        return;
+    }
 
     // Focus the input box when opening and search with anything there
     input.focus();
