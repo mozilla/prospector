@@ -1909,9 +1909,9 @@ function addDashboard(window) {
 
     // Style the tab notification icon
     tabIcon.style.backgroundColor = "rgba(0, 0, 0, .3)";
-    tabIcon.style.backgroundPosition = "1px center";
+    tabIcon.style.backgroundPosition = "2px center";
     tabIcon.style.backgroundRepeat = "no-repeat";
-    tabIcon.style.borderRadius = "0 100% 100% 0";
+    tabIcon.style.borderRadius = "0 25% 25% 0";
     tabIcon.style.height = "22px";
     tabIcon.style.width = "22px";
 
@@ -1934,16 +1934,49 @@ function addDashboard(window) {
 
     // Switch to the tab when the notification icon is clicked
     tabIcon.addEventListener("click", function() {
+      // Figure out where this icon sits of the visible ones
+      let visibleItems = Array.filter(notifications.childNodes, function(item) {
+        return !item.collapsed;
+      });
+
+      // Don't automatically load the next preview if we'll point at another
+      if (visibleItems.pop() != tabIcon)
+        notifications.skipPreview = true;
+      else
+        notifications.skipPreview = false;
+
+      // Select the tab which will remove this notification
       gBrowser.selectedTab = tab;
     }, false);
 
     // Indicate what clicking will do
     tabIcon.addEventListener("mouseover", function() {
+      // Only show an instant preview if it's not automatically "over"
+      if (!notifications.skipPreview) {
+        tabPreview.swap(tab);
+
+        // Remove other things that might cover the preview
+        if (dashboard.open) {
+          sites.collapsed = true;
+          tabs.collapsed = true;
+        }
+      }
+
       statusLine.set("switch", tab.getAttribute("label"));
     }, false);
 
     tabIcon.addEventListener("mouseout", function() {
+      // We've successfully moved out of the notification, so previews are ok
+      notifications.skipPreview = false;
+
+      // Re-show things that might have covered the preview
+      if (dashboard.open) {
+        sites.collapsed = false;
+        tabs.collapsed = false;
+      }
+
       statusLine.reset();
+      tabPreview.reset();;
     }, false);
   };
 
