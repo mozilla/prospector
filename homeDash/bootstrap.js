@@ -45,7 +45,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 const images = {};
 
 // Define a global shadow to be used for various elements
-const globalShadow = "3px 3px 10px rgba(0, 0, 0, .8)";
+const globalShadow = "3px 3px 10px rgb(0, 0, 0)";
 
 /**
  * Remove all existing chrome of the browser window
@@ -685,7 +685,7 @@ function addDashboard(window) {
   searchBox.setAttribute("top", "30");
   dashboard.appendChild(searchBox);
 
-  searchBox.style.backgroundColor = "rgba(224, 224, 224, .5)";
+  searchBox.style.backgroundColor = "rgb(224, 224, 224)";
   searchBox.style.borderRadius = "5px";
   searchBox.style.boxShadow = globalShadow;
   searchBox.style.padding = "5px";
@@ -994,7 +994,7 @@ function addDashboard(window) {
   history.setAttribute("top", "150");
   dashboard.appendChild(history);
 
-  history.style.backgroundColor = "rgba(224, 224, 224, .5)";
+  history.style.backgroundColor = "rgb(224, 224, 224)";
   history.style.boxShadow = globalShadow;
 
   // Add a single page info to the list of history results
@@ -1011,9 +1011,8 @@ function addDashboard(window) {
 
     entryBox.pageInfo = pageInfo;
 
-    entryBox.style.backgroundColor = "rgba(244, 244, 244, .9)";
+    entryBox.style.backgroundColor = "rgb(244, 244, 244)";
     entryBox.style.fontSize = "16px";
-    entryBox.style.opacity = ".7";
     entryBox.style.pointerEvents = "auto";
 
     let iconNode = createNode("image");
@@ -1037,7 +1036,6 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     entryBox.addEventListener("mouseover", function() {
-      entryBox.style.opacity = ".9";
       entryBox.style.textDecoration = "underline";
 
       // Show the preview and hide other things covering it
@@ -1048,7 +1046,6 @@ function addDashboard(window) {
     }, false);
 
     entryBox.addEventListener("mouseout", function() {
-      entryBox.style.opacity = ".7";
       entryBox.style.textDecoration = "";
 
       sites.collapsed = false;
@@ -1352,7 +1349,7 @@ function addDashboard(window) {
   sites.highlight = function(targetBox) {
     // Fade out all the other boxes except the target made brighter
     Array.forEach(sites.childNodes, function(siteBox) {
-      siteBox.style.opacity = siteBox == targetBox ? ".9" : ".1";
+      siteBox.style.opacity = siteBox == targetBox ? "1" : "0";
     });
   };
 
@@ -1366,18 +1363,18 @@ function addDashboard(window) {
     Array.forEach(sites.childNodes, function(siteBox) {
       // Just show the site if there's no query
       if (query == "") {
-        siteBox.style.opacity = ".7";
+        siteBox.style.opacity = "1";
         siteBox.style.pointerEvents = "auto";
       }
       // Emphasize the match and record it
       else if (queryMatchesPage(query, siteBox.pageInfo)) {
-        siteBox.style.opacity = ".9";
+        siteBox.style.opacity = "1";
         siteBox.style.pointerEvents = "auto";
         pageMatches.push(siteBox.pageInfo);
       }
       // Almost hide the site if not a match
       else {
-        siteBox.style.opacity = ".1";
+        siteBox.style.opacity = "0";
         siteBox.style.pointerEvents = "none";
       }
     });
@@ -1397,7 +1394,7 @@ function addDashboard(window) {
   tabs.setAttribute("top", "30");
   dashboard.appendChild(tabs);
 
-  tabs.style.backgroundColor = "rgba(224, 224, 224, .9)";
+  tabs.style.backgroundColor = "rgb(224, 224, 224)";
   tabs.style.borderRadius = "5px";
   tabs.style.boxShadow = globalShadow;
   tabs.style.overflow = "hidden";
@@ -1470,11 +1467,10 @@ function addDashboard(window) {
       let tabBox = createNode("box");
       tabs.appendChild(tabBox);
 
-      tabBox.style.backgroundColor = "rgba(244, 244, 244, .7)";
-      tabBox.style.border = "1px solid rgba(0, 0, 0, .7)";
+      tabBox.style.backgroundColor = "rgb(244, 244, 244)";
+      tabBox.style.border = "1px solid rgb(0, 0, 0)";
       tabBox.style.borderRadius = "10px";
       tabBox.style.position = "relative";
-      tabBox.style.opacity = ".5";
       tabBox.style.overflow = "hidden";
       tabBox.style.margin = "10px -122px 10px 0";
 
@@ -1496,7 +1492,6 @@ function addDashboard(window) {
         tabBox.style.boxShadow = globalShadow;
         tabBox.style.marginBottom = "0";
         tabBox.style.marginTop = "0";
-        tabBox.style.opacity = "1";
         tabThumb.style.height = "110px";
         tabThumb.style.width = "146px";
 
@@ -1517,7 +1512,6 @@ function addDashboard(window) {
         tabBox.style.boxShadow = "";
         tabBox.style.marginBottom = "10px";
         tabBox.style.marginTop = "10px";
-        tabBox.style.opacity = ".5";
         tabThumb.style.height = "90px";
         tabThumb.style.width = "120px";
 
@@ -1951,7 +1945,7 @@ function addDashboard(window) {
 
   // Just go back to the default opacity when closing the dashboard
   fxIcon.reset = onClose(function() {
-    fxIcon.style.opacity = dashboard.open ? ".9" : ".3";
+    fxIcon.style.opacity = dashboard.open ? "1" : ".3";
   });
 
   // Allow toggling the dashboard by clicking
