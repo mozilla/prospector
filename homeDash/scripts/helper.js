@@ -125,17 +125,104 @@ function hosty(URI, noPort) {
   return URI.path;
 }
 
+// Checks if a term matches on a word boundary
+function matchesBoundary(term, target, casedTarget) {
+  // Nothing left to do if the term doesn't show up in the rest of the target
+  let pos = target.indexOf(term);
+  if (pos == -1)
+    return false;
+
+  // Matching at the very beginning is a boundary success
+  if (pos == 0)
+    return true;
+
+  // Otherwise, check if a middle-match is a boundary match
+  do {
+    // If the matching position's character is lowercase
+    let at = casedTarget.charCodeAt(pos);
+    if (at >= 97 && at <= 122) {
+      // We're good as long as the character before is not a letter
+      let prev = casedTarget.charCodeAt(pos - 1);
+      if (prev < 65 || (prev > 90 && prev < 97) || prev > 122)
+        return true;
+
+      // Otherwise, continue after where it matched
+      pos = target.indexOf(term, pos + 1);
+      continue;
+    }
+    // If the matching position's character is uppercase
+    else if (at >= 65 && at <= 90) {
+      // We're good as long as the character before is not uppercase
+      let prev = casedTarget.charCodeAt(pos - 1);
+      if (prev < 65 || prev > 90)
+        return true;
+
+      // Otherwise, continue after where it matched
+      pos = target.indexOf(term, pos + 1);
+      continue;
+    }
+
+    // Must not have been a letter, so it's a word boundary!
+    return true;
+
+  // Keep searching until the term doesn't show up, then it must not match
+  } while (pos != -1);
+  return false;
+}
+
+// Get both the original-case and lowercase prepared text
+function prepareMatchText(text) {
+  // Arbitrarily only search through the first 50 characters
+  text = stripPrefix(text).slice(0, 50);
+  return [text, text.toLowerCase()];
+}
+
 // Check if a query string matches some page information
 function queryMatchesPage(query, {title, url}) {
-  query = query.toLowerCase();
-  title = title.toLowerCase();
-  url = url.toLowerCase();
+  // Just short circuit if it's the empty query
+  if (query == "")
+    return true;
 
-  if (title.indexOf(query) != -1)
-    return true;
-  if (url.indexOf(query) != -1)
-    return true;
-  return false;
+  // Use a cached query parts instead of processing each time
+  let {lastQuery, queryParts} = queryMatchesPage;
+  if (query != lastQuery) {
+    // Remember what the cached data is used for
+    queryMatchesPage.lastQuery = query;
+    queryParts = queryMatchesPage.queryParts = [];
+
+    // Get rid of prefixes and identify each term's case-ness
+    stripPrefix(query).split(/\s+/).forEach(function(part) {
+      // NB: Add the term to the front, so the last term is processed first as
+      // it will fail-to-match faster than earlier terms that already matched
+      // when doing an incremental search.
+      queryParts.unshift({
+        ignoreCase: part == part.toLowerCase(),
+        term: part
+      });
+    });
+  }
+
+  // Fix up both the title and url in preparation for searching
+  let [title, lowerTitle] = prepareMatchText(title);
+  let [url, lowerUrl] = prepareMatchText(url);
+
+  // Make sure every term in the query matches
+  return queryParts.every(function({ignoreCase, term}) {
+    // For case insensitive terms, match against the lowercase text
+    if (ignoreCase) {
+      return matchesBoundary(term, lowerTitle, title) ||
+             matchesBoundary(term, lowerUrl, url);
+    }
+
+    // For case sensitive terms, just use the original casing text
+    return matchesBoundary(term, title, title) ||
+           matchesBoundary(term, url, url);
+  });
+}
+
+// Remove common protocol and subdomain prefixes
+function stripPrefix(text) {
+  return text.replace(/^(?:(?:ftp|https?):\/{0,2})?(?:ftp|w{3}\d*)?\.?/, "");
 }
 
 // Get a upper-case-first-of-word string from an array of strings
