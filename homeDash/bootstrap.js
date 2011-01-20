@@ -1404,6 +1404,11 @@ function addDashboard(window) {
   tabs.lastSelectCount = 1;
   tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
 
+  // Initialize various special state to something useful
+  Array.forEach(gBrowser.tabs, function(tab) {
+    tab.HDselectCount = 1;
+  });
+
   // Get an array of tabs that match a query
   tabs.filter = function(query) {
     return gBrowser.visibleTabs.filter(function(tab) {
@@ -1427,7 +1432,7 @@ function addDashboard(window) {
       return 1;
 
     // For regular tabs, order by most frequently selected first
-    let countDiff = (b.HDselectCount || 0) - (a.HDselectCount || 0);
+    let countDiff = b.HDselectCount - a.HDselectCount;
     if (countDiff != 0)
       return countDiff;
 
@@ -1445,19 +1450,33 @@ function addDashboard(window) {
     let firstNormal = true;
     let firstTab = true;
 
+    // Track various priorities to potentially assign to tabs
+    let highPriority, lowPriority;
+
+    // Keep state of moving a tab around
+    let moving = false;
+
     // Organize the tabs that match the query then add each one
     tabs.filter(query).sort(tabs.prioritize).forEach(function(tab) {
       // Put in a larger spacer between app-tabs and normal ones
       let flex = 3;
-      if (!tab.hasAttribute("pinned") && firstNormal) {
+      if (!tab.pinned && firstNormal) {
         firstNormal = false;
         flex = 5;
       }
+
       // Unless it's the first tab, then put in a smaller spacer
       if (firstTab) {
         firstTab = false;
         flex = 1;
       }
+
+      // Only track high priorities from non-app tabs
+      if (!tab.pinned && highPriority == null)
+        highPriority = tab.HDselectCount;
+
+      // Always update the low priority so it eventually gets the lowest
+      lowPriority = tab.HDselectCount;
 
       // Insert a spacer before each tab
       let spacer = createNode("spacer");
@@ -1470,6 +1489,7 @@ function addDashboard(window) {
       tabBox.style.backgroundColor = "rgb(244, 244, 244)";
       tabBox.style.border = "1px solid rgb(0, 0, 0)";
       tabBox.style.borderRadius = "10px";
+      tabBox.style.cursor = "pointer";
       tabBox.style.position = "relative";
       tabBox.style.overflow = "hidden";
       tabBox.style.margin = "10px -122px 10px 0";
@@ -1482,13 +1502,111 @@ function addDashboard(window) {
 
       // Switch to the selected tab
       tabBox.addEventListener("click", function() {
+        // Don't handle clicks if we're moving a tab
+        if (moving)
+          return;
+
         // NB: Closing the dashboard has the tab preview restoring the docshell
         dashboard.open = false;
         gBrowser.selectedTab = tab;
       }, false);
 
+      // Prepare for moving if the user drags after clicking
+      tabBox.addEventListener("mousedown", function(event) {
+        // Capture mouse events on the dashboard to detect mouse drags anywhere
+        dashboard.style.pointerEvents = "auto";
+        tabBox.style.cursor = "move";
+
+        // Update the non-local shared tab moving state
+        moving = true;
+
+        // Initialize some state for this potential drag
+        let doneAction;
+        let downPos = event.pageX;
+        let origMargin = parseInt(tabBox.style.marginRight);
+        let startOffset = tabBox.boxObject.screenX;
+
+        // Track mouse movement to figure out which way the tab should move
+        let stopMove = listen(window, dashboard, "mousemove", function(event) {
+          let action;
+
+          // Prioritize the tab if dragged left enough
+          let offset = event.pageX - downPos;
+          if (offset < -50) {
+            action = "moveup";
+
+            // Force the tab to be close to the left side of the tabs area
+            offset = tabs.firstChild.boxObject.screenX - startOffset + 5;
+
+            // If already pinned, make sure it'll be the first tab
+            if (tab.pinned)
+              doneAction = function() gBrowser.moveTabTo(tab, 0);
+            // Otherwise just make it the last pinned tab
+            else
+              doneAction = function() gBrowser.pinTab(tab);
+          }
+          // Deprioritize the tab if dragged right enough
+          else if (offset > 50) {
+            action = "movedown";
+
+            // Force the tab to be close to the right side of the tabs area
+            offset = tabs.lastChild.boxObject.screenX +
+                     tabs.lastChild.boxObject.width - startOffset - 148 - 5;
+
+            // If currently pinned, unpin it and give it the highest priority
+            if (tab.pinned) {
+              doneAction = function() {
+                gBrowser.unpinTab(tab);
+                tab.HDselectCount = highPriority * 1.01;
+              };
+            }
+            // Otherwise, give the tab the least priority
+            else
+              doneAction = function() tab.HDselectCount = lowPriority * .99;
+          }
+
+          // If nothing will happen to the tab, clear the status and do nothing
+          if (action == null) {
+            statusLine.reset();
+            doneAction = function() {};
+          }
+          // Indicate what unclicking will do to the tab
+          else
+            statusLine.set(action, tab.getAttribute("label"));
+
+          // Make the tab sit above other tabs and update its position
+          tabBox.style.zIndex = "1";
+          tabBox.style.marginLeft = offset + "px";
+          tabBox.style.marginRight = origMargin - offset + "px";
+        });
+
+        // Detect when the user stopped dragging to clean up
+        let stopUp = listen(window, dashboard, "mouseup", function() {
+          // Stop capturing the mouse events and various listeners
+          dashboard.style.pointerEvents = "none";
+          moving = false;
+          stopMove();
+          stopUp();
+
+          // Can only do an action (even if nothing) if dragged even a little
+          if (doneAction == null)
+            return;
+
+          // Do the action and update the display with a fresh search
+          doneAction();
+          tabs.search(query);
+        });
+      }, false);
+
       // Indicate what clicking will do
       tabBox.addEventListener("mouseover", function() {
+        // Don't focus this tab if we're still moving
+        if (moving) {
+          // Fix up the cursor to better indicate we're still dragging
+          tabBox.style.cursor = "move";
+          return;
+        }
+
         tabBox.style.boxShadow = globalShadow;
         tabBox.style.marginBottom = "0";
         tabBox.style.marginTop = "0";
@@ -1509,6 +1627,10 @@ function addDashboard(window) {
       }, false);
 
       tabBox.addEventListener("mouseout", function() {
+        // Don't restyle if we're still moving
+        if (moving)
+          return;
+
         tabBox.style.boxShadow = "";
         tabBox.style.marginBottom = "10px";
         tabBox.style.marginTop = "10px";
@@ -1531,6 +1653,10 @@ function addDashboard(window) {
       spacer.setAttribute("flex", "1");
       tabs.appendChild(spacer);
     }
+
+    // If we don't have a high priority for some reason, just take the low
+    if (highPriority == null)
+      highPriority = lowPriority;
   };
 
   // Clean up any tabs from a search when closing
@@ -1556,7 +1682,7 @@ function addDashboard(window) {
   listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
     let tab = event.target;
     tab.HDlastSelect = Date.now();
-    tab.HDselectCount = (tab.HDselectCount || 0) + 1;
+    tab.HDselectCount = tab.HDselectCount + 1;
 
     // Remember this tab's selection count to inherit later
     tabs.lastSelectCount = tab.HDselectCount;
@@ -1606,6 +1732,14 @@ function addDashboard(window) {
 
       case "loadsite":
         text = "Go to " + text;
+        break;
+
+      case "movedown":
+        text = "Deprioritize " + text;
+        break;
+
+      case "moveup":
+        text = "Prioritize " + text;
         break;
 
       case "reload":
