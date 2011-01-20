@@ -945,22 +945,23 @@ function addDashboard(window) {
     if (engine == Services.search.currentEngine)
       input.defaultEngineIcon = engineIcon;
 
+    // Provide a way to update the activeness and look of the engine
     Object.defineProperty(engineIcon, "active", {
-      get: function() engineIcon.style.opacity != "0.5",
+      get: function() !!engineIcon._active,
       set: function(val) {
-        // Don't do work if we're already of that state
-        val = !!val;
-        if (val == engineIcon.active)
-          return;
-
-        // Toggle based on opacity
-        engineIcon.style.opacity = engineIcon.active ? "0.5" : "1";
+        engineIcon._active = val;
+        engineIcon.updateLook();
       }
     });
 
     // Helper to get a url from a search engine
     engineIcon.getSearchUrl = function(query) {
       return engine.getSubmission(query).uri.spec;
+    };
+
+    // Provide a shared way to get the right look
+    engineIcon.updateLook = function() {
+      engineIcon.style.opacity = engineIcon.active ? "1" : ".6";
     };
 
     // Make sure each engine icon is deactivated initially
@@ -975,10 +976,12 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     engineIcon.addEventListener("mouseover", function() {
+      engineIcon.style.opacity = ".8";
       statusLine.set("toggle", engine.name);
     }, false);
 
     engineIcon.addEventListener("mouseout", function() {
+      engineIcon.updateLook();
       statusLine.reset();
     }, false);
   });
