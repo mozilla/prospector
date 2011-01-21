@@ -698,6 +698,11 @@ function addDashboard(window) {
   input.setAttribute("type", "search");
   searchBox.appendChild(input);
 
+  // Take the current query to update the adaptive learning
+  input.adapt = function(pageInfo) {
+    updateAdaptive(input.lastQuery, pageInfo);
+  };
+
   // Maybe complete the rest of the word
   input.maybeSuggest = function() {
     // If the new query fits in the last query (deleting), don't suggest
@@ -1034,6 +1039,7 @@ function addDashboard(window) {
 
     // Save the page preview when clicked
     entryBox.addEventListener("click", function() {
+      input.adapt(pageInfo);
       dashboard.usePreview(pagePreview, pageInfo.url);
     }, false);
 
@@ -1337,6 +1343,7 @@ function addDashboard(window) {
 
     // Save the page preview when clicked
     siteBox.addEventListener("click", function() {
+      input.adapt(pageInfo);
       dashboard.usePreview(pagePreview, pageInfo.url);
     }, false);
 

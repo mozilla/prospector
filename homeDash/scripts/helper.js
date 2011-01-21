@@ -260,6 +260,29 @@ function stripPrefix(text) {
   return text.replace(/^(?:(?:ftp|https?):\/{0,2})?(?:ftp|w{3}\d*)?\.?/, "");
 }
 
+// Update the input history with some input and page info
+function updateAdaptive(input, pageInfo) {
+  // Initialize or use the cached statement
+  let stmt = updateAdaptive.stmt;
+  if (stmt == null) {
+    stmt = updateAdaptive.stmt = Svc.History.DBConnection.createAsyncStatement(
+      "INSERT OR REPLACE INTO moz_inputhistory " +
+      "SELECT h.id, :input, IFNULL(i.use_count, 0) * .9 + 1 " +
+      "FROM moz_places h " +
+      "LEFT JOIN moz_inputhistory i " +
+      "ON i.place_id = h.id AND i.input = :input " +
+      "WHERE url = :url");
+  }
+
+  // Update the places database with this information
+  stmt.params.input = input;
+  stmt.params.url = pageInfo.url;
+  stmt.executeAsync();
+
+  // Add the data to in-memory storage
+  adaptiveData.push([input, pageInfo]);
+}
+
 // Get a upper-case-first-of-word string from an array of strings
 function upperFirst(strArray) {
   return strArray.map(function(part) {
