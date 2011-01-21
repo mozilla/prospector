@@ -1505,7 +1505,7 @@ function addDashboard(window) {
       spacer.setAttribute("flex", flex + "");
       tabs.appendChild(spacer);
 
-      let tabBox = createNode("box");
+      let tabBox = createNode("stack");
       tabs.appendChild(tabBox);
 
       tabBox.style.backgroundColor = "rgb(244, 244, 244)";
@@ -1521,6 +1521,24 @@ function addDashboard(window) {
       tabThumb.style.height = "90px";
       tabThumb.style.width = "120px";
       tabBox.appendChild(tabThumb);
+
+      let quickNum = createNode("label");
+      quickNum.setAttribute("bottom", "0");
+      quickNum.setAttribute("left", "0");
+      tabBox.appendChild(quickNum);
+
+      quickNum.style.backgroundColor = "rgb(244, 244, 244)";
+      quickNum.style.border = "1px solid rgb(0, 0, 0)";
+      quickNum.style.borderTopRightRadius = "10px";
+      quickNum.style.fontSize = "16px";
+      quickNum.style.margin = "-2px";
+      quickNum.style.paddingLeft = "5px";
+      quickNum.style.pointerEvents = "none";
+      quickNum.style.width = "20px";
+
+      // Specially indicate that this pinned tab can be switched to
+      if (tab.pinned && tab._tPos < 8)
+        quickNum.value = tab._tPos + 1 + "";
 
       // Switch to the selected tab
       tabBox.addEventListener("click", function() {
@@ -1644,7 +1662,12 @@ function addDashboard(window) {
           return;
         }
 
-        statusLine.set("switch", tab.getAttribute("label"));
+        // Indicate what tab is being switched to with shortcut if available
+        let text = tab.getAttribute("label");
+        if (quickNum.value != "")
+          text += " (\u2318" + quickNum.value + ")";
+        statusLine.set("switch", text);
+
         tabPreview.swap(tab);
       }, false);
 
