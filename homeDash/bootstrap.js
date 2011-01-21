@@ -1101,18 +1101,15 @@ function addDashboard(window) {
     return entryBox;
   };
 
-  // Get all pages by frecency
-  history.allFrecency = Svc.History.DBConnection.createAsyncStatement(
-    "SELECT frecency, title, url " +
-    "FROM moz_places " +
-    "ORDER BY frecency DESC");
+  // Chunk on number of rows processed as it always increases unlike frecency
+  const PAGES_PER_CHUNK = 750;
 
-  // Get all pages under a frecency
-  history.belowFrecency = Svc.History.DBConnection.createAsyncStatement(
-    "SELECT frecency, title, url " +
+  // Get all pages by frecency
+  history.allPagesByFrecency = Svc.History.DBConnection.createAsyncStatement(
+    "SELECT title, url " +
     "FROM moz_places " +
-    "WHERE frecency <= :frecency " +
-    "ORDER BY frecency DESC");
+    "ORDER BY frecency DESC " +
+    "LIMIT :offset, " + PAGES_PER_CHUNK);
 
   // Allow canceling an active search
   history.cancelSearch = function() {
@@ -1124,8 +1121,8 @@ function addDashboard(window) {
 
   // Clear out any state like results and active queries
   history.reset = onClose(function() {
+    history.lastOffset = 0;
     history.lastQuery = null;
-    history.lastFrecency = Infinity;
     history.topMatchBox = null;
 
     // Stop any active searches or previews if any
@@ -1141,8 +1138,6 @@ function addDashboard(window) {
 
   // Search through history and add items
   history.search = function(query, topMatch) {
-    let statement;
-
     // Filter existing results and continue if entering a longer search
     if (query.indexOf(history.lastQuery) == 0) {
       // Make a copy before iterating as we're removing unwanted entries
@@ -1166,12 +1161,8 @@ function addDashboard(window) {
         return;
 
       // Nothing left to do with all pages processed
-      if (history.lastFrecency == -Infinity)
+      if (history.lastOffset == Infinity)
         return;
-
-      // Continue the search from the last frecency seen
-      statement = history.belowFrecency;
-      statement.params.frecency = history.lastFrecency;
     }
     // Query is different enough, so start fresh
     else {
@@ -1185,10 +1176,19 @@ function addDashboard(window) {
       // Add the top match if we have one
       history.addTopMatch(topMatch);
 
-      // Search through all history by frecency
-      statement = history.allFrecency;
+      // Initialize the some data to process places results
+      history.lastOffset = 0;
       history.lastQuery = query;
     }
+
+    // Search through all of places starting/continuing from the offset
+    history.searchPlaces(history.lastOffset);
+  }
+
+  // Search through all of places by frecency from some offset
+  history.searchPlaces = function(offset) {
+    let statement = history.allPagesByFrecency;
+    statement.params.offset = offset;
 
     // Filter out history results based on the current query
     let thisSearch = history.activeSearch = statement.executeAsync({
@@ -1198,8 +1198,21 @@ function addDashboard(window) {
           return;
 
         // Remember that we finished completely
-        history.activeSearch = null;
-        history.lastFrecency = -Infinity;
+        if (history.lastOffset - offset < PAGES_PER_CHUNK) {
+          history.activeSearch = null;
+          history.lastOffset = Infinity;
+        }
+        // We got exactly the number of pages per chunk, so continue later!
+        else {
+          setTimeout(function() {
+            // Only continue if the active search is still this one
+            if (thisSearch != history.activeSearch)
+              return;
+
+            // Recursively call with the new offset
+            history.searchPlaces(history.lastOffset);
+          }, 50);
+        }
       },
 
       handleError: function(error) {
@@ -1214,12 +1227,12 @@ function addDashboard(window) {
       handleResult: function(results) {
         // NB: Use the most recent query in-case it changes since starting
         let query = history.lastQuery;
-        let frecency;
+        let numProcessed = 0;
 
         let row;
         while ((row = results.getNextRow()) != null) {
-          // Remember the most recent (smallest) frecency seen
-          frecency = row.getResultByName("frecency");
+          // Keep track of how many rows we see to know where to continue
+          numProcessed++;
 
           // Construct a page info to test and potentially add
           let pageInfo = {
@@ -1245,9 +1258,8 @@ function addDashboard(window) {
           }
         }
 
-        // Save the frecency that we last saw for future reference
-        if (frecency < history.lastFrecency)
-          history.lastFrecency = frecency;
+        // Update the offset with however many rows got processed
+        history.lastOffset += numProcessed;
       }
     });
   };
