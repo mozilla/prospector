@@ -205,6 +205,14 @@ function matchesBoundary(term, target, casedTarget) {
   return false;
 }
 
+// Sort the tabs that match a query by most recently used
+function organizeTabsByUsed(tabs) {
+  // Make a copy of the input tabs to avoid changing its order
+  return tabs.slice().sort(function(a, b) {
+    return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
+  });
+};
+
 // Get both the original-case and lowercase prepared text
 function prepareMatchText(text) {
   // Arbitrarily only search through the first 50 characters

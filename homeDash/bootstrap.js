@@ -578,9 +578,7 @@ function addDashboard(window) {
           dashboard.open = "switch";
 
           // Figure out the order of most-recently-used tabs
-          let mruTabs = tabs.filter(input.value).sort(function(a, b) {
-            return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
-          });
+          let mruTabs = organizeTabsByUsed(tabs.filter(input.value));
 
           // Treat the current tab as previewed even if it is filtered out
           let previewedTab = gBrowser.selectedTab;
@@ -1468,6 +1466,10 @@ function addDashboard(window) {
     tabs.reset();
     tabPreview.reset();
 
+    // Figure out what the next tab to switch to will be
+    let filteredTabs = tabs.filter(query);
+    let nextMRUTab = organizeTabsByUsed(filteredTabs)[1];
+
     // Track some state to determine when to separate tabs
     let firstNormal = true;
     let firstTab = true;
@@ -1479,7 +1481,7 @@ function addDashboard(window) {
     let moving = false;
 
     // Organize the tabs that match the query then add each one
-    tabs.filter(query).sort(tabs.prioritize).forEach(function(tab) {
+    filteredTabs.sort(tabs.prioritize).forEach(function(tab) {
       // Put in a larger spacer between app-tabs and normal ones
       let flex = 3;
       if (!tab.pinned && firstNormal) {
@@ -1539,6 +1541,9 @@ function addDashboard(window) {
       // Specially indicate that this pinned tab can be switched to
       if (tab.pinned && tab._tPos < 8)
         quickNum.value = tab._tPos + 1 + "";
+      // Indicate that switching to the "last" tab is possible for this tab
+      else if (tab == nextMRUTab)
+        quickNum.value = "9";
 
       // Switch to the selected tab
       tabBox.addEventListener("click", function() {
