@@ -854,10 +854,13 @@ function addDashboard(window) {
       searchPreview2.search(query);
 
     // Filter out the sites display as well as get the top sites
-    let topMatches = sites.search(query);
+    let topMatch = sites.search(query)[0];
+
+    // Use the adaptive result over top site match
+    topMatch = getAdaptiveInfo(query) || topMatch;
 
     // Do a full history search with a suggested top site
-    history.search(query, topMatches[0]);
+    history.search(query, topMatch);
 
     // Only show the tabs that match
     tabs.search(query);

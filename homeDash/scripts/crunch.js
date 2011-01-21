@@ -46,14 +46,12 @@ function computeTopSites() {
     "ORDER BY frecency DESC " +
     "LIMIT 24");
   Utils.queryAsync(stm, ["url", "title"]).forEach(function({url, title}) {
-    let URI = Services.io.newURI(url, null, null);
-    topSites.push({
-      icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
-      title: title || getHostText(URI),
-      url: url
-    });
+    topSites.push(makePageInfo(title, url));
   });
 }
+
+// Save an in-memory array of adaptive data
+let adaptiveData = [];
 
 // Figure out what keywords might be useful to suggest to the user
 let sortedKeywords = [];
@@ -82,6 +80,9 @@ function processAdaptive() {
   // Keep a nested array of array of keywords -- 2 arrays per entry
   let allKeywords = [];
   Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
+    // Track all the adaptive data in memory with page info
+    adaptiveData.push([input, makePageInfo(title, url)]);
+
     // Add keywords for word parts that start with the input word
     let word = input.trim().toLowerCase().split(/\s+/)[0];
     word = word.replace("www.", "");

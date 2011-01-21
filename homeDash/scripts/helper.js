@@ -36,6 +36,31 @@
 
 "use strict";
 
+// Search through the adaptive info in-order for a matching query
+function getAdaptiveInfo(query) {
+  // Short circuit for empty queries
+  let queryLen = query.length;
+  if (queryLen == 0)
+    return;
+
+  // Continue until one matching adaptive data is found
+  let matchingInfo;
+  adaptiveData.some(function([input, pageInfo]) {
+    // Not interested in an input that doesn't prefix match
+    if (input.slice(0, queryLen) != query)
+      return false;
+
+    // Make sure the page info still matches the query
+    if (!queryMatchesPage(query, pageInfo))
+      return false;
+
+    // Must be a good page!
+    matchingInfo = pageInfo;
+    return true;
+  });
+  return matchingInfo;
+}
+
 // Extract the sub/domains of a URI
 function getHostText(URI) {
   let host = hosty(URI, true);
@@ -123,6 +148,16 @@ function hosty(URI, noPort) {
 
   // Some URIs don't have a host, so fallback to path
   return URI.path;
+}
+
+// Make a page info object and fill in some data
+function makePageInfo(title, url) {
+  let URI = Services.io.newURI(url, null, null);
+  return {
+    icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
+    title: title || getHostText(URI),
+    url: url
+  };
 }
 
 // Checks if a term matches on a word boundary
