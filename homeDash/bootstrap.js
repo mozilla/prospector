@@ -845,6 +845,10 @@ function addDashboard(window) {
         return;
     }
 
+    // Select all the text in the box to be ready to replace existing text
+    if (reason == "location" || reason == "tab")
+      input.setSelectionRange(0, input.value.length);
+
     // Focus the input box when opening and search with anything there
     input.focus();
     input.doCommand();
