@@ -701,6 +701,12 @@ function addDashboard(window) {
     updateAdaptive(input.lastQuery, pageInfo);
   };
 
+  // Force a search (again if necessary)
+  input.forceSearch = function() {
+    input.lastQuery = null;
+    input.doCommand();
+  };
+
   // Provide a helper to get the next icon that will activate on command
   Object.defineProperty(input, "nextEngineIcon", {
     get: function() {
@@ -740,6 +746,13 @@ function addDashboard(window) {
     input.setSelectionRange(query.length, keyword.length);
   };
 
+  // Indicate if the "left" engine is active for potential side-by-side
+  Object.defineProperty(input, "sideBySide", {
+    get: function() {
+      return searchPreview1.engineIcon != null;
+    }
+  });
+
   // Allow toggling a search engine (up to two visible at a time)
   input.toggleEngine = function(engineIcon) {
     // Set the new engine for the preview and what preview to use next
@@ -750,9 +763,6 @@ function addDashboard(window) {
       // Remove the preview if we deactivated
       if (newEngineIcon == null)
         preview.reset();
-      // Start previewing immediately with the current search
-      else
-        preview.search(input.value);
     }
 
     // Deactivate the engine if it's already active
@@ -765,22 +775,6 @@ function addDashboard(window) {
       replaceEngine(searchPreview1, engineIcon, 2);
     else
       replaceEngine(searchPreview2, engineIcon, 1);
-
-    // For side-by-side searches, hide all other information and resize
-    if (searchPreview1.engineIcon != null) {
-      history.collapsed = true;
-      sites.collapsed = true;
-      tabs.collapsed = true;
-
-      searchPreview2.setAttribute("left", sixthWidth * 3 + "");
-    }
-    else {
-      history.collapsed = false;
-      sites.collapsed = false;
-      tabs.collapsed = false;
-
-      searchPreview2.setAttribute("left", sixthWidth * 2 + "");
-    }
 
     // If both searches aren't being used, make sure the next one is "right"
     if (searchPreview1.engineIcon == null && searchPreview2.engineIcon == null)
@@ -851,7 +845,7 @@ function addDashboard(window) {
 
     // Focus the input box when opening and search with anything there
     input.focus();
-    input.doCommand();
+    input.forceSearch();
   });
 
   // Handle the user searching for stuff
@@ -869,17 +863,34 @@ function addDashboard(window) {
     // Prevent accidental mouseover for things already under the pointer
     mouseSink.capture();
 
-    // Update search previews if necessary
-    if (searchPreview1.engineIcon != null)
+    // Update side-by-side search previews and not bother with other data
+    if (input.sideBySide) {
+      pagePreview.reset();
       searchPreview1.search(query);
-    if (searchPreview2.engineIcon != null)
       searchPreview2.search(query);
+
+      history.collapsed = true;
+      sites.collapsed = true;
+      tabs.collapsed = true;
+      return;
+    }
+
+    // Search through all data when doing normal searches
+    searchPreview1.reset();
+    searchPreview2.reset();
+    history.collapsed = false;
+    sites.collapsed = false;
+    tabs.collapsed = false;
 
     // Filter out the sites display as well as get the top sites
     let topMatch = sites.search(query)[0];
 
+    // Use the single search as a top match if searching
+    if (searchPreview2.engineIcon != null)
+      topMatch = searchPreview2.engineIcon.getPageInfo(query);
     // Use the adaptive result over top site match
-    topMatch = getAdaptiveInfo(query) || topMatch;
+    else
+      topMatch = getAdaptiveInfo(query) || topMatch;
 
     // Do a full history search with a suggested top site
     history.search(query, topMatch);
@@ -979,6 +990,15 @@ function addDashboard(window) {
       }
     });
 
+    // Create a page info from a search query
+    engineIcon.getPageInfo = function(query) {
+      return {
+        icon: engine.iconURI.spec,
+        title: engine.name + ": " + query,
+        url: engineIcon.getSearchUrl(query)
+      };
+    };
+
     // Helper to get a url from a search engine
     engineIcon.getSearchUrl = function(query) {
       return engine.getSubmission(query).uri.spec;
@@ -997,6 +1017,7 @@ function addDashboard(window) {
     // Inform the input to change engines
     engineIcon.addEventListener("click", function() {
       input.toggleEngine(engineIcon);
+      input.forceSearch();
     }, false);
 
     // Indicate what clicking will do
@@ -1136,16 +1157,13 @@ function addDashboard(window) {
     entryBox.style.fontWeight = "bold";
     entryBox.style.margin = "0 -10px 5px -5px";
 
-    // Start previewing this top match if not doing web searches
-    if (!input.willSearch) {
-      // Load the preview and clean up styles when removed
-      pagePreview.load(pageInfo.url, function() {
-        entryBox.style.textDecoration = "";
-      });
+    // Load the preview and clean up styles when removed
+    pagePreview.load(pageInfo.url, function() {
+      entryBox.style.textDecoration = "";
+    });
 
-      // Indicate that we're loading
-      entryBox.style.textDecoration = "underline";
-    }
+    // Indicate that we're loading
+    entryBox.style.textDecoration = "underline";
 
     return entryBox;
   };
