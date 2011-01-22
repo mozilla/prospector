@@ -796,6 +796,7 @@ function addDashboard(window) {
 
   // Clear out current state when closing
   onClose(function() {
+    input.firstEmptyOpen = true;
     input.lastQuery = null;
     input.lastRawQuery = "";
     input.nextPreview = 2;
@@ -813,6 +814,16 @@ function addDashboard(window) {
           input.toggleEngine(searchPreview1.engineIcon);
         if (searchPreview2.engineIcon != null)
           input.toggleEngine(searchPreview2.engineIcon);
+
+        // For power users, allow getting the current tab's location when empty
+        if (input.value == "") {
+          // Ignore the very first opening
+          if (input.firstEmptyOpen)
+            input.firstEmptyOpen = false;
+          else
+            input.value = gBrowser.selectedBrowser.currentURI.spec;
+        }
+
         break;
 
       // Automatically toggle the default engine if we need to search
@@ -1459,6 +1470,11 @@ function addDashboard(window) {
   // Get an array of tabs that match a query
   tabs.filter = function(query) {
     return gBrowser.visibleTabs.filter(function(tab) {
+      // Allow exact url matches to succeed without checking others
+      if (tab.linkedBrowser.currentURI.spec == query)
+        return true;
+
+      // For other queries, do the same filtering as other page matches
       return queryMatchesPage(query, {
         title: tab.getAttribute("label"),
         url: tab.linkedBrowser.currentURI.spec
