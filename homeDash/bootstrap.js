@@ -454,7 +454,7 @@ function addDashboard(window) {
   // Persist the preview to the tab the user wants
   dashboard.usePreview = function(preview, url) {
     // Open the result in a new tab and switch to it
-    if (dashboard.openReason == "tab") {
+    if (controls.newTab) {
       let newTab = gBrowser.addTab();
       preview.persistTo(newTab, url);
 
@@ -1776,6 +1776,82 @@ function addDashboard(window) {
 
   //// 4.5: Browser controls
 
+  let controls = createNode("hbox");
+  controls.setAttribute("left", "30");
+  controls.setAttribute("top", "110");
+  dashboard.appendChild(controls);
+
+  controls.style.overflow = "visible";
+
+  let newTabButton = createNode("button");
+  newTabButton.setAttribute("label", "New tab");
+  controls.appendChild(newTabButton);
+
+  newTabButton.style.backgroundColor = "rgb(244, 244, 244)";
+  newTabButton.style.borderRadius = "5px";
+  newTabButton.style.padding = "5px";
+  newTabButton.style.pointerEvents = "auto";
+
+  // Control if pages should be opened in new tabs or not
+  Object.defineProperty(controls, "newTab", {
+    get: function() !!newTabButton.checked,
+    set: function(val) {
+      newTabButton.checked = val;
+      newTabButton.updateLook();
+    }
+  });
+
+  // Provide a shared way to get the right look
+  newTabButton.updateLook = function() {
+    if (controls.newTab) {
+      newTabButton.style.opacity = "1";
+    }
+    else {
+      newTabButton.style.opacity = ".7";
+    }
+  };
+
+  // Reset and initialize various control state
+  onClose(function() {
+    controls.collapsed = false;
+    controls.newTab = false;
+  });
+
+  // Pick the appropriate new tab state for various open reasons
+  onOpen(function(reason) {
+    switch (reason) {
+      case "search":
+        controls.newTab = true;
+        break;
+
+      case "switch":
+        controls.collapsed = true;
+        break;
+
+      case "tab":
+        controls.newTab = !controls.newTab;
+        break;
+    }
+  });
+
+  // Toggle the new-tab-ness for each click
+  newTabButton.addEventListener("click", function() {
+    controls.newTab = !controls.newTab;
+  }, false);
+
+  // Indicate what clicking will do
+  newTabButton.addEventListener("mouseover", function() {
+    newTabButton.style.opacity = ".8";
+
+    let action = controls.newTab ? "deactivate" : "activate";
+    statusLine.set(action, "selecting pages as a new tab (\u2318T)");
+  }, false);
+
+  newTabButton.addEventListener("mouseout", function() {
+    newTabButton.updateLook();
+    statusLine.reset();
+  }, false);
+
   //// 5: Status line
 
   let statusBox = createNode("box");
@@ -1832,7 +1908,7 @@ function addDashboard(window) {
         break;
 
       case "select":
-        if (dashboard.openReason == "tab")
+        if (controls.newTab)
           text = "Tabify " + text;
         else
           text = "Select " + text;
