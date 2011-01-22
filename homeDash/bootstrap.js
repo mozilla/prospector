@@ -2388,6 +2388,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   });
 
   // Crunch through some data to use later
+  collectBookmarkKeywords();
   computeTopSites();
   processAdaptive();
 

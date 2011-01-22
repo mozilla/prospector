@@ -113,10 +113,17 @@ function getKeywordInfo(query) {
 
   // Use a keyworded search engine if available
   let engine = Services.search.getEngineByAlias(keyword);
+  let bookmark = bookmarkKeywords[keyword];
   if (engine != null) {
     icon = engine.iconURI.spec;
     name = engine.name;
     url = engine.getSubmission(params).uri.spec;
+  }
+  // Use a bookmarked keyword otherwise
+  else if (bookmark != null) {
+    icon = bookmark.icon;
+    name = bookmark.title;
+    url = bookmark.getUrl(params);
   }
 
   // Nothing to give back if we didn't find anything

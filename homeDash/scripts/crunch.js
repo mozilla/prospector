@@ -50,6 +50,48 @@ function computeTopSites() {
   });
 }
 
+// Collect the bookmark keywords for later use
+let bookmarkKeywords = {};
+function collectBookmarkKeywords() {
+  let db = Svc.History.DBConnection;
+  let stm = Utils.createStatement(db,
+    "SELECT (SELECT keyword FROM moz_keywords WHERE id = keyword_id) keyword, " +
+           "title, (SELECT url FROM moz_places WHERE id = fk) url " +
+    "FROM moz_bookmarks " +
+    "WHERE keyword_id NOT NULL");
+  let cols = ["keyword", "title", "url"];
+  Utils.queryAsync(stm, cols).forEach(function({keyword, title, url}) {
+    // Ignore duplicate keywords and keep the first
+    if (bookmarkKeywords[keyword] != null)
+      return;
+
+    // Figure out what kind of url transformation to do
+    let getUrl;
+
+    // Lowercase %s is an escaped replace
+    if (url.indexOf("%s") != -1) {
+      getUrl = function(params) {
+        let escaped = encodeURIComponent(params).replace("%20", "+", "g");
+        return url.replace("%s", escaped);
+      };
+    }
+    // Uppercase %S is a plain replace
+    else if (url.indexOf("%S") != -1)
+      getUrl = function(params) url.replace("%S", params);
+    // Just a plain bookmark with a keyword for the url
+    else
+      getUrl = function() url;
+
+    // Package up various keyword information for later user
+    let URI = Services.io.newURI(url, null, null);
+    bookmarkKeywords[keyword] = {
+      getUrl: getUrl,
+      icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
+      title: title
+    }
+  });
+}
+
 // Save an in-memory array of adaptive data
 let adaptiveData = [];
 
