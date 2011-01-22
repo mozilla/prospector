@@ -701,6 +701,27 @@ function addDashboard(window) {
     updateAdaptive(input.lastQuery, pageInfo);
   };
 
+  // Provide a helper to get the next icon that will activate on command
+  Object.defineProperty(input, "nextEngineIcon", {
+    get: function() {
+      // If the default isn't active yet, use that right away
+      if (searchPreview2.engineIcon != input.defaultEngineIcon)
+        return input.defaultEngineIcon;
+
+      // Figure out what position the next icon should be
+      let engineIcons = Array.slice(engines.childNodes);
+      let nextPos = engineIcons.indexOf(searchPreview1.engineIcon) + 1;
+
+      // Use the icon only if it's not the default one
+      let nextEngineIcon = engineIcons[nextPos];
+      if (nextEngineIcon != input.defaultEngineIcon)
+        return nextEngineIcon;
+
+      // Move to one after the default engine if necessary
+      return nextEngineIcon.nextSibling;
+    }
+  });
+
   // Maybe complete the rest of the word
   input.maybeSuggest = function() {
     // If the new query fits in the last query (deleting), don't suggest
@@ -796,33 +817,16 @@ function addDashboard(window) {
 
       // Automatically toggle the default engine if we need to search
       case "search":
-        let nextEngineIcon = input.defaultEngineIcon;
+        let nextEngineIcon = input.nextEngineIcon;
 
-        // If the default engine is already active, cycle through other ones
-        if (searchPreview2.engineIcon == nextEngineIcon) {
-          // Get not-default engines
-          let notDefault = Array.filter(engines.childNodes, function(engine) {
-            return engine != nextEngineIcon;
-          });
+        // Deactivate the "left" search if both are active
+        let leftIcon = searchPreview1.engineIcon;
+        if (leftIcon != null && searchPreview2.engineIcon != null)
+          input.toggleEngine(leftIcon);
 
-          // Rotate the list until the secondary engine is first
-          let active1Icon = searchPreview1.engineIcon;
-          if (active1Icon != null) {
-            while (notDefault[0] != active1Icon)
-              notDefault.push(notDefault.shift());
-
-            // Remove the active secondary engine
-            notDefault.shift();
-            input.toggleEngine(active1Icon);
-          }
-
-          // Take the next engine in the order if any
-          if (notDefault.length > 0)
-            nextEngineIcon = notDefault.shift();
-        }
-
-        // Activate the next engine
-        input.toggleEngine(nextEngineIcon);
+        // Activate the next engine unless we just deactivated
+        if (nextEngineIcon != null && nextEngineIcon != leftIcon)
+          input.toggleEngine(nextEngineIcon);
         break;
 
       // Don't do anything if we're switching tabs
@@ -983,7 +987,30 @@ function addDashboard(window) {
     // Indicate what clicking will do
     engineIcon.addEventListener("mouseover", function() {
       engineIcon.style.opacity = ".8";
-      statusLine.set("toggle", engine.name);
+
+      let action = engineIcon.active ? "deactivate" : "activate";
+      let text = engine.name;
+
+      // Add in some extra text for some icons
+      let extras = [];
+      let nextEngineIcon = input.nextEngineIcon;
+
+      // Next engine to be activated in order
+      if (engineIcon == nextEngineIcon)
+        extras.push("\u2318K");
+
+      // Default engine gets special text
+      if (engineIcon == input.defaultEngineIcon)
+        extras.push("default");
+      // No next engine, so this secondary engine will be deactivated
+      else if (nextEngineIcon == null && engineIcon.active)
+        extras.push("\u2318K");
+
+      // Put the extra text at the end if we have modifiers
+      if (extras.length > 0)
+        text += " (" + extras.join(", ") + ")";
+
+      statusLine.set(action, text);
     }, false);
 
     engineIcon.addEventListener("mouseout", function() {
@@ -1772,6 +1799,14 @@ function addDashboard(window) {
   // Helper function to set the status text for a given action
   statusLine.set = function(action, text) {
     switch (action) {
+      case "activate":
+        text = "Activate " + text;
+        break;
+
+      case "deactivate":
+        text = "Deactivate " + text;
+        break;
+
       case "loadpage":
         text = "View " + text;
         break;
