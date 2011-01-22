@@ -200,7 +200,7 @@ function addDashboard(window) {
       }
 
       // If we're already on the right url, just wait for it to be shown
-      if (url == browser.getAttribute("src"))
+      if (url == stack.lastRequestedUrl)
         return;
 
       // Must be changing urls, so inform whoever needs to know
@@ -211,7 +211,7 @@ function addDashboard(window) {
         unloadCallbacks.push(callback);
 
       // Start loading the provided url
-      browser.setAttribute("src", url);
+      browser.loadURI(url);
       stack.lastRequestedUrl = url;
 
       // Wait until the page loads to show the preview
@@ -286,17 +286,19 @@ function addDashboard(window) {
       runUnload();
       stack.collapsed = true;
       stack.lastLoadedUrl = null;
-      stack.lastRequestedUrl = null;
 
       // We might have a load listener if we just started a preview
-      if (browser.hasAttribute("src")) {
-        browser.removeAttribute("src");
+      if (stack.lastRequestedUrl != null) {
+        stack.lastRequestedUrl = null;
         stack.unlisten();
       }
 
       // Stop the preview in-case it's loading, but only if we can
       if (browser.stop != null)
         browser.stop();
+
+      // Clear out any docshell state by going to somewhere empty
+      browser.loadURI("about:blank");
     });
 
     // Provide a way to stop listening for the preview load
@@ -407,7 +409,7 @@ function addDashboard(window) {
 
     // Make sure the browser has a docshell to swap in the future
     if (tabPreview.swappedBrowser == null) {
-      tabPreview.setAttribute("src", "about:blank");
+      tabPreview.loadURI("about:blank");
       return;
     }
 
