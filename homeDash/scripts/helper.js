@@ -100,6 +100,37 @@ function getKeyword(query) {
   }
 }
 
+// Give a page info if it matches a bookmark or search keyword
+function getKeywordInfo(query) {
+  // Do nothing for empty queries
+  if (query == "")
+    return;
+
+  // First word is the keyword and everything else is parameters
+  let [, keyword, params] = query.match(/^(\S+)\s*(.*)$/);
+
+  let icon, name, url;
+
+  // Use a keyworded search engine if available
+  let engine = Services.search.getEngineByAlias(keyword);
+  if (engine != null) {
+    icon = engine.iconURI.spec;
+    name = engine.name;
+    url = engine.getSubmission(params).uri.spec;
+  }
+
+  // Nothing to give back if we didn't find anything
+  if (url == null)
+    return;
+
+  // Package up as a page info
+  return {
+    icon: icon,
+    title: params == "" ? name : name + ": " + params,
+    url: url
+  };
+}
+
 // Get a favicon for a tab
 function getTabIcon(tab) {
   // Use the favicon from the tab if it's there

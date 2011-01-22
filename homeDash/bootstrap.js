@@ -890,9 +890,9 @@ function addDashboard(window) {
     // Use the single search as a top match if searching
     if (searchPreview2.engineIcon != null)
       topMatch = searchPreview2.engineIcon.getPageInfo(query);
-    // Use the adaptive result over top site match
+    // Get top matches in order: keyword, adaptive, top site
     else
-      topMatch = getAdaptiveInfo(query) || topMatch;
+      topMatch = getKeywordInfo(query) || getAdaptiveInfo(query) || topMatch;
 
     // Do a full history search with a suggested top site
     history.search(query, topMatch);
