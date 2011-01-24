@@ -51,11 +51,38 @@ const globalShadow = "3px 3px 10px rgb(0, 0, 0)";
  * Remove all existing chrome of the browser window
  */
 function removeChrome(window) {
+  // Replace a value with another value or a function of the original value
   function change(obj, prop, val) {
     let orig = obj[prop];
-    obj[prop] = val;
+    obj[prop] = typeof val == "function" ? val(orig) : val;
     unload(function() obj[prop] = orig, window);
   }
+
+  // Resize the chrome based on the original size containing the main browser
+  let {document, gBrowser} = window;
+  let parentBox = gBrowser.parentNode.boxObject;
+
+  // Handle switching in and out of full screen
+  change(window.FullScreen, "mouseoverToggle", function(orig) {
+    return function(exitingFullScreen) {
+      try {
+        // Nothing to fix if not transitioning in or out of full screen
+        if (!window.fullScreen)
+          return;
+
+        // Wait a bit for the UI to switch
+        Utils.delay(function() {
+          // If we're exiting, shift away all the chrome, otherwise just 1px
+          let offset = exitingFullScreen ? -parentBox.y : -1;
+          gBrowser.style.marginTop = offset + "px";
+        });
+      }
+      finally {
+        // Always do the original functionality
+        return orig.apply(this, arguments);
+      }
+    };
+  });
 
   // Remove the lightweight theme to avoid browser size and color changes
   Cu.import("resource://gre/modules/LightweightThemeManager.jsm");
@@ -66,9 +93,8 @@ function removeChrome(window) {
 
   // Wait a bit for the UI to flow to grab the right size
   Utils.delay(function() {
-    let {gBrowser} = window;
     let style = gBrowser.style;
-    change(style, "marginTop", -gBrowser.boxObject.y + "px");
+    change(style, "marginTop", -parentBox.y + "px");
     change(style, "position", "relative");
     change(style, "zIndex", "1");
   });
