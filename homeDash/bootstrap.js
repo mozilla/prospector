@@ -1896,14 +1896,22 @@ function addDashboard(window) {
   // Pick the appropriate new tab state for various open reasons
   onOpen(function(reason) {
     switch (reason) {
+      // Location changes from an app tab default to opening a new tab
+      case "location":
+        controls.newTab = gBrowser.selectedTab.pinned;
+        break;
+
+      // Default open searches in a new tab
       case "search":
         controls.newTab = true;
         break;
 
+      // Don't show the controls when switching tabs
       case "switch":
         controls.collapsed = true;
         break;
 
+      // Toggle the new tab state each time it's triggered
       case "tab":
         controls.newTab = !controls.newTab;
         break;
