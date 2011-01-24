@@ -57,6 +57,10 @@ function removeChrome(window) {
     unload(function() obj[prop] = orig, window);
   }
 
+  // Remove the lightweight theme to avoid browser size and color changes
+  Cu.import("resource://gre/modules/LightweightThemeManager.jsm");
+  change(LightweightThemeManager, "currentTheme", null);
+
   // Make sure the navigation bar isn't hidden on pages like about:addons
   change(window.TabsOnTop, "enabled", false);
 
