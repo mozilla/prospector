@@ -171,6 +171,12 @@ function addDashboard(window) {
     masterStack.style.pointerEvents = "auto";
   });
 
+  // User was attempting to click the page behind the stack, so just dismiss
+  masterStack.addEventListener("click", function(event) {
+    if (event.target == masterStack)
+      dashboard.open = false;
+  }, false);
+
   // Make sure we're in the right tab stack whenever the tab switches
   listen(window, gBrowser.tabContainer, "TabSelect", function() {
     // Close the dashboard if the tab previewer isn't active (for tab close)
