@@ -1551,11 +1551,6 @@ function addDashboard(window) {
   tabs.lastSelectCount = 1;
   tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
 
-  // Initialize various special state to something useful
-  Array.forEach(gBrowser.tabs, function(tab) {
-    tab.HDselectCount = 1;
-  });
-
   // Get an array of tabs that match a query
   tabs.filter = function(query) {
     return gBrowser.visibleTabs.filter(function(tab) {
@@ -1896,11 +1891,25 @@ function addDashboard(window) {
     // Allow the request to be shared by future calls
     tabs.updateRequests.push(requestData);
 
+    // Default to grabbing the thumbnail in 1 second
+    let wait = 1000;
+    if (callback != null && callback.wait != null)
+      wait = callback.wait;
+
+    // Wait a little longer if the tab is busy loading
+    if (tab.hasAttribute("busy"))
+      wait *= 2;
+
     // Wait a little bit before taking the thumbnail to let the tab update
     setTimeout(function() {
       try {
+        // Might not have been restored yet so abort
+        let browser = tab.linkedBrowser;
+        if (browser.__SS_restoreState != null)
+          return;
+
         // Tab might not exist anymore so abort
-        let currentURI = tab.linkedBrowser.currentURI;
+        let currentURI = browser.currentURI;
         if (currentURI == null)
           return;
 
@@ -1930,7 +1939,7 @@ function addDashboard(window) {
         let pos = tabs.updateRequests.indexOf(requestData);
         tabs.updateRequests.splice(pos, 1);
       }
-    }, 1000);
+    }, wait);
   };
 
   // Newly opened tabs inherit some properties of the last selected tab
@@ -1943,6 +1952,9 @@ function addDashboard(window) {
     // Reduce the count by a little bit but pass down most of the value
     tabs.lastSelectCount *= .9;
     tab.HDselectCount = tabs.lastSelectCount;
+
+    // Wait a while before grabbing the thumbnail of a new tab
+    tabs.updateThumbnail(tab, {wait: 10000});
   });
 
   // Count how many times each tab is selected
@@ -1954,6 +1966,9 @@ function addDashboard(window) {
     // Remember this tab's selection count to inherit later
     tabs.lastSelectCount = tab.HDselectCount;
     tabs.lastSelectTime = tab.HDlastSelect;
+
+    // Get the thumbnail of the selected tab
+    tabs.updateThumbnail(tab, {wait: 5000});
   });
 
   // Clear out any state we set on external objects
@@ -1964,6 +1979,14 @@ function addDashboard(window) {
       tab.HDselectCount = 0;
       tab.HDthumbnail = "";
     });
+  });
+
+  // Initialize various special state to something useful
+  Array.forEach(gBrowser.tabs, function(tab) {
+    tab.HDselectCount = 1;
+
+    // Get a thumbnail for already open tabs
+    tabs.updateThumbnail(tab);
   });
 
   //// 4.5: Browser controls
