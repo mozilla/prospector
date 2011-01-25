@@ -279,11 +279,34 @@ function addDashboard(window) {
       if (stack.collapsed) {
         stack.unlisten();
         stack.listener = function() {
+          // Might get the load from the previous page, so just ignore
+          if (browser.docShell.currentDocumentChannel.originalURI.spec != url)
+            return;
+
+          // Only trigger once to unhide the preview
           stack.unlisten();
           stack.collapsed = false;
 
           // Remember the current url that is successfully previewed
           stack.lastLoadedUrl = url;
+
+          // Nothing else to do without a callback
+          if (callback == null)
+            return;
+
+          // Give the thumbnail callback what it wants
+          let {onThumbnail} = callback;
+          if (typeof onThumbnail == "function") {
+            // Check the thumbnail multiple times as it loads
+            for (let wait = 0; wait <= 4; wait++) {
+              let timeout = setTimeout(function() {
+                onThumbnail(createThumbnail(browser));
+              }, wait * 2500);
+
+              // Remember how to get rid of these timeouts when unloading
+              unloadCallbacks.push(function() clearTimeout(timeout));
+            }
+          }
         };
         browser.addEventListener("DOMContentLoaded", stack.listener, false);
       }
@@ -1447,7 +1470,7 @@ function addDashboard(window) {
     let left = 1.1 * sizeScale * leftBase - width / 2;
     let top = 1.1 * sizeScale * topBase * siteRatio - height / 2;
 
-    let siteBox = createNode("box");
+    let siteBox = createNode("stack");
     siteBox.setAttribute("left", left + "");
     siteBox.setAttribute("top", top + "");
     sites.appendChild(siteBox);
@@ -1457,12 +1480,21 @@ function addDashboard(window) {
     siteBox.style.boxShadow = globalShadow;
     siteBox.style.overflow = "hidden";
 
+    // The main content is the page thumbnail
     let siteThumb = createNode("image");
-    siteThumb.setAttribute("src", pageInfo.icon);
     siteBox.appendChild(siteThumb);
 
     siteThumb.style.height = height + "px";
     siteThumb.style.width = width + "px";
+
+    // Put a favicon in the top left corner
+    let siteIcon = createNode("image");
+    siteIcon.setAttribute("height", "16");
+    siteIcon.setAttribute("left", "2");
+    siteIcon.setAttribute("src", pageInfo.icon);
+    siteIcon.setAttribute("top", "2");
+    siteIcon.setAttribute("width", "16");
+    siteBox.appendChild(siteIcon);
 
     siteBox.pageInfo = pageInfo;
 
@@ -1474,7 +1506,12 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     siteBox.addEventListener("mouseover", function() {
-      pagePreview.load(pageInfo.url);
+      // Update the thumbnail as the preview loads
+      pagePreview.load(pageInfo.url, {
+        onThumbnail: function(thumbnail) {
+          siteThumb.setAttribute("src", thumbnail);
+        }
+      });
       statusLine.set("select", pageInfo.title);
       tabs.collapsed = true;
 
