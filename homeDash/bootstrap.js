@@ -62,6 +62,12 @@ function removeChrome(window) {
   let {document, gBrowser} = window;
   let parentBox = gBrowser.parentNode.boxObject;
 
+  // Offset the expected top if there's a title bar showing on Windows
+  let titleBar = document.getElementById("titlebar");
+  function getTop() {
+    return titleBar == null ? 0 : titleBar.boxObject.height;
+  }
+
   // Handle switching in and out of full screen
   change(window.FullScreen, "mouseoverToggle", function(orig) {
     return function(exitingFullScreen) {
@@ -73,7 +79,7 @@ function removeChrome(window) {
         // Wait a bit for the UI to switch
         Utils.delay(function() {
           // If we're exiting, shift away all the chrome, otherwise just 1px
-          let offset = exitingFullScreen ? -parentBox.y : -1;
+          let offset = exitingFullScreen ? getTop() - parentBox.y : -1;
           gBrowser.style.marginTop = offset + "px";
         });
       }
@@ -94,7 +100,7 @@ function removeChrome(window) {
   // Wait a bit for the UI to flow to grab the right size
   Utils.delay(function() {
     let style = gBrowser.style;
-    change(style, "marginTop", -parentBox.y + "px");
+    change(style, "marginTop", getTop() - parentBox.y + "px");
     change(style, "position", "relative");
     change(style, "zIndex", "1");
   });
