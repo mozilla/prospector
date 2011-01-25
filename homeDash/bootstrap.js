@@ -1533,7 +1533,10 @@ function addDashboard(window) {
   sites.highlight = function(targetBox) {
     // Fade out all the other boxes except the target made brighter
     Array.forEach(sites.childNodes, function(siteBox) {
-      siteBox.style.opacity = siteBox == targetBox ? "1" : "0";
+      // Don't re-show sites that are already hidden
+      if (siteBox.style.opacity == "0")
+        return;
+      siteBox.style.opacity = siteBox == targetBox ? "1" : ".3";
     });
   };
 
