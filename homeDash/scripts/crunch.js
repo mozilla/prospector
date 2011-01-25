@@ -43,9 +43,28 @@ function computeTopSites() {
   let stm = Utils.createStatement(db,
     "SELECT * " +
     "FROM moz_places " +
+    "WHERE hidden = 0 " +
     "ORDER BY frecency DESC " +
-    "LIMIT 24");
+    "LIMIT 100");
+
+  let seenDomains = {};
   Utils.queryAsync(stm, ["url", "title"]).forEach(function({url, title}) {
+    // Stop at 24 sites for now
+    if (topSites.length == 24)
+      return;
+
+    // Only allow one site per domain for now until the user can customize
+    try {
+      let domain = Services.io.newURI(url, null, null).prePath;
+      if (seenDomains[domain])
+        return;
+      seenDomains[domain] = true;
+    }
+    catch(ex) {
+      return;
+    }
+
+    // Save this top site to display later
     topSites.push(makePageInfo(title, url));
   });
 }
