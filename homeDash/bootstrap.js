@@ -306,8 +306,12 @@ function addDashboard(window) {
       // TODO: Add the preview as an entry (disablehistory prevents us for now)
       let history = targetBrowser.sessionHistory;
 
+      // XXX Set overflow before then unset after to force scrollbars to appear
+      targetBrowser.style.overflow = "auto";
+
       // Swap the docshells then fix up various properties
       targetBrowser.swapDocShells(browser);
+      targetBrowser.style.overflow = "";
       targetBrowser.webNavigation.sessionHistory = history;
       targetBrowser.attachFormFill();
       gBrowser.setTabTitle(targetTab);
@@ -319,9 +323,6 @@ function addDashboard(window) {
       gBrowser.mTabListeners[selectedIndex] = tabListener;
       filter.addProgressListener(tabListener, Ci.nsIWebProgress.NOTIFY_ALL);
       targetBrowser.webProgress.addProgressListener(filter, Ci.nsIWebProgress.NOTIFY_ALL);
-
-      // Fix some properties because the preview is different from a tab's browser
-      targetBrowser.style.overflow = "auto";
     };
 
     // Hide and stop the preview
