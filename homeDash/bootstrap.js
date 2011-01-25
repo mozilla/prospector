@@ -174,6 +174,22 @@ function addDashboard(window) {
   const windowBoxObject = window.document.documentElement.boxObject;
   const sixthWidth = windowBoxObject.width / 6;
 
+  // Maybe the window is still loading so we got some impossible size
+  if (sixthWidth < 50) {
+    // Don't try again for this window
+    if (window.HDtriedOnce)
+      return;
+
+    // Remember that we've already tried once
+    window.HDtriedOnce = true;
+    unload(function() window.HDtriedOnce = false, window);
+
+    // Recursively try again a little later
+    let timeout = setTimeout(function() addDashboard(window), 5000);
+    unload(function() clearTimeout(timeout), window);
+    return;
+  }
+
   //// Add master stack containing all 7 layers of the dashboard
 
   let masterStack = createNode("stack");
