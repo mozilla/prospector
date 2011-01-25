@@ -147,7 +147,8 @@ function addDashboard(window) {
     return document.createElementNS(XUL, node);
   }
 
-  let sixthWidth = gBrowser.boxObject.width / 6;
+  const windowBoxObject = window.document.documentElement.boxObject;
+  const sixthWidth = windowBoxObject.width / 6;
 
   //// Add master stack containing all 7 layers of the dashboard
 
@@ -1372,12 +1373,15 @@ function addDashboard(window) {
   //// 4.3: Top sites
 
   let sites = createNode("stack");
-  sites.setAttribute("left", "850");
-  sites.setAttribute("top", "450");
+  sites.setAttribute("left", 4 * sixthWidth);
+  sites.setAttribute("top", (windowBoxObject.height - 140) / 2 + 140 + "");
   dashboard.appendChild(sites);
 
+  // Set the base width and height ratio to fit the bottom-right sites area
+  const sizeScale = sixthWidth / 3.5;
+  const siteRatio = (windowBoxObject.height - 140) / (4 * sixthWidth);
+
   // Define the positions and size of the top sites
-  const sizeScale = 60;
   const siteSizes = [
     [-2, -2, 2],
     [ 2, -2, 2],
@@ -1414,9 +1418,9 @@ function addDashboard(window) {
     let [leftBase, topBase, size] = siteSizes[index];
 
     let width = sizeScale * size * 2;
-    let height = sizeScale * size * 3 / 4 * 2;
+    let height = sizeScale * size * siteRatio * 2;
     let left = 1.1 * sizeScale * leftBase - width / 2;
-    let top = 1.1 * sizeScale * topBase * 3 / 4 - height / 2;
+    let top = 1.1 * sizeScale * topBase * siteRatio - height / 2;
 
     let siteBox = createNode("box");
     siteBox.setAttribute("left", left + "");
