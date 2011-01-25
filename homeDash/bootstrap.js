@@ -153,6 +153,24 @@ function addDashboard(window) {
     return document.createElementNS(XUL, node);
   }
 
+  // Create a data url thumbnail of a browser
+  function createThumbnail(browser) {
+    let canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+    canvas.height = 2 * sixthWidth / 4 * 3;
+    canvas.width = 2 * sixthWidth;
+
+    // Shrink the page a little bit
+    let ctx = canvas.getContext("2d");
+    ctx.scale(.5, .5);
+
+    // Draw the page into the canvas and give back the data url
+    let content = browser.contentWindow;
+    let {scrollX, scrollY} = content;
+    let {height, width} = windowBoxObject;
+    ctx.drawWindow(content, scrollX, scrollY, width, height, "white");
+    return canvas.toDataURL();
+  }
+
   const windowBoxObject = window.document.documentElement.boxObject;
   const sixthWidth = windowBoxObject.width / 6;
 
@@ -1632,12 +1650,23 @@ function addDashboard(window) {
       tabBox.style.overflow = "hidden";
       tabBox.style.margin = "10px -122px 10px 0";
 
+      // The main content is the tab thubmnail
       let tabThumb = createNode("image");
-      tabThumb.setAttribute("src", getTabIcon(tab));
+      tabThumb.setAttribute("src", tab.HDthumbnail);
       tabThumb.style.height = "90px";
       tabThumb.style.width = "120px";
       tabBox.appendChild(tabThumb);
 
+      // Put a favicon in the top left corner
+      let tabIcon = createNode("image");
+      tabIcon.setAttribute("height", "16");
+      tabIcon.setAttribute("left", "2");
+      tabIcon.setAttribute("src", getTabIcon(tab));
+      tabIcon.setAttribute("top", "2");
+      tabIcon.setAttribute("width", "16");
+      tabBox.appendChild(tabIcon);
+
+      // Show a quick switch number in the bottom left if necessary
       let quickNum = createNode("label");
       quickNum.setAttribute("bottom", "0");
       quickNum.setAttribute("left", "0");
@@ -1806,6 +1835,14 @@ function addDashboard(window) {
         statusLine.reset();
         tabPreview.reset();
       }, false);
+
+      // Make a request to update the thumbnail
+      tabs.updateThumbnail(tab, function(thumbnail) {
+        // Might have been removed before getting the data
+        if (tabBox.parentNode != tabs)
+          return;
+        tabThumb.setAttribute("src", thumbnail);
+      });
     });
 
     // Fix up the right margin of the last tab and insert a spacer
@@ -1829,6 +1866,72 @@ function addDashboard(window) {
     while ((node = tabs.lastChild) != null)
       tabs.removeChild(node);
   });
+
+  // Keep track of what tabs we're still waiting to take a thumbnail
+  tabs.updateRequests = [];
+
+  // Take a thumbnail of a tab after waiting a little bit
+  tabs.updateThumbnail = function(tab, callback) {
+    // Figure out if we have an active request for this tab
+    let requestData;
+    tabs.updateRequests.some(function(data) {
+      if (data.tab != tab)
+        return false;
+      requestData = data;
+      return true;
+    });
+
+    // Just add the callback to the active request
+    if (requestData != null) {
+      requestData.callbacks.push(callback);
+      return;
+    }
+
+    // Package up the current request for later reference
+    requestData = {
+      callbacks: [callback],
+      tab: tab
+    };
+
+    // Allow the request to be shared by future calls
+    tabs.updateRequests.push(requestData);
+
+    // Wait a little bit before taking the thumbnail to let the tab update
+    setTimeout(function() {
+      try {
+        // Tab might not exist anymore so abort
+        let currentURI = tab.linkedBrowser.currentURI;
+        if (currentURI == null)
+          return;
+
+        // Don't take snapshots of blank pages (or swapped previews)
+        let currentUrl = currentURI.spec;
+        if (currentUrl == "about:blank")
+          return;
+
+        // No need to update the thumbnail if we're on the same page
+        if (tab.HDlastThumbUrl == currentUrl)
+          return;
+
+        // Save the thumbnail for future use
+        tab.HDlastThumbUrl = currentUrl;
+        tab.HDthumbnail = createThumbnail(tab.linkedBrowser);
+
+        // Give the thumbnail to all callbacks (or not if not a function)
+        requestData.callbacks.forEach(function(callback) {
+          try {
+            callback(tab.HDthumbnail);
+          }
+          catch(ex) {}
+        });
+      }
+      // Always remove this tab's request from the active requests array
+      finally {
+        let pos = tabs.updateRequests.indexOf(requestData);
+        tabs.updateRequests.splice(pos, 1);
+      }
+    }, 1000);
+  };
 
   // Newly opened tabs inherit some properties of the last selected tab
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
@@ -1857,7 +1960,9 @@ function addDashboard(window) {
   unload(function() {
     Array.forEach(gBrowser.tabs, function(tab) {
       tab.HDlastSelect = 0;
+      tab.HDlastThumbUrl = "";
       tab.HDselectCount = 0;
+      tab.HDthumbnail = "";
     });
   });
 
