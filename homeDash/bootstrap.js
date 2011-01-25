@@ -483,8 +483,8 @@ function addDashboard(window) {
 
   // Borrow a tab's browser until the preview goes away
   tabPreview.swap = function(tab) {
-    tabPreview.swappedBrowser = tab.linkedBrowser;
-    tabPreview.swapDocShells(tabPreview.swappedBrowser);
+    tabPreview.swappedTab = tab;
+    tabPreview.swapDocShells(tab.linkedBrowser);
     tabPreviewStack.collapsed = false;
   };
 
@@ -493,14 +493,16 @@ function addDashboard(window) {
     tabPreviewStack.collapsed = true;
 
     // Make sure the browser has a docshell to swap in the future
-    if (tabPreview.swappedBrowser == null) {
+    let {swappedTab} = tabPreview;
+    if (swappedTab == null) {
       tabPreview.loadURI("about:blank");
       return;
     }
 
     // Restore the docshell to wherever it came from
-    tabPreview.swapDocShells(tabPreview.swappedBrowser);
-    tabPreview.swappedBrowser = null;
+    tabPreview.swapDocShells(swappedTab.linkedBrowser);
+    gBrowser.setTabTitle(swappedTab);
+    tabPreview.swappedTab = null;
   });
 
   // Prevent errors from browser.js/xul when it gets unexpected title changes
