@@ -704,7 +704,7 @@ function addDashboard(window) {
 
             // Don't show a preview if it's for the current tab
             if (gBrowser.selectedTab == previewedTab) {
-              statusLine.set("text", "Return to the current tab");
+              statusLine.set("text", "Return to the current tab (esc)");
               return;
             }
 
@@ -1033,7 +1033,7 @@ function addDashboard(window) {
 
   // Describe the input box
   input.addEventListener("mouseover", function() {
-    statusLine.set("text", "Search your top sites, open tabs, history, and the web");
+    statusLine.set("text", "Search your top sites, open tabs, history, and the web (\u2318L)");
   }, false);
 
   input.addEventListener("mouseout", function() {
@@ -1841,7 +1841,7 @@ function addDashboard(window) {
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
-          statusLine.set("text", "Return to the current tab");
+          statusLine.set("text", "Return to the current tab (esc)");
           return;
         }
 
