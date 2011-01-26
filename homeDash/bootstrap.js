@@ -2224,10 +2224,81 @@ function addDashboard(window) {
     statusLine.value = text;
   };
 
+  // Show loading status of the current tab
+  statusLine.setLoading = function(state) {
+    switch (state) {
+      // Only show start when transitioning from stopped
+      case "start":
+        if (statusLine.loadingState == null)
+          break;
+        return;
+
+      // Only show stop if not already stopped
+      case "stop":
+        if (statusLine.loadingState == null)
+          return;
+        state = null;
+        break;
+
+      // Only show load when transitioning from start
+      case "load":
+        if (statusLine.loadingState == "start")
+          break;
+        return;
+
+      default:
+        return;
+    }
+
+    // Update the current state and show it (or remove it)
+    statusLine.loadingState = state;
+    statusLine.reset();
+  };
+
   // Clear out the status line when closing or resetting
   statusLine.reset = onClose(function() {
+    // Show a connecting or loading state instead of just clearing
+    if (statusLine.loadingState != null) {
+      let text = statusLine.loadingState == "load" ? "Loading" : "Connecting";
+      statusLine.set("text", text + "\u2026");
+      return;
+    }
+
     statusLine.collapsed = true;
     statusLine.value = "";
+  });
+
+  // Track the state and progress of the current tab
+  let progressListener = {
+    onLocationChange: function() {},
+
+    // Indicate that the page is loading
+    onProgressChange: function() {
+      statusLine.setLoading("load");
+    },
+
+    onSecurityChange: function() {},
+
+    onStateChange: function(progress, request, state, status) {
+      // Only care about the top level state changes
+      if (!(state & Ci.nsIWebProgressListener.STATE_IS_WINDOW))
+        return;
+
+      // Track only starts and stops
+      if (state & Ci.nsIWebProgressListener.STATE_START)
+        statusLine.setLoading("start");
+      else if (state & Ci.nsIWebProgressListener.STATE_STOP)
+        statusLine.setLoading("stop");
+    },
+
+    onStatusChange: function() {}
+  };
+  gBrowser.addProgressListener(progressListener);
+  unload(function() gBrowser.removeProgressListener(progressListener), window);
+
+  // Clear out any existing loading status when switching tabs
+  listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
+    statusLine.setLoading("stop");
   });
 
   let (orig = window.XULBrowserWindow.setOverLink) {
