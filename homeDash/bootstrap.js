@@ -166,13 +166,13 @@ function addDashboard(window) {
     // Draw the page into the canvas and give back the data url
     let content = browser.contentWindow;
     let {scrollX, scrollY} = content;
-    let {height, width} = windowBoxObject;
+    let {height, width} = maxBoxObject;
     ctx.drawWindow(content, scrollX, scrollY, width, height, "white");
     return canvas.toDataURL();
   }
 
-  const windowBoxObject = window.document.documentElement.boxObject;
-  const sixthWidth = windowBoxObject.width / 6;
+  const maxBoxObject = gBrowser.boxObject;
+  const sixthWidth = maxBoxObject.width / 6;
 
   // Maybe the window is still loading so we got some impossible size
   if (sixthWidth < 50) {
@@ -1440,12 +1440,12 @@ function addDashboard(window) {
 
   let sites = createNode("stack");
   sites.setAttribute("left", 4 * sixthWidth);
-  sites.setAttribute("top", (windowBoxObject.height - 140) / 2 + 140 + "");
+  sites.setAttribute("top", (maxBoxObject.height - 140) / 2 + 140 + "");
   dashboard.appendChild(sites);
 
   // Set the base width and height ratio to fit the bottom-right sites area
   const sizeScale = sixthWidth / 3.5;
-  const siteRatio = (windowBoxObject.height - 140) / (4 * sixthWidth);
+  const siteRatio = (maxBoxObject.height - 140) / (4 * sixthWidth);
 
   // Define the positions and size of the top sites
   const siteSizes = [
@@ -2634,8 +2634,12 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   processAdaptive();
 
   // Change the main browser windows
-  watchWindows(removeChrome);
-  watchWindows(addDashboard);
+  watchWindows(function(window) {
+    removeChrome(window);
+
+    // Wait for the chrome to be removed and resized before adding
+    Utils.delay(function() addDashboard(window));
+  });
 })
 
 /**
