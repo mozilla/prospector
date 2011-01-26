@@ -1431,7 +1431,7 @@ function addDashboard(window) {
           history.add(pageInfo);
 
           // Stop processing current and future results if we have enough
-          if (history.childNodes.length > 30) {
+          if (history.childNodes.length > 60) {
             history.cancelSearch();
             break;
           }
