@@ -2599,8 +2599,9 @@ function addDashboard(window) {
       return;
     tab.HDtitleChangedCount = count;
 
+    // Show a notification if we've gotten enough
     if (count == CHANGE_THRESHOLD)
-      notifications.addTab(tab, function() tab.HDtitleChangedCount = 0);
+      notifications.addTab(tab);
   });
 
   // Don't switch to the tab on modal and show a notification instead
@@ -2616,6 +2617,12 @@ function addDashboard(window) {
   // Watch for tabs being opened in the background
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
     notifications.addTab(event.target);
+  });
+
+  // Reset the change count if the user has seen the tab
+  listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
+    let tab = event.target;
+    tab.HDtitleChangedCount = 0
   });
 
   // Clear out any state we set on external objects
