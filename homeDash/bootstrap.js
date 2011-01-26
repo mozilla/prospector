@@ -2087,7 +2087,7 @@ function addDashboard(window) {
       newTabButton.style.opacity = "1";
     }
     else {
-      newTabButton.style.opacity = ".7";
+      newTabButton.style.opacity = ".4";
     }
   };
 
@@ -2129,7 +2129,7 @@ function addDashboard(window) {
 
   // Indicate what clicking will do
   newTabButton.addEventListener("mouseover", function() {
-    newTabButton.style.opacity = ".8";
+    newTabButton.style.opacity = ".7";
 
     let action = controls.newTab ? "deactivate" : "activate";
     statusLine.set(action, "selecting pages as a new tab (\u2318T)");
