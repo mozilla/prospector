@@ -163,12 +163,12 @@ function addDashboard(window) {
   // Create a data url thumbnail of a browser
   function createThumbnail(browser) {
     let canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
-    canvas.height = 2 * sixthWidth / 4 * 3;
-    canvas.width = 2 * sixthWidth;
+    canvas.width = 1.15 * sixthWidth;
+    canvas.height = canvas.width / 4 * 3;
 
     // Shrink the page a little bit
     let ctx = canvas.getContext("2d");
-    ctx.scale(.5, .5);
+    ctx.scale(.3, .3);
 
     // Draw the page into the canvas and give back the data url
     let content = browser.contentWindow;
