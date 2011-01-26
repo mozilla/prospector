@@ -2586,6 +2586,12 @@ function addDashboard(window) {
     if (tab == null || tab == gBrowser.selectedTab)
       return;
 
+    // Ignore duplicate title change events to the same title
+    let title = tab.getAttribute("label");
+    if (title == tab.HDlastTitle)
+      return;
+    tab.HDlastTitle = title;
+
     // Don't notify or update the count if we already triggered
     const CHANGE_THRESHOLD = 2;
     let count = (tab.HDtitleChangedCount || 0) + 1;
@@ -2614,7 +2620,10 @@ function addDashboard(window) {
 
   // Clear out any state we set on external objects
   unload(function() {
-    Array.forEach(gBrowser.tabs, function(tab) tab.HDtitleChangedCount = 0);
+    Array.forEach(gBrowser.tabs, function(tab) {
+      tab.HDlastTitle = "";
+      tab.HDtitleChangedCount = 0;
+    });
   });
 
   //// 7: Firefox icon
