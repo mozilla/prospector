@@ -2727,6 +2727,32 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   computeTopSites();
   processAdaptive();
 
+  // Initially activate Home Dash when starting
+  activateHomeDash(true);
+})
+
+// Activate or deactivate Home Dash
+function activateHomeDash(activating) {
+  // Add a shortcut to activate and deactivate Home Dash
+  watchWindows(function(window) {
+    listen(window, window, "keydown", function(event) {
+      // Only care about alt-ctrl-shift-d key combination
+      if (event.keyCode != event.DOM_VK_D)
+        return;
+      if (!event.altKey || !event.ctrlKey || !event.shiftKey)
+        return;
+
+      // Unload everything then activate the opposite behavior
+      event.stopPropagation();
+      unload();
+      activateHomeDash(!activating);
+    });
+  });
+
+  // Nothing else to do if we're deactivating
+  if (!activating)
+    return;
+
   // Change the main browser windows
   watchWindows(function(window) {
     removeChrome(window);
@@ -2734,7 +2760,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     // Wait for the chrome to be removed and resized before adding
     Utils.delay(function() addDashboard(window));
   });
-})
+}
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
