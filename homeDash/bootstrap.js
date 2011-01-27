@@ -1166,6 +1166,12 @@ function addDashboard(window) {
     let {firstSuggestion, selectionStart, textLength, value} = input;
 
     switch (event.keyCode) {
+      // Select the next element from the history list
+      case event.DOM_VK_DOWN:
+        history.highlight({direction: "down"});
+        event.preventDefault();
+        break;
+
       // Track when we see key downs for enter
       case event.DOM_VK_ENTER:
       case event.DOM_VK_RETURN:
@@ -1193,6 +1199,12 @@ function addDashboard(window) {
         }
 
         // Always prevent the focus from leaving the box
+        event.preventDefault();
+        break;
+
+      // Select the previous element from the history list
+      case event.DOM_VK_UP:
+        history.highlight({direction: "up"});
         event.preventDefault();
         break;
     }
@@ -1231,9 +1243,9 @@ function addDashboard(window) {
       url = searchPreview2.engineIcon.getSearchUrl(input.lastQuery);
       preview = searchPreview2;
     }
-    // Use the top match for the query if it exists
-    else if (history.topMatchBox != null) {
-      url = history.topMatchBox.pageInfo.url;
+    // Use the highlighted entry which might be a top match
+    else if (history.highlighted != null) {
+      url = history.highlighted.pageInfo.url;
       preview = pagePreview;
     }
     // Just navigate to whatever the user typed in
@@ -1493,6 +1505,7 @@ function addDashboard(window) {
 
     iconNode.style.height = "16px";
     iconNode.style.marginLeft = "2px";
+    iconNode.style.pointerEvents = "none";
     iconNode.style.width = "16px";
 
     let titleNode = createNode("label");
@@ -1501,30 +1514,48 @@ function addDashboard(window) {
     titleNode.setAttribute("value", pageInfo.title);
     entryBox.appendChild(titleNode);
 
-    // Save the page preview when clicked
-    entryBox.addEventListener("click", function() {
-      input.adapt(pageInfo);
-      dashboard.usePreview(pagePreview, pageInfo.url);
-    }, false);
+    titleNode.style.pointerEvents = "none";
 
-    // Indicate what clicking will do
-    entryBox.addEventListener("mouseover", function() {
+    // Emphasize this entry and show its preview
+    entryBox.emphasize = function(allowOtherData) {
       entryBox.style.textDecoration = "underline";
 
-      // Show the preview and hide other things covering it
+      // Show the preview and indicate what click/enter will do
       pagePreview.load(pageInfo.url);
-      sites.hide();
       statusLine.set(replacePage.action, pageInfo.title);
-      tabs.hide();
-    }, false);
 
-    entryBox.addEventListener("mouseout", function() {
+      // Only hide other data if it's not allowed
+      if (!allowOtherData) {
+        sites.hide();
+        tabs.hide();
+      }
+    };
+
+    // Stop emphasizing this entry and remove its preview
+    entryBox.unemphasize = function() {
       entryBox.style.textDecoration = "";
 
       sites.show(1000);
       statusLine.reset();
       pagePreview.reset();
       tabs.show(1000);
+    };
+
+    // Save the page preview when clicked
+    entryBox.addEventListener("click", function() {
+      input.adapt(pageInfo);
+      dashboard.usePreview(pagePreview, pageInfo.url);
+    }, false);
+
+    // Highlight this entry to update the status and preview
+    entryBox.addEventListener("mouseover", function() {
+      history.highlight(entryBox);
+    }, false);
+
+    // Only unhighlight if the highlighted was still this box
+    entryBox.addEventListener("mouseout", function() {
+      if (history.highlighted == entryBox)
+        history.unhighlight();
     }, false);
 
     return entryBox;
@@ -1553,20 +1584,13 @@ function addDashboard(window) {
 
     // Add the top match and remember it for later
     let entryBox = history.topMatchBox = history.add(pageInfo);
+    history.highlight(entryBox, true);
 
     // Specially style the top match
     entryBox.style.boxShadow = globalShadow;
     entryBox.style.fontSize = "20px";
     entryBox.style.fontWeight = "bold";
     entryBox.style.margin = "0 -10px 5px -5px";
-
-    // Load the preview and clean up styles when removed
-    pagePreview.load(pageInfo.url, function() {
-      entryBox.style.textDecoration = "";
-    });
-
-    // Indicate that we're loading
-    entryBox.style.textDecoration = "underline";
 
     return entryBox;
   };
@@ -1589,8 +1613,38 @@ function addDashboard(window) {
     history.activeSearch = null;
   };
 
+  // Emphasize an entry to preview and load on select
+  history.highlight = function(entry, allowOtherData) {
+    // Don't bother if it's already highlighted
+    let current = history.highlighted;
+    if (entry == current)
+      return;
+
+    // Stop emphasizing the current highlight
+    history.unhighlight();
+
+    // Create a fake node if there's no current entry
+    current = current || {
+      nextSibling: history.firstChild,
+      previousSibling: history.lastChild
+    };
+
+    // Detetect alternate entry selection of relative directions
+    let {direction} = entry;
+    if (direction == "up")
+      entry = current.previousSibling;
+    else if (direction == "down")
+      entry = current.nextSibling;
+
+    // Remember this entry and emphasize if necessary
+    history.highlighted = entry;
+    if (entry != null)
+      entry.emphasize(allowOtherData);
+  };
+
   // Clear out any state like results and active queries
   history.reset = function() {
+    history.highlighted = null;
     history.lastOffset = 0;
     history.lastQuery = null;
     history.topMatchBox = null;
@@ -1732,6 +1786,16 @@ function addDashboard(window) {
         history.lastOffset += numProcessed;
       }
     });
+  };
+
+  // Stop tracking an entry as highlighted
+  history.unhighlight = function() {
+    if (history.highlighted == null)
+      return;
+
+    // Stop emphasizing if there's something highlighted
+    history.highlighted.unemphasize();
+    history.highlighted = null;
   };
 
   // Remove any history matches and active searches
