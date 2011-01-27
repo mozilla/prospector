@@ -275,6 +275,8 @@ function addDashboard(window) {
       unloadCallbacks.length = 0;
     }
 
+    stack.loadTimer = null;
+
     // Provide a way to load a url into the preview
     stack.load = function(url, callback) {
       // Nothing to load, so hide
@@ -290,49 +292,57 @@ function addDashboard(window) {
       // Must be changing urls, so inform whoever needs to know
       runUnload();
 
-      // Save this new unload callback for later
-      if (typeof callback == "function")
-        unloadCallbacks.push(callback);
-
-      // Start loading the provided url
-      browser.loadURI(url);
       stack.lastRequestedUrl = url;
 
-      // Wait until the page loads to show the preview
-      if (stack.collapsed) {
-        stack.unlisten();
-        stack.listener = function() {
-          // Might get the load from the previous page, so just ignore
-          if (browser.docShell.currentDocumentChannel.originalURI.spec != url)
-            return;
+      if (stack.loadTimer)
+        return;
 
-          // Only trigger once to unhide the preview
+      stack.loadTimer = setTimeout(function() {
+        stack.loadTimer = null;
+
+        // Save this new unload callback for later
+        if (typeof callback == "function")
+          unloadCallbacks.push(callback);
+
+        // Start loading the provided url
+        browser.loadURI(stack.lastRequestedUrl);
+
+        // Wait until the page loads to show the preview
+        if (stack.collapsed) {
           stack.unlisten();
-          stack.collapsed = false;
+          stack.listener = function() {
+            // Might get the load from the previous page, so just ignore
+            if (browser.docShell.currentDocumentChannel.originalURI.spec != url)
+              return;
 
-          // Remember the current url that is successfully previewed
-          stack.lastLoadedUrl = url;
+            // Only trigger once to unhide the preview
+            stack.unlisten();
+            stack.collapsed = false;
 
-          // Nothing else to do without a callback
-          if (callback == null)
-            return;
+            // Remember the current url that is successfully previewed
+            stack.lastLoadedUrl = url;
 
-          // Give the thumbnail callback what it wants
-          let {onThumbnail} = callback;
-          if (typeof onThumbnail == "function") {
-            // Check the thumbnail multiple times as it loads
-            for (let wait = 0; wait <= 4; wait++) {
-              let timeout = setTimeout(function() {
-                onThumbnail(createThumbnail(browser));
-              }, wait * 2500);
+            // Nothing else to do without a callback
+            if (callback == null)
+              return;
 
-              // Remember how to get rid of these timeouts when unloading
-              unloadCallbacks.push(function() clearTimeout(timeout));
+            // Give the thumbnail callback what it wants
+            let {onThumbnail} = callback;
+            if (typeof onThumbnail == "function") {
+              // Check the thumbnail multiple times as it loads
+              for (let wait = 0; wait <= 4; wait++) {
+                let timeout = setTimeout(function() {
+                  onThumbnail(createThumbnail(browser));
+                }, wait * 2500);
+
+                // Remember how to get rid of these timeouts when unloading
+                unloadCallbacks.push(function() clearTimeout(timeout));
+              }
             }
-          }
-        };
-        browser.addEventListener("DOMContentLoaded", stack.listener, false);
-      }
+          };
+          browser.addEventListener("DOMContentLoaded", stack.listener, false);
+        }
+      }, 100);
     };
 
     // Persist the preview to where the user wants
