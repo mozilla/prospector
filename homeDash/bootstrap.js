@@ -1027,11 +1027,11 @@ function addDashboard(window) {
     switch (event.keyCode) {
       case event.DOM_VK_UP:
         history.selectPrevious();
-        event.stopPropagation();
+        event.preventDefault();
         return;
       case event.DOM_VK_DOWN:
         history.selectNext();
-        event.stopPropagation();
+        event.preventDefault();
         return;
     }
 
