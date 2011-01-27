@@ -1013,6 +1013,18 @@ function addDashboard(window) {
 
   // Close the dashboard when hitting escape from an empty input box
   input.addEventListener("keydown", function(event) {
+    // Select the next/previous element from the history list on UP/DOWN.
+    switch (event.keyCode) {
+      case event.DOM_VK_UP:
+        history.selectPrevious();
+        event.stopPropagation();
+        return;
+      case event.DOM_VK_DOWN:
+        history.selectNext();
+        event.stopPropagation();
+        return;
+    }
+
     if (event.keyCode == event.DOM_VK_ESCAPE && input.value == "")
       dashboard.open = false;
   }, false);
@@ -1042,9 +1054,9 @@ function addDashboard(window) {
       url = searchPreview2.engineIcon.getSearchUrl(input.lastQuery);
       preview = searchPreview2;
     }
-    // Use the top match for the query if it exists
-    else if (history.topMatchBox != null) {
-      url = history.topMatchBox.pageInfo.url;
+    // Use the selected entry from the history if there is one
+    else if (history.highlighted != null || history.topMatchBox != null) {
+      url = (history.highlighted || history.topMatchBox).pageInfo.url;
       preview = pagePreview;
     }
     // Just navigate to whatever the user typed in
@@ -1216,8 +1228,7 @@ function addDashboard(window) {
       dashboard.usePreview(pagePreview, pageInfo.url);
     }, false);
 
-    // Indicate what clicking will do
-    entryBox.addEventListener("mouseover", function() {
+    entryBox.highlight = function() {
       entryBox.style.textDecoration = "underline";
 
       // Show the preview and hide other things covering it
@@ -1225,19 +1236,70 @@ function addDashboard(window) {
       sites.collapsed = true;
       statusLine.set("select", pageInfo.title);
       tabs.collapsed = true;
-    }, false);
 
-    entryBox.addEventListener("mouseout", function() {
+      if (entryBox != history.highlighted)
+        history.setHighlighted(entryBox);
+    };
+
+    // Indicate what clicking will do
+    entryBox.addEventListener("mouseover", entryBox.highlight, false);
+
+    entryBox.unhighlight = function() {
       entryBox.style.textDecoration = "";
 
       sites.collapsed = false;
       statusLine.reset();
       pagePreview.reset();
       tabs.collapsed = false;
-    }, false);
+      history.highlighted = null;
+    }
+    entryBox.addEventListener("mouseout", entryBox.unhighlight, false);
 
     return entryBox;
   };
+
+  history.highlighted = null;
+
+  history.setHighlighted = function(entry) {
+    if (entry == history.highlighted)
+      return;
+
+    if (history.highlighted) {
+      history.highlighted.unhighlight();
+    }
+
+    history.highlighted = entry;
+
+    if (entry) {
+      history.highlighted.highlight();
+    }
+  }
+
+  history.selectPrevious = function() {
+      let idx;
+      let nodeArray = Array.slice(history.childNodes);
+      if (!history.highlighted) {
+          idx = 0;
+      } else {
+          idx = Math.max(
+              0,
+              nodeArray.indexOf(history.highlighted) - 1);
+      }
+      history.setHighlighted(nodeArray[idx])
+  }
+
+  history.selectNext = function() {
+      let idx;
+      let nodeArray = Array.slice(history.childNodes);
+      if (!history.highlighted) {
+          idx = 1;
+      } else {
+          idx = Math.min(
+              nodeArray.length - 1,
+              nodeArray.indexOf(history.highlighted) + 1);
+      }
+      history.setHighlighted(nodeArray[idx])
+  }
 
   // Specially handle adding the single top match result
   history.addTopMatch = function(pageInfo) {
@@ -1262,6 +1324,7 @@ function addDashboard(window) {
 
     // Add the top match and remember it for later
     let entryBox = history.topMatchBox = history.add(pageInfo);
+    history.highlighted = history.topMatchBox;
 
     // Specially style the top match
     entryBox.style.boxShadow = globalShadow;
@@ -1313,6 +1376,7 @@ function addDashboard(window) {
     while ((node = history.lastChild) != null)
       history.removeChild(node);
     history.resultMap = {};
+    history.highlighted = null;
   });
 
   // Search through history and add items
@@ -2326,7 +2390,7 @@ function addDashboard(window) {
 
           case "https":
             action = "loadsite";
-            text = "secure " + getHostText(newURI);
+            text = "secure " + getHostText(newURI) + " - " + url;
             break;
 
           case "javascript":
@@ -2341,7 +2405,7 @@ function addDashboard(window) {
 
           default:
             action = "loadsite";
-            text = getHostText(newURI);
+            text = getHostText(newURI) + " - " + url;
             break;
         }
       }
