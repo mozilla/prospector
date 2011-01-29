@@ -861,9 +861,7 @@ function addDashboard(window) {
   searchBox.style.pointerEvents = "auto";
 
   let input = createNode("textbox");
-  input.setAttribute("left", "30");
   input.setAttribute("timeout", "1");
-  input.setAttribute("top", "30");
   input.setAttribute("type", "search");
   searchBox.appendChild(input);
 
@@ -934,6 +932,9 @@ function addDashboard(window) {
     // Remember that this was the first suggestion
     if (!again)
       input.firstSuggestion = keyword;
+
+    // Update the suggestion list with the new suggestion ordering
+    suggestList.show(input.suggestions);
   };
 
   // Indicate if the "left" engine is active for potential side-by-side
@@ -1046,6 +1047,8 @@ function addDashboard(window) {
     // Only suggest if the user started typing and not searching
     if (input.value != "" && !input.willSearch)
       input.maybeSuggest(false);
+    else
+      suggestList.reset();
 
     // Skip searches that don't change usefully
     let query = input.value.trim();
@@ -1183,7 +1186,55 @@ function addDashboard(window) {
     statusLine.reset();
   }, false);
 
-  //// 4.1.1 Search engine controls
+  //// 4.1.1 Search suggestion list
+
+  let suggestList = createNode("hbox");
+  searchBox.appendChild(suggestList);
+
+  suggestList.style.overflow = "hidden";
+
+  // Show a list of suggestions
+  suggestList.show = function(suggestions) {
+    suggestList.reset();
+    suggestList.collapsed = false;
+
+    // Add each suggestion one by one
+    suggestions.forEach(function(suggestion) {
+      let suggestText = createNode("label");
+      suggestText.setAttribute("value", suggestion);
+      suggestList.appendChild(suggestText);
+
+      suggestText.style.margin = "0 0 0 3px";
+      suggestText.style.pointerEvents = "auto";
+
+      // Search for the suggestion when clicked
+      suggestText.addEventListener("click", function() {
+        input.value = suggestion;
+        input.doCommand();
+      }, false);
+
+      // Indicate what clicking will do
+      suggestText.addEventListener("mouseover", function() {
+        statusLine.set("search", suggestion);
+      }, false);
+
+      suggestText.addEventListener("mouseout", function() {
+        statusLine.reset();
+      }, false);
+    });
+  };
+
+  // Clear out all suggestions
+  suggestList.reset = onClose(function() {
+    suggestList.collapsed = true;
+
+    // Remove all suggestions
+    let node;
+    while ((node = suggestList.lastChild) != null)
+      suggestList.removeChild(node);
+  });
+
+  //// 4.1.2 Search engine controls
 
   let engines = createNode("hbox");
   searchBox.appendChild(engines);
@@ -2311,6 +2362,10 @@ function addDashboard(window) {
 
       case "reload":
         text = "Reload " + text;
+        break;
+
+      case "search":
+        text = "Search for " + text;
         break;
 
       case "select":
