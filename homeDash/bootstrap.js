@@ -961,6 +961,7 @@ function addDashboard(window) {
 
   // Clear out current state when closing
   onClose(function() {
+    input.expectEnter = false;
     input.firstEmptyOpen = true;
     input.lastQuery = null;
     input.lastRawQuery = "";
@@ -1076,6 +1077,22 @@ function addDashboard(window) {
       dashboard.open = false;
   }, false);
 
+  // Track when we see key downs for enter
+  input.addEventListener("keydown", function(event) {
+    // Only care about enter and return
+    switch (event.keyCode) {
+      case event.DOM_VK_ENTER:
+      case event.DOM_VK_RETURN:
+        break;
+
+      default:
+        return;
+    }
+
+    // Remember that we saw a keydown for enter
+    input.expectEnter = true;
+  }, false);
+
   // Look for enter after "command" has fired
   input.addEventListener("keyup", function(event) {
     // Only care about enter and return
@@ -1087,6 +1104,14 @@ function addDashboard(window) {
       default:
         return;
     }
+
+    // Only expect enter once, so clear it, but save it first
+    let expecting = input.expectEnter;
+    input.expectEnter = false;
+
+    // If we weren't expecting the enter, don't handle it
+    if (!expecting)
+      return;
 
     // Figure out which preview to use and url to load
     let preview, url;
