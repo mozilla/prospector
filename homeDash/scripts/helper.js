@@ -89,15 +89,12 @@ function getHostText(URI) {
   return host;
 }
 
-// Lookup a keyword to suggest for the provided query
-function getKeyword(query) {
+// Lookup all keywords to suggest for the provided query
+function getKeywordSuggestions(query) {
   let queryLen = query.length;
-  let sortedLen = sortedKeywords.length;
-  for (let i = 0; i < sortedLen; i++) {
-    let keyword = sortedKeywords[i];
-    if (keyword.slice(0, queryLen) == query)
-      return keyword;
-  }
+  return sortedKeywords.filter(function(keyword) {
+    return keyword.slice(0, queryLen) == query;
+  });
 }
 
 // Give a page info if it matches a bookmark or search keyword

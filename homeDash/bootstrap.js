@@ -900,21 +900,40 @@ function addDashboard(window) {
   });
 
   // Maybe complete the rest of the word
-  input.maybeSuggest = function() {
+  input.maybeSuggest = function(again) {
     // If the new query fits in the last query (deleting), don't suggest
     let query = input.value;
-    if (input.lastRawQuery.indexOf(query) == 0)
-      return;
-    input.lastRawQuery = query;
+    if (!again) {
+      if (input.lastRawQuery.indexOf(query) == 0)
+        return;
+      input.lastRawQuery = query;
 
-    // No need to update if there's no new keyword
-    let keyword = getKeyword(query);
-    if (keyword == null || keyword == query)
-      return;
+      // Fetch new suggestions for this query
+      input.suggestions = getKeywordSuggestions(query);
+
+      // Make sure the original query is somewhere
+      if (input.suggestions.indexOf(query) == -1)
+        input.suggestions.push(query);
+    }
+    // Start from the last raw query if not new
+    else {
+      query = input.lastRawQuery;
+
+      // Cycle in a direction to prepare the next keyword
+      if (again.backwards)
+        input.suggestions.unshift(input.suggestions.pop());
+      else
+        input.suggestions.push(input.suggestions.shift());
+    }
 
     // Put in the suggestion and highlight the completed part
+    let keyword = input.suggestions[0];
     input.value = keyword;
     input.setSelectionRange(query.length, keyword.length);
+
+    // Remember that this was the first suggestion
+    if (!again)
+      input.firstSuggestion = keyword;
   };
 
   // Indicate if the "left" engine is active for potential side-by-side
@@ -963,9 +982,11 @@ function addDashboard(window) {
   onClose(function() {
     input.expectEnter = false;
     input.firstEmptyOpen = true;
+    input.firstSuggestion = "";
     input.lastQuery = null;
     input.lastRawQuery = "";
     input.nextPreview = 2;
+    input.suggestions = [];
     input.value = "";
     searchPreview1.engineIcon = null;
     searchPreview2.engineIcon = null;
@@ -1024,7 +1045,7 @@ function addDashboard(window) {
   input.addEventListener("command", function() {
     // Only suggest if the user started typing and not searching
     if (input.value != "" && !input.willSearch)
-      input.maybeSuggest();
+      input.maybeSuggest(false);
 
     // Skip searches that don't change usefully
     let query = input.value.trim();
@@ -1073,6 +1094,8 @@ function addDashboard(window) {
 
   // Handle some special key hits from the input box
   input.addEventListener("keydown", function(event) {
+    let {firstSuggestion, selectionStart, textLength, value} = input;
+
     switch (event.keyCode) {
       // Track when we see key downs for enter
       case event.DOM_VK_ENTER:
@@ -1082,15 +1105,21 @@ function addDashboard(window) {
 
       // Close the dashboard when hitting escape from an empty input box
       case event.DOM_VK_ESCAPE:
-        if (input.value == "")
+        if (value == "")
           dashboard.open = false;
         break;
 
       // Allow cycling through stuff with tab
       case event.DOM_VK_TAB:
         // Activate searches for each tab
-        if (input.value == "" || input.willSearch)
+        if (value == "" || input.willSearch)
           dashboard.open = "search";
+        // Clear the selection if it's the first suggestion
+        else if (value == firstSuggestion && selectionStart != textLength)
+          input.setSelectionRange(textLength, textLength);
+        // Cycle through the suggestions
+        else
+          input.maybeSuggest({backwards: event.shiftKey});
 
         // Always prevent the focus from leaving the box
         event.preventDefault();
