@@ -155,6 +155,7 @@ function addDashboard(window) {
     return reasonOrCallback;
   }
 
+  // Make an alias to create a XUL node
   function createNode(node) {
     const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
     return document.createElementNS(XUL, node);
@@ -563,15 +564,8 @@ function addDashboard(window) {
 
   tabPreviewScreen.style.pointerEvents = "auto";
 
-  // Borrow a tab's browser until the preview goes away
-  tabPreview.swap = function(tab) {
-    tabPreview.swappedTab = tab;
-    tabPreview.swapDocShells(tab.linkedBrowser);
-    tabPreviewStack.collapsed = false;
-  };
-
   // Hide the preview and restore docshells
-  tabPreview.reset = onClose(function() {
+  tabPreview.reset = function() {
     tabPreviewStack.collapsed = true;
 
     // Make sure the browser has a docshell to swap in the future
@@ -585,7 +579,17 @@ function addDashboard(window) {
     tabPreview.swapDocShells(swappedTab.linkedBrowser);
     gBrowser.setTabTitle(swappedTab);
     tabPreview.swappedTab = null;
-  });
+  };
+
+  // Borrow a tab's browser until the preview goes away
+  tabPreview.swap = function(tab) {
+    tabPreview.swappedTab = tab;
+    tabPreview.swapDocShells(tab.linkedBrowser);
+    tabPreviewStack.collapsed = false;
+  };
+
+  // Initialize and clean up tab preview state
+  onClose(tabPreview.reset);
 
   // Prevent errors from browser.js/xul when it gets unexpected title changes
   tabPreview.addEventListener("DOMTitleChanged", function(event) {
@@ -937,6 +941,53 @@ function addDashboard(window) {
     suggestList.show(input.suggestions);
   };
 
+  // Take the current value in the input box and search with it
+  input.search = function() {
+    // Skip searches that don't change usefully
+    let query = input.value.trim();
+    if (query == input.lastQuery)
+      return;
+    input.lastQuery = query;
+
+    // Prevent accidental mouseover for things already under the pointer
+    mouseSink.capture();
+
+    // Update side-by-side search previews and not bother with other data
+    if (input.sideBySide) {
+      pagePreview.reset();
+      searchPreview1.search(query);
+      searchPreview2.search(query);
+
+      history.collapsed = true;
+      sites.collapsed = true;
+      tabs.collapsed = true;
+      return;
+    }
+
+    // Search through all data when doing normal searches
+    searchPreview1.reset();
+    searchPreview2.reset();
+    history.collapsed = false;
+    sites.collapsed = false;
+    tabs.collapsed = false;
+
+    // Filter out the sites display as well as get the top sites
+    let topMatch = sites.search(query)[0];
+
+    // Use the single search as a top match if searching
+    if (searchPreview2.engineIcon != null)
+      topMatch = searchPreview2.engineIcon.getPageInfo(query);
+    // Get top matches in order: keyword, adaptive, top site
+    else
+      topMatch = getKeywordInfo(query) || getAdaptiveInfo(query) || topMatch;
+
+    // Do a full history search with a suggested top site
+    history.search(query, topMatch);
+
+    // Only show the tabs that match
+    tabs.search(query);
+  };
+
   // Indicate if the "left" engine is active for potential side-by-side
   Object.defineProperty(input, "sideBySide", {
     get: function() {
@@ -1054,53 +1105,6 @@ function addDashboard(window) {
     input.search();
   }, false);
 
-  // Take the current value in the input box and search with it
-  input.search = function() {
-    // Skip searches that don't change usefully
-    let query = input.value.trim();
-    if (query == input.lastQuery)
-      return;
-    input.lastQuery = query;
-
-    // Prevent accidental mouseover for things already under the pointer
-    mouseSink.capture();
-
-    // Update side-by-side search previews and not bother with other data
-    if (input.sideBySide) {
-      pagePreview.reset();
-      searchPreview1.search(query);
-      searchPreview2.search(query);
-
-      history.collapsed = true;
-      sites.collapsed = true;
-      tabs.collapsed = true;
-      return;
-    }
-
-    // Search through all data when doing normal searches
-    searchPreview1.reset();
-    searchPreview2.reset();
-    history.collapsed = false;
-    sites.collapsed = false;
-    tabs.collapsed = false;
-
-    // Filter out the sites display as well as get the top sites
-    let topMatch = sites.search(query)[0];
-
-    // Use the single search as a top match if searching
-    if (searchPreview2.engineIcon != null)
-      topMatch = searchPreview2.engineIcon.getPageInfo(query);
-    // Get top matches in order: keyword, adaptive, top site
-    else
-      topMatch = getKeywordInfo(query) || getAdaptiveInfo(query) || topMatch;
-
-    // Do a full history search with a suggested top site
-    history.search(query, topMatch);
-
-    // Only show the tabs that match
-    tabs.search(query);
-  };
-
   // Handle some special key hits from the input box
   input.addEventListener("keydown", function(event) {
     let {firstSuggestion, selectionStart, textLength, value} = input;
@@ -1201,6 +1205,16 @@ function addDashboard(window) {
 
   suggestList.style.overflow = "hidden";
 
+  // Clear out all suggestions
+  suggestList.reset = function() {
+    suggestList.collapsed = true;
+
+    // Remove all suggestions
+    let node;
+    while ((node = suggestList.lastChild) != null)
+      suggestList.removeChild(node);
+  };
+
   // Show a list of suggestions
   suggestList.show = function(suggestions) {
     suggestList.reset();
@@ -1232,15 +1246,8 @@ function addDashboard(window) {
     });
   };
 
-  // Clear out all suggestions
-  suggestList.reset = onClose(function() {
-    suggestList.collapsed = true;
-
-    // Remove all suggestions
-    let node;
-    while ((node = suggestList.lastChild) != null)
-      suggestList.removeChild(node);
-  });
+  // Hide and remove suggestions
+  onClose(suggestList.reset);
 
   //// 4.1.2 Search engine controls
 
@@ -1476,7 +1483,7 @@ function addDashboard(window) {
   };
 
   // Clear out any state like results and active queries
-  history.reset = onClose(function() {
+  history.reset = function() {
     history.lastOffset = 0;
     history.lastQuery = null;
     history.topMatchBox = null;
@@ -1490,7 +1497,7 @@ function addDashboard(window) {
     while ((node = history.lastChild) != null)
       history.removeChild(node);
     history.resultMap = {};
-  });
+  };
 
   // Search through history and add items
   history.search = function(query, topMatch) {
@@ -1619,6 +1626,9 @@ function addDashboard(window) {
       }
     });
   };
+
+  // Remove any history matches and active searches
+  onClose(history.reset);
 
   //// 4.3: Top sites
 
@@ -1789,10 +1799,6 @@ function addDashboard(window) {
   tabs.style.overflow = "hidden";
   tabs.style.pointerEvents = "auto";
 
-  // Keep track of what count to pass down to new tabs
-  tabs.lastSelectCount = 1;
-  tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
-
   // Get an array of tabs that match a query
   tabs.filter = function(query) {
     return gBrowser.visibleTabs.filter(function(tab) {
@@ -1807,6 +1813,10 @@ function addDashboard(window) {
       });
     });
   };
+
+  // Keep track of what values to pass down to new tabs
+  tabs.lastSelectCount = 1;
+  tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
 
   // Put app tabs first then most often selected sub sorted by most recently
   tabs.prioritize = function(a, b) {
@@ -2098,11 +2108,11 @@ function addDashboard(window) {
   };
 
   // Clean up any tabs from a search when closing
-  tabs.reset = onClose(function() {
+  tabs.reset = function() {
     let node;
     while ((node = tabs.lastChild) != null)
       tabs.removeChild(node);
-  });
+  };
 
   // Keep track of what tabs we're still waiting to take a thumbnail
   tabs.updateRequests = [];
@@ -2183,6 +2193,9 @@ function addDashboard(window) {
       }
     }, wait);
   };
+
+  // Clean up any tabs showing
+  onClose(tabs.reset);
 
   // Newly opened tabs inherit some properties of the last selected tab
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
@@ -2828,9 +2841,12 @@ function addDashboard(window) {
   fxIcon.style.width = "22px";
 
   // Just go back to the default opacity when closing the dashboard
-  fxIcon.reset = onClose(function() {
+  fxIcon.reset = function() {
     fxIcon.style.opacity = dashboard.open ? "1" : ".3";
-  });
+  };
+
+  // Make sure the icon looks right
+  onClose(fxIcon.reset);
 
   // Allow toggling the dashboard by clicking
   fxIcon.addEventListener("click", function() {
@@ -2867,7 +2883,7 @@ function addDashboard(window) {
   };
 
   // Clean up the listener when stopping
-  mouseSink.reset = onClose(function() {
+  mouseSink.reset = function() {
     // Restore mouseover/mouseout events to whatever is under the pointer
     mouseSink.style.pointerEvents = "none";
 
@@ -2878,7 +2894,10 @@ function addDashboard(window) {
     // Stop listening for mousemove
     mouseSink.unmove();
     mouseSink.unmove = null;
-  });
+  };
+
+  // Restore normal events to the main browser
+  onClose(mouseSink.reset);
 
   // Pretend the dashboard just closed to initialize things
   onClose();

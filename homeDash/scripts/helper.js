@@ -89,14 +89,6 @@ function getHostText(URI) {
   return host;
 }
 
-// Lookup all keywords to suggest for the provided query
-function getKeywordSuggestions(query) {
-  let queryLen = query.length;
-  return sortedKeywords.filter(function(keyword) {
-    return keyword.slice(0, queryLen) == query;
-  });
-}
-
 // Give a page info if it matches a bookmark or search keyword
 function getKeywordInfo(query) {
   // Do nothing for empty queries
@@ -133,6 +125,14 @@ function getKeywordInfo(query) {
     title: params == "" ? name : name + ": " + params,
     url: url
   };
+}
+
+// Lookup all keywords to suggest for the provided query
+function getKeywordSuggestions(query) {
+  let queryLen = query.length;
+  return sortedKeywords.filter(function(keyword) {
+    return keyword.slice(0, queryLen) == query;
+  });
 }
 
 // Get a favicon for a tab
