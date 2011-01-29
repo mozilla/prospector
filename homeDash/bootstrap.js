@@ -1071,26 +1071,31 @@ function addDashboard(window) {
     tabs.search(query);
   }, false);
 
-  // Close the dashboard when hitting escape from an empty input box
+  // Handle some special key hits from the input box
   input.addEventListener("keydown", function(event) {
-    if (event.keyCode == event.DOM_VK_ESCAPE && input.value == "")
-      dashboard.open = false;
-  }, false);
-
-  // Track when we see key downs for enter
-  input.addEventListener("keydown", function(event) {
-    // Only care about enter and return
     switch (event.keyCode) {
+      // Track when we see key downs for enter
       case event.DOM_VK_ENTER:
       case event.DOM_VK_RETURN:
+        input.expectEnter = true;
         break;
 
-      default:
-        return;
-    }
+      // Close the dashboard when hitting escape from an empty input box
+      case event.DOM_VK_ESCAPE:
+        if (input.value == "")
+          dashboard.open = false;
+        break;
 
-    // Remember that we saw a keydown for enter
-    input.expectEnter = true;
+      // Allow cycling through stuff with tab
+      case event.DOM_VK_TAB:
+        // Activate searches for each tab
+        if (input.value == "" || input.willSearch)
+          dashboard.open = "search";
+
+        // Always prevent the focus from leaving the box
+        event.preventDefault();
+        break;
+    }
   }, false);
 
   // Look for enter after "command" has fired
