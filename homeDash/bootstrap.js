@@ -1042,7 +1042,7 @@ function addDashboard(window) {
     input.forceSearch();
   });
 
-  // Handle the user searching for stuff
+  // Handle the user typing stuff
   input.addEventListener("command", function() {
     // Only suggest if the user started typing and not searching
     if (input.value != "" && !input.willSearch)
@@ -1050,6 +1050,12 @@ function addDashboard(window) {
     else
       suggestList.reset();
 
+    // Now that we might have gotten a suggestion, search with it
+    input.search();
+  }, false);
+
+  // Take the current value in the input box and search with it
+  input.search = function() {
     // Skip searches that don't change usefully
     let query = input.value.trim();
     if (query == input.lastQuery)
@@ -1093,7 +1099,7 @@ function addDashboard(window) {
 
     // Only show the tabs that match
     tabs.search(query);
-  }, false);
+  };
 
   // Handle some special key hits from the input box
   input.addEventListener("keydown", function(event) {
@@ -1121,8 +1127,10 @@ function addDashboard(window) {
         else if (value == firstSuggestion && selectionStart != textLength)
           input.setSelectionRange(textLength, textLength);
         // Cycle through the suggestions
-        else
+        else {
           input.maybeSuggest({backwards: event.shiftKey});
+          input.search();
+        }
 
         // Always prevent the focus from leaving the box
         event.preventDefault();
