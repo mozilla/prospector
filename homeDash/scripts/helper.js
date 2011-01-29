@@ -162,6 +162,8 @@ function getTextContent(node) {
     return cleanup(node.textContent);
   if (node.alt != null && node.alt.trim() != "")
     return cleanup(node.alt);
+  if (node.title != null && node.title.trim() != "")
+    return cleanup(node.title);
 
   // Go through child nodes to find the first useful text
   let ret = "";
