@@ -202,6 +202,57 @@ function addDashboard(window) {
   let masterStack = createNode("stack");
   masterStack.style.overflow = "hidden";
 
+  // Prevent handling of mouse events if we get a modal dialog that blurs us
+  masterStack.avoidModalLoss = function() {
+    // Don't add more than one active listener
+    let undo = masterStack.modalListeners;
+    if (undo.length > 0)
+      return;
+
+    // Listen for some event on a node and save its undo-er
+    function track(node, eventType, callback) {
+      let unlisten = listen(window, node, eventType, callback);
+      undo.push(unlisten);
+      return unlisten;
+    }
+
+    // Listen for one modal open
+    let unOpen = track(window, "DOMWillOpenModalDialog", function() {
+      unOpen();
+
+      // Track callbacks to allow mouse events again
+      let unMouse;
+
+      // Listen for one blur
+      let unBlur = track(masterStack, "blur", function() {
+        unBlur();
+
+        // We're modal and blurred, so prevent things from getting mouse events
+        unMouse = ["move", "out", "over"].map(function(type) {
+          return track(masterStack, "mouse" + type, function(event) {
+            event.stopPropagation();
+          });
+        });
+      }, true);
+
+      // Listen for one modal close
+      let unClose = track(window, "DOMModalDialogClosed", function() {
+        unClose();
+
+        // Clear the blur listener if it never fired
+        if (unMouse == null)
+          unBlur();
+        // Remove each of the mouse listeners
+        else
+          unMouse.forEach(function(restore) restore());
+
+        // All the listeners should be cleared now, so reset and re-watch
+        undo.length = 0;
+        masterStack.avoidModalLoss();
+      });
+    });
+  };
+
   // Add the stack to the current tab on first load
   masterStack.move = function() {
     gBrowser.selectedBrowser.parentNode.appendChild(masterStack);
@@ -212,11 +263,19 @@ function addDashboard(window) {
   // Allow normal clicking when most of the dashboard is hidden
   onClose(function() {
     masterStack.style.pointerEvents = "none";
+
+    // Remove any listeners that might still be active
+    if (masterStack.modalListeners != null)
+      masterStack.modalListeners.forEach(function(undo) undo());
+    masterStack.modalListeners = [];
   });
 
   // Don't allow clicking the current tab behind the stack when open
   onOpen(function(reason) {
     masterStack.style.pointerEvents = "auto";
+
+    // Allow pointing at things that trigger modal dialogs
+    masterStack.avoidModalLoss();
   });
 
   // User was attempting to click the page behind the stack, so just dismiss
