@@ -166,21 +166,29 @@ function addDashboard(window) {
 
     // Make a delayable function that uses a sharable timer
     function makeDelayable(timerName, func) {
-      return function(delay) {
+      return function() {
         // Stop the shared timer
         stopTimer(timerName);
 
+        // Pick out the arguments that the function wants
+        let args = Array.slice(arguments, 0, func.length);
+        function callFunc() {
+          func.apply(global, args);
+        }
+
         // If we have some amount of time to wait, wait
+        let delay = arguments[func.length];
         if (delay)
-          node[timerName] = setTimeout(func, delay);
+          node[timerName + "Timer"] = setTimeout(callFunc, delay);
         // Otherwise do it synchronously
         else
-          func();
+          callFunc();
       };
     }
 
     // Stop a timer if it's still waiting
     function stopTimer(timerName) {
+      timerName = timerName + "Timer";
       if (node[timerName] == null)
         return;
       clearTimeout(node[timerName]);
@@ -190,11 +198,17 @@ function addDashboard(window) {
     // Allow this node to be collapsed with a delay
     node.hide = makeDelayable("showHide", function() node.collapsed = true);
 
+    // Set the opacity after a delay
+    node.setOpacity = makeDelayable("opacity", function(val) {
+      node.style.opacity = val;
+    });
+
     // Allow this node to be uncollapsed with a delay
     node.show = makeDelayable("showHide", function() node.collapsed = false);
 
     // Stop any timers that might be waiting
     onClose(function() {
+      stopTimer("opacity");
       stopTimer("showHide");
     });
 
@@ -1453,10 +1467,10 @@ function addDashboard(window) {
     entryBox.addEventListener("mouseout", function() {
       entryBox.style.textDecoration = "";
 
-      sites.show();
+      sites.show(1000);
       statusLine.reset();
       pagePreview.reset();
-      tabs.show();
+      tabs.show(1000);
     }, false);
 
     return entryBox;
@@ -1721,7 +1735,7 @@ function addDashboard(window) {
     let left = 1.1 * sizeScale * leftBase - width / 2;
     let top = 1.1 * sizeScale * topBase * siteRatio - height / 2;
 
-    let siteBox = createNode("stack");
+    let siteBox = createNode("stack", true);
     siteBox.setAttribute("left", left + "");
     siteBox.setAttribute("top", top + "");
     sites.appendChild(siteBox);
@@ -1773,10 +1787,10 @@ function addDashboard(window) {
     siteBox.addEventListener("mouseout", function() {
       pagePreview.reset();
       statusLine.reset();
-      tabs.show();
+      tabs.show(1000);
 
       // Revert to the highlighting behavior of the last query
-      sites.search(sites.lastQuery);
+      sites.search({repeat: true});
     }, false);
   });
 
@@ -1787,34 +1801,45 @@ function addDashboard(window) {
       // Don't re-show sites that are already hidden
       if (siteBox.style.opacity == "0")
         return;
-      siteBox.style.opacity = siteBox == targetBox ? "1" : ".3";
+      siteBox.setOpacity(siteBox == targetBox ? "1" : ".3");
     });
   };
 
   // Search through the top sites to filter out non-matches
   sites.search = function(query) {
+    // Unpack special args if necessary
+    let {repeat} = query;
+
+    // Just reuse the last query if we're repeating
+    if (repeat)
+      query = sites.lastQuery;
     // Remember what query to re-search when un-highlighting
-    sites.lastQuery = query;
+    else
+      sites.lastQuery = query;
 
     // Find out which pages match the query
     let pageMatches = [];
     Array.forEach(sites.childNodes, function(siteBox) {
+      let opacity;
       // Just show the site if there's no query
       if (query == "") {
-        siteBox.style.opacity = "1";
+        opacity = 1;
         siteBox.style.pointerEvents = "auto";
       }
       // Emphasize the match and record it
       else if (queryMatchesPage(query, siteBox.pageInfo)) {
-        siteBox.style.opacity = "1";
+        opacity = 1;
         siteBox.style.pointerEvents = "auto";
         pageMatches.push(siteBox.pageInfo);
       }
       // Almost hide the site if not a match
       else {
-        siteBox.style.opacity = "0";
+        opacity = 0;
         siteBox.style.pointerEvents = "none";
       }
+
+      // Set the desired opacity, but wait if it's a repeat search
+      siteBox.setOpacity(opacity + "", repeat ? 1000 : 0);
     });
     return pageMatches;
   };
@@ -2116,7 +2141,7 @@ function addDashboard(window) {
         tabThumb.style.height = "90px";
         tabThumb.style.width = "120px";
 
-        sites.show();
+        sites.show(1000);
         statusLine.reset();
         tabPreview.reset();
       }, false);
