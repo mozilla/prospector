@@ -36,6 +36,45 @@
 
 "use strict";
 
+const isMac = Services.appinfo.OS == "Darwin";
+
+// Use an appropriate modifier string and key for the OS
+function cmd(command) {
+  let key;
+  let modifier = isMac ? "\u2318" : "Ctrl+";
+  switch (command) {
+    case "1":
+    case "2":
+    case "3":
+    case "4":
+    case "5":
+    case "6":
+    case "7":
+    case "8":
+    case "9":
+      key = command;
+      break;
+
+    case "escape":
+      key = "esc";
+      modifier = "";
+      break;
+
+    case "location":
+      key = "L";
+      break;
+
+    case "search":
+      key = "K";
+      break;
+
+    case "tab":
+      key = "T";
+      break;
+  }
+  return modifier + key;
+}
+
 // Search through the adaptive info in-order for a matching query
 function getAdaptiveInfo(query) {
   // Short circuit for empty queries

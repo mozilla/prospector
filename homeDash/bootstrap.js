@@ -41,10 +41,6 @@ const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-// Use an appropriate modifier string for the OS
-const modString = Cc["@mozilla.org/xre/app-info;1"]
-    .getService(Ci.nsIXULRuntime).OS.toLowerCase() != "darwin" ? "Ctrl+" : "\u2318";
-
 // Keep a reference to various packaged images
 const images = {};
 
@@ -847,7 +843,7 @@ function addDashboard(window) {
 
             // Don't show a preview if it's for the current tab
             if (gBrowser.selectedTab == previewedTab) {
-              statusLine.set("text", "Return to the current tab (esc)");
+              statusLine.set("text", "Return to the current tab (" + cmd("escape") + ")");
               return;
             }
 
@@ -1248,7 +1244,8 @@ function addDashboard(window) {
 
   // Describe the input box
   input.addEventListener("mouseover", function() {
-    statusLine.set("text", "Search your top sites, open tabs, history, and the web ("+modString+"L)");
+    statusLine.set("text", "Search your top sites, open tabs, history, and " +
+                           "the web (" + cmd("location") + ")");
   }, false);
 
   input.addEventListener("mouseout", function() {
@@ -1386,14 +1383,14 @@ function addDashboard(window) {
 
       // Next engine to be activated in order
       if (engineIcon == nextEngineIcon)
-        extras.push(modString + "K");
+        extras.push(cmd("search"));
 
       // Default engine gets special text
       if (engineIcon == input.defaultEngineIcon)
         extras.push("default");
       // No next engine, so this secondary engine will be deactivated
       else if (nextEngineIcon == null && engineIcon.active)
-        extras.push(modString + "K");
+        extras.push(cmd("search"));
 
       // Put the extra text at the end if we have modifiers
       if (extras.length > 0)
@@ -2121,14 +2118,14 @@ function addDashboard(window) {
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
-          statusLine.set("text", "Return to the current tab (esc)");
+          statusLine.set("text", "Return to the current tab (" + cmd("escape") + ")");
           return;
         }
 
         // Indicate what tab is being switched to with shortcut if available
         let text = tab.getAttribute("label");
         if (quickNum.value != "")
-          text += " (" + modString + quickNum.value + ")";
+          text += " (" + cmd(quickNum.value) + ")";
         statusLine.set("switch", text);
 
         tabPreview.swap(tab);
@@ -2392,7 +2389,7 @@ function addDashboard(window) {
     newTabButton.style.opacity = ".7";
 
     let action = controls.newTab ? "deactivate" : "activate";
-    statusLine.set(action, "selecting pages as a new tab (" + modString + "T)");
+    statusLine.set(action, "selecting pages as a new tab (" + cmd("tab") + ")");
   }, false);
 
   newTabButton.addEventListener("mouseout", function() {
