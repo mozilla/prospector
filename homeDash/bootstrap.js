@@ -2351,7 +2351,17 @@ function addDashboard(window) {
   statusLine.style.padding = "0 3px 2px 28px";
 
   // Helper function to set the status text for a given action
-  statusLine.set = function(action, text) {
+  statusLine.set = function(action, regular, alternate) {
+    // Save what status we're showing if we need to reshow
+    statusLine.lastStatus = {
+      action: action,
+      alternate: alternate,
+      regular: regular,
+    };
+
+    // Pick out which text to use but only if we have an alternate
+    let text = statusLine.shifted && alternate ? alternate : regular;
+
     switch (action) {
       case "activate":
         text = "Activate " + text;
@@ -2450,7 +2460,7 @@ function addDashboard(window) {
   };
 
   // Clear out the status line when closing or resetting
-  statusLine.reset = onClose(function() {
+  statusLine.reset = function() {
     // Show a connecting or loading state instead of just clearing
     if (statusLine.loadingState != null) {
       let text = statusLine.loadingState == "load" ? "Loading" : "Connecting";
@@ -2459,8 +2469,28 @@ function addDashboard(window) {
     }
 
     statusLine.collapsed = true;
+    statusLine.lastStatus = null;
     statusLine.value = "";
+  };
+
+  // Update if we're shifted and re-show status if necessary
+  Object.defineProperty(statusLine, "shifted", {
+    get: function() !!statusLine._shifted,
+    set: function(val) {
+      statusLine._shifted = val;
+
+      // Nothing else to do if we have no status to update
+      if (statusLine.lastStatus == null)
+        return;
+
+      // Update the status with the new shifted state
+      let {action, alternate, regular} = statusLine.lastStatus;
+      statusLine.set(action, regular, alternate);
+    }
   });
+
+  // Initialize and get rid of any status
+  onClose(statusLine.reset);
 
   // Track the state and progress of the current tab
   let progressListener = {
@@ -2490,11 +2520,43 @@ function addDashboard(window) {
   gBrowser.addProgressListener(progressListener);
   unload(function() gBrowser.removeProgressListener(progressListener), window);
 
+  // Detect when we start shifting
+  listen(window, window, "keydown", function(event) {
+    if (event.keyCode == event.DOM_VK_SHIFT)
+      statusLine.shifted = true;
+  });
+
+  // Detect when we stop shifting
+  listen(window, window, "keyup", function(event) {
+    if (event.keyCode == event.DOM_VK_SHIFT)
+      statusLine.shifted = false;
+  });
+
   // Clear out any existing loading status when switching tabs
   listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
     statusLine.setLoading("stop");
   });
 
+  // Don't allow opening new windows while clicking with shift
+  let (orig = window.handleLinkClick) {
+    window.handleLinkClick = function(event, href, linkNode) {
+      // Do the original stuff if it's not a plain left shift click
+      let {altKey, button, ctrlKey, metaKey, shiftKey} = event;
+      if (button != 0 || altKey || ctrlKey || metaKey || !shiftKey)
+        return orig.apply(window, arguments);
+
+      // Normally left clicks are automagically handled, so manually do it here
+      let postData = {};
+      let url = window.getShortcutOrURI(href, postData);
+      if (!url)
+        return true;
+      window.loadURI(url, null, postData.value, false);
+      return false;
+    };
+    unload(function() window.handleLinkClick = orig, window);
+  }
+
+  // Handle link status changes
   let (orig = window.XULBrowserWindow.setOverLink) {
     window.XULBrowserWindow.setOverLink = function(url, anchor) {
       // Clear the status if there's nothing to show
@@ -2576,7 +2638,7 @@ function addDashboard(window) {
           text = getHostText(newURI) + "'s home page";
       }
 
-      statusLine.set(action, text);
+      statusLine.set(action, text, url);
     };
     unload(function() window.XULBrowserWindow.setOverLink = orig, window);
   }
