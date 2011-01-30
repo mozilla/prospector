@@ -544,7 +544,7 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     screen.addEventListener("mouseover", function() {
-      statusLine.set("select", browser.contentDocument.title);
+      statusLine.set(controls.action, browser.contentDocument.title);
     }, false);
 
     screen.addEventListener("mouseout", function() {
@@ -843,7 +843,7 @@ function addDashboard(window) {
 
             // Don't show a preview if it's for the current tab
             if (gBrowser.selectedTab == previewedTab) {
-              statusLine.set("text", "Return to the current tab (" + cmd("escape") + ")");
+              statusLine.set("return", {keys: cmd("escape")});
               return;
             }
 
@@ -1244,8 +1244,7 @@ function addDashboard(window) {
 
   // Describe the input box
   input.addEventListener("mouseover", function() {
-    statusLine.set("text", "Search your top sites, open tabs, history, and " +
-                           "the web (" + cmd("location") + ")");
+    statusLine.set("inputbox", {keys: cmd("location")});
   }, false);
 
   input.addEventListener("mouseout", function() {
@@ -1375,28 +1374,24 @@ function addDashboard(window) {
       engineIcon.style.opacity = ".8";
 
       let action = engineIcon.active ? "deactivate" : "activate";
-      let text = engine.name;
 
       // Add in some extra text for some icons
-      let extras = [];
+      let showCommand = false;
+      let isDefault = engineIcon == input.defaultEngineIcon;
       let nextEngineIcon = input.nextEngineIcon;
 
       // Next engine to be activated in order
       if (engineIcon == nextEngineIcon)
-        extras.push(cmd("search"));
-
-      // Default engine gets special text
-      if (engineIcon == input.defaultEngineIcon)
-        extras.push("default");
+        showCommand = true;
       // No next engine, so this secondary engine will be deactivated
-      else if (nextEngineIcon == null && engineIcon.active)
-        extras.push(cmd("search"));
+      else if (!isDefault && nextEngineIcon == null && engineIcon.active)
+        showCommand = true;
 
-      // Put the extra text at the end if we have modifiers
-      if (extras.length > 0)
-        text += " (" + extras.join(", ") + ")";
-
-      statusLine.set(action, text);
+      statusLine.set(action, {
+        extra: isDefault ? "default" : null,
+        keys: showCommand ? cmd("search") : null,
+        text: engine.name
+      });
     }, false);
 
     engineIcon.addEventListener("mouseout", function() {
@@ -1461,7 +1456,7 @@ function addDashboard(window) {
       // Show the preview and hide other things covering it
       pagePreview.load(pageInfo.url);
       sites.hide();
-      statusLine.set("select", pageInfo.title);
+      statusLine.set(controls.action, pageInfo.title);
       tabs.hide();
     }, false);
 
@@ -1778,7 +1773,7 @@ function addDashboard(window) {
           siteThumb.setAttribute("src", thumbnail);
         }
       });
-      statusLine.set("select", pageInfo.title);
+      statusLine.set(controls.action, pageInfo.title);
       tabs.hide();
 
       // Emphasize this one site and dim others
@@ -2118,15 +2113,16 @@ function addDashboard(window) {
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
-          statusLine.set("text", "Return to the current tab (" + cmd("escape") + ")");
+          statusLine.set("return", {keys: cmd("escape")});
           return;
         }
 
         // Indicate what tab is being switched to with shortcut if available
-        let text = tab.getAttribute("label");
-        if (quickNum.value != "")
-          text += " (" + cmd(quickNum.value) + ")";
-        statusLine.set("switch", text);
+        statusLine.set("switch", {
+          extra: tab == nextMRUTab ? "next tab" : null,
+          keys: quickNum.value != "" ? cmd(quickNum.value) : null,
+          text: tab.getAttribute("label")
+        });
 
         tabPreview.swap(tab);
       }, false);
@@ -2329,6 +2325,11 @@ function addDashboard(window) {
   newTabButton.style.padding = "5px";
   newTabButton.style.pointerEvents = "auto";
 
+  // Indicate what action should be done for various clicks
+  Object.defineProperty(controls, "action", {
+    get: function() controls.newTab ? "tabify" : "select"
+  });
+
   // Control if pages should be opened in new tabs or not
   Object.defineProperty(controls, "newTab", {
     get: function() !!newTabButton.checked,
@@ -2389,7 +2390,10 @@ function addDashboard(window) {
     newTabButton.style.opacity = ".7";
 
     let action = controls.newTab ? "deactivate" : "activate";
-    statusLine.set(action, "selecting pages as a new tab (" + cmd("tab") + ")");
+    statusLine.set(action, {
+      keys: cmd("tab"),
+      text: "selecting pages as a new tab"
+    });
   }, false);
 
   newTabButton.addEventListener("mouseout", function() {
@@ -2427,7 +2431,12 @@ function addDashboard(window) {
     };
 
     // Pick out which text to use but only if we have an alternate
-    let text = statusLine.shifted && alternate ? alternate : regular;
+    let textObj = statusLine.shifted && alternate ? alternate : regular;
+
+    // Try to unpack special text arguments; otherwise default to itself
+    let {extra, keys, text} = textObj || {};
+    if (text == null)
+      text = textObj;
 
     switch (action) {
       case "activate":
@@ -2438,12 +2447,32 @@ function addDashboard(window) {
         text = "Deactivate " + text;
         break;
 
+      case "email":
+        text = "Email " + text;
+        break;
+
+      case "inputbox":
+        text = "Search your top sites, open tabs, history, and the web";
+        break;
+
+      case "loaddata":
+        text = "Go to data: resource";
+        break;
+
       case "loadpage":
         text = "View " + text;
         break;
 
       case "loadref":
         text = "Jump to " + text;
+        break;
+
+      case "loadscript":
+        text = "Run script";
+        break;
+
+      case "loadsecure":
+        text = "Go to secure " + text;
         break;
 
       case "loadsite":
@@ -2458,6 +2487,18 @@ function addDashboard(window) {
         text = "Prioritize " + text;
         break;
 
+      case "progressload":
+        text = "Loading\u2026";
+        break;
+
+      case "progressstart":
+        text = "Connecting\u2026";
+        break;
+
+      case "return":
+        text = "Return to the current tab";
+        break;
+
       case "reload":
         text = "Reload " + text;
         break;
@@ -2467,14 +2508,15 @@ function addDashboard(window) {
         break;
 
       case "select":
-        if (controls.newTab)
-          text = "Tabify " + text;
-        else
-          text = "Select " + text;
+        text = "Select " + text;
         break;
 
       case "switch":
         text = "Switch to " + text;
+        break;
+
+      case "tabify":
+        text = "Tabify " + text;
         break;
 
       // Just use the provided text
@@ -2490,6 +2532,17 @@ function addDashboard(window) {
         statusLine.reset();
         return;
     }
+
+    // Gather up various additional modifiers
+    let mods = [];
+    if (keys != null)
+      mods.push(keys);
+    if (extra != null)
+      mods.push(extra);
+
+    // Show the modifiers at the end of the text if necessary
+    if (mods.length > 0)
+      text = text + " (" + mods.join(", ") + ")";
 
     statusLine.collapsed = false;
     statusLine.value = text;
@@ -2530,8 +2583,7 @@ function addDashboard(window) {
   statusLine.reset = function() {
     // Show a connecting or loading state instead of just clearing
     if (statusLine.loadingState != null) {
-      let text = statusLine.loadingState == "load" ? "Loading" : "Connecting";
-      statusLine.set("text", text + "\u2026");
+      statusLine.set("progress" + statusLine.loadingState);
       return;
     }
 
@@ -2643,23 +2695,21 @@ function addDashboard(window) {
         // Specially handle certain protocols
         switch (newURI.scheme) {
           case "data":
-            action = "loadsite";
-            text = "data: resource";
+            action = "loaddata";
             break;
 
           case "https":
-            action = "loadsite";
-            text = "secure " + getHostText(newURI);
+            action = "loadsecure";
+            text = getHostText(newURI);
             break;
 
           case "javascript":
-            action = "text";
-            text = "Run script";
+            action = "loadscript";
             break;
 
           case "mailto":
-            action = "text";
-            text = "Email " + newURI.path.split("?")[0];
+            action = "email";
+            text = newURI.path.split("?")[0];
             break;
 
           default:
