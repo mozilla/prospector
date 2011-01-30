@@ -155,10 +155,50 @@ function addDashboard(window) {
     return reasonOrCallback;
   }
 
-  // Make an alias to create a XUL node
-  function createNode(node) {
+  // Create a XUL node that can get some extra functionality
+  function createNode(nodeName, extend) {
     const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-    return document.createElementNS(XUL, node);
+    let node = document.createElementNS(XUL, nodeName);
+
+    // Only extend certain top-level nodes that want to be
+    if (!extend)
+      return node;
+
+    // Make a delayable function that uses a sharable timer
+    function makeDelayable(timerName, func) {
+      return function(delay) {
+        // Stop the shared timer
+        stopTimer(timerName);
+
+        // If we have some amount of time to wait, wait
+        if (delay)
+          node[timerName] = setTimeout(func, delay);
+        // Otherwise do it synchronously
+        else
+          func();
+      };
+    }
+
+    // Stop a timer if it's still waiting
+    function stopTimer(timerName) {
+      if (node[timerName] == null)
+        return;
+      clearTimeout(node[timerName]);
+      node[timerName] = null;
+    }
+
+    // Allow this node to be collapsed with a delay
+    node.hide = makeDelayable("showHide", function() node.collapsed = true);
+
+    // Allow this node to be uncollapsed with a delay
+    node.show = makeDelayable("showHide", function() node.collapsed = false);
+
+    // Stop any timers that might be waiting
+    onClose(function() {
+      stopTimer("showHide");
+    });
+
+    return node;
   }
 
   // Create a data url thumbnail of a browser
@@ -656,10 +696,10 @@ function addDashboard(window) {
 
     // Hide all the dashboard data if switching tabs
     if (reason == "switch") {
-      history.collapsed = true;
-      searchBox.collapsed = true;
-      sites.collapsed = true;
-      tabs.collapsed = true;
+      history.hide();
+      searchBox.hide();
+      sites.hide();
+      tabs.hide();
 
       pagePreview.reset();
       searchPreview1.reset();
@@ -667,11 +707,8 @@ function addDashboard(window) {
       return;
     }
 
-    // Restore visibility to various things in the dashboard
-    history.collapsed = false;
-    searchBox.collapsed = false;
-    sites.collapsed = false;
-    tabs.collapsed = false;
+    // Just show the search box; others will be shown by search
+    searchBox.show();
   });
 
   // Catch various existing browser commands to redirect to the dashboard
@@ -852,7 +889,7 @@ function addDashboard(window) {
 
   //// 4.1: Search controls
 
-  let searchBox = createNode("vbox");
+  let searchBox = createNode("vbox", true);
   searchBox.setAttribute("left", "30");
   searchBox.setAttribute("right", Math.ceil(4 * sixthWidth) + "");
   searchBox.setAttribute("top", "30");
@@ -958,18 +995,20 @@ function addDashboard(window) {
       searchPreview1.search(query);
       searchPreview2.search(query);
 
-      history.collapsed = true;
-      sites.collapsed = true;
-      tabs.collapsed = true;
+      history.hide();
+      sites.hide();
+      tabs.hide();
       return;
     }
 
     // Search through all data when doing normal searches
     searchPreview1.reset();
     searchPreview2.reset();
-    history.collapsed = false;
-    sites.collapsed = false;
-    tabs.collapsed = false;
+
+    // Immediately show history but wait to show sites and tabs
+    history.show();
+    sites.show(1000);
+    tabs.show(1000);
 
     // Filter out the sites display as well as get the top sites
     let topMatch = sites.search(query)[0];
@@ -1353,7 +1392,7 @@ function addDashboard(window) {
 
   //// 4.2: History results
 
-  let history = createNode("vbox");
+  let history = createNode("vbox", true);
   history.setAttribute("left", "30");
   history.setAttribute("right", Math.ceil(4 * sixthWidth) + "");
   history.setAttribute("top", "150");
@@ -1406,18 +1445,18 @@ function addDashboard(window) {
 
       // Show the preview and hide other things covering it
       pagePreview.load(pageInfo.url);
-      sites.collapsed = true;
+      sites.hide();
       statusLine.set("select", pageInfo.title);
-      tabs.collapsed = true;
+      tabs.hide();
     }, false);
 
     entryBox.addEventListener("mouseout", function() {
       entryBox.style.textDecoration = "";
 
-      sites.collapsed = false;
+      sites.show();
       statusLine.reset();
       pagePreview.reset();
-      tabs.collapsed = false;
+      tabs.show();
     }, false);
 
     return entryBox;
@@ -1632,7 +1671,7 @@ function addDashboard(window) {
 
   //// 4.3: Top sites
 
-  let sites = createNode("stack");
+  let sites = createNode("stack", true);
   sites.setAttribute("left", 4 * sixthWidth);
   sites.setAttribute("top", (maxBoxObject.height - 140) / 2 + 140 + "");
   dashboard.appendChild(sites);
@@ -1725,7 +1764,7 @@ function addDashboard(window) {
         }
       });
       statusLine.set("select", pageInfo.title);
-      tabs.collapsed = true;
+      tabs.hide();
 
       // Emphasize this one site and dim others
       sites.highlight(siteBox);
@@ -1734,7 +1773,7 @@ function addDashboard(window) {
     siteBox.addEventListener("mouseout", function() {
       pagePreview.reset();
       statusLine.reset();
-      tabs.collapsed = false;
+      tabs.show();
 
       // Revert to the highlighting behavior of the last query
       sites.search(sites.lastQuery);
@@ -1780,14 +1819,14 @@ function addDashboard(window) {
     return pageMatches;
   };
 
-  // Revert to default styling for the next opening
+  // Don't show anything so opening is fast
   onClose(function() {
-    sites.search("");
+    sites.hide();
   });
 
   //// 4.4: Tabs
 
-  let tabs = createNode("hbox");
+  let tabs = createNode("hbox", true);
   tabs.setAttribute("left", 2 * sixthWidth + 10 + "");
   tabs.setAttribute("right", "10");
   tabs.setAttribute("top", "30");
@@ -2049,7 +2088,7 @@ function addDashboard(window) {
         tabThumb.style.width = "146px";
 
         // Show the tab preview and get rid of other things covering
-        sites.collapsed = true;
+        sites.hide();
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
@@ -2077,8 +2116,7 @@ function addDashboard(window) {
         tabThumb.style.height = "90px";
         tabThumb.style.width = "120px";
 
-        sites.collapsed = false;
-
+        sites.show();
         statusLine.reset();
         tabPreview.reset();
       }, false);
@@ -2194,8 +2232,11 @@ function addDashboard(window) {
     }, wait);
   };
 
-  // Clean up any tabs showing
-  onClose(tabs.reset);
+  // Clean up any tabs showing and hide them so opening is fast
+  onClose(function() {
+    tabs.hide();
+    tabs.reset();
+  });
 
   // Newly opened tabs inherit some properties of the last selected tab
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
@@ -2733,8 +2774,8 @@ function addDashboard(window) {
 
         // Remove other things that might cover the preview
         if (dashboard.open) {
-          sites.collapsed = true;
-          tabs.collapsed = true;
+          sites.hide();
+          tabs.hide();
         }
       }
 
@@ -2747,8 +2788,8 @@ function addDashboard(window) {
 
       // Re-show things that might have covered the preview
       if (dashboard.open) {
-        sites.collapsed = false;
-        tabs.collapsed = false;
+        sites.show();
+        tabs.show();
       }
 
       statusLine.reset();
