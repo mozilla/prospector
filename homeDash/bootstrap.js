@@ -1238,11 +1238,6 @@ function addDashboard(window) {
       url = searchPreview1.engineIcon.getSearchUrl(input.lastQuery);
       preview = searchPreview1;
     }
-    // Fall back to the default search if searches are active
-    else if (searchPreview2.engineIcon != null) {
-      url = searchPreview2.engineIcon.getSearchUrl(input.lastQuery);
-      preview = searchPreview2;
-    }
     // Use the highlighted entry which might be a top match
     else if (history.highlighted != null) {
       url = history.highlighted.pageInfo.url;
