@@ -3034,7 +3034,14 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   });
 
   // Initialize the strings
-  getString.init(addon);
+  getString.init(addon, function(locale) {
+    // Use es-ES until we get translations for other Spanish and Portuguese
+    if (locale.match(/^(es|pt)/))
+      return "es-ES";
+
+    // Fall back to English for everything else
+    return "en-US";
+  });
 
   // Crunch through some data to use later
   collectBookmarkKeywords();
