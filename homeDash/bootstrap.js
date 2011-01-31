@@ -982,7 +982,10 @@ function addDashboard(window) {
     // Put in the suggestion and highlight the completed part
     let keyword = input.suggestions[0];
     input.value = keyword;
-    input.setSelectionRange(query.length, keyword.length);
+
+    // Only move the selection if there's a new suggestion
+    if (keyword != query)
+      input.setSelectionRange(query.length, keyword.length);
 
     // Remember that this was the first suggestion
     if (!again)
