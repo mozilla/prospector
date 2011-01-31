@@ -2119,7 +2119,7 @@ function addDashboard(window) {
 
         // Indicate what tab is being switched to with shortcut if available
         statusLine.set("switch", {
-          extra: tab == nextMRUTab ? "next tab" : null,
+          extra: tab == nextMRUTab ? "next.tab" : null,
           keys: quickNum.value != "" ? cmd(quickNum.value) : null,
           text: tab.getAttribute("label")
         });
@@ -2438,111 +2438,19 @@ function addDashboard(window) {
     if (text == null)
       text = textObj;
 
-    switch (action) {
-      case "activate":
-        text = "Activate " + text;
-        break;
-
-      case "deactivate":
-        text = "Deactivate " + text;
-        break;
-
-      case "email":
-        text = "Email " + text;
-        break;
-
-      case "inputbox":
-        text = "Search your top sites, open tabs, history, and the web";
-        break;
-
-      case "loaddata":
-        text = "Go to data: resource";
-        break;
-
-      case "loadpage":
-        text = "View " + text;
-        break;
-
-      case "loadref":
-        text = "Jump to " + text;
-        break;
-
-      case "loadscript":
-        text = "Run script";
-        break;
-
-      case "loadsecure":
-        text = "Go to secure " + text;
-        break;
-
-      case "loadsite":
-        text = "Go to " + text;
-        break;
-
-      case "movedown":
-        text = "Deprioritize " + text;
-        break;
-
-      case "moveup":
-        text = "Prioritize " + text;
-        break;
-
-      case "progressload":
-        text = "Loading\u2026";
-        break;
-
-      case "progressstart":
-        text = "Connecting\u2026";
-        break;
-
-      case "return":
-        text = "Return to the current tab";
-        break;
-
-      case "reload":
-        text = "Reload " + text;
-        break;
-
-      case "search":
-        text = "Search for " + text;
-        break;
-
-      case "select":
-        text = "Select " + text;
-        break;
-
-      case "switch":
-        text = "Switch to " + text;
-        break;
-
-      case "tabify":
-        text = "Tabify " + text;
-        break;
-
-      // Just use the provided text
-      case "text":
-        break;
-
-      case "toggle":
-        text = "Toggle " + text;
-        break;
-
-      // Hide the status for no/unknown action/text
-      default:
-        statusLine.reset();
-        return;
-    }
+    // Get the localized action/status text and fill in text if necessary
+    text = getString(action, text);
 
     // Gather up various additional modifiers
     let mods = [];
     if (keys != null)
       mods.push(keys);
     if (extra != null)
-      mods.push(extra);
+      mods.push(getString(extra));
 
     // Show the modifiers at the end of the text if necessary
     if (mods.length > 0)
-      text = text + " (" + mods.join(", ") + ")";
+      text = getString("with.extra", [text, mods.join(getString("joiner"))]);
 
     statusLine.collapsed = false;
     statusLine.value = text;
@@ -3100,6 +3008,9 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
+
+  // Initialize the strings
+  getString.init(addon);
 
   // Crunch through some data to use later
   collectBookmarkKeywords();

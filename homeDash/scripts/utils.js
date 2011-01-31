@@ -37,6 +37,111 @@
 "use strict";
 
 /**
+ * Get a localized string with string replacement arguments filled in and
+ * correct plural form picked if necessary.
+ *
+ * @note: Initialize the strings to use with getString.init(addon).
+ *
+ * @usage getString(name): Get the localized string for the given name.
+ * @param [string] name: Corresponding string name in the properties file.
+ * @return [string]: Localized string for the string name.
+ *
+ * @usage getString(name, arg): Replace %S references in the localized string.
+ * @param [string] name: Corresponding string name in the properties file.
+ * @param [any] arg: Value to insert for instances of %S.
+ * @return [string]: Localized string with %S references replaced.
+ *
+ * @usage getString(name, args): Replace %1$S references in localized string.
+ * @param [string] name: Corresponding string name in the properties file.
+ * @param [array of any] args: Array of values to replace references like %1$S.
+ * @return [string]: Localized string with %N$S references replaced.
+ *
+ * @usage getString(name, args, plural): Pick the correct plural form.
+ * @param [string] name: Corresponding string name in the properties file.
+ * @param [array of any] args: Array of values to replace references like %1$S.
+ * @param [number] plural: Number to decide what plural form to use.
+ * @return [string]: Localized string of the correct plural form.
+ */
+function getString(name, args, plural) {
+  // Use the cached bundle to retrieve the string
+  let str;
+  try {
+    str = getString.bundle.GetStringFromName(name);
+  }
+  // Use the fallback in-case the string isn't localized
+  catch(ex) {
+    str = getString.fallback.GetStringFromName(name);
+  }
+
+  // Pick out the correct plural form if necessary
+  if (plural != null)
+    str = getString.plural(plural, str);
+
+  // Fill in the arguments if necessary
+  if (args != null) {
+    // Convert a string or something not array-like to an array
+    if (typeof args == "string" || args.length == null)
+      args = [args];
+
+    // Assume %S refers to the first argument
+    str = str.replace(/%s/gi, args[0]);
+
+    // Replace instances of %N$S where N is a 1-based number
+    Array.forEach(args, function(replacement, index) {
+      str = str.replace(RegExp("%" + (index + 1) + "\\$S", "gi"), replacement);
+    });
+  }
+
+  return str;
+}
+
+/**
+ * Initialize getString() for the provided add-on.
+ *
+ * @usage getString.init(addon): Load properties file for the add-on.
+ * @param [object] addon: Add-on object from AddonManager
+ *
+ * @usage getString.init(addon, getAlternate): Load properties with alternate.
+ * @param [object] addon: Add-on object from AddonManager
+ * @param [function] getAlternate: Convert a locale to an alternate locale
+ */
+getString.init = function(addon, getAlternate) {
+  // Set a default get alternate function if it doesn't exist
+  if (typeof getAlternate != "function")
+    getAlternate = function() "en-US";
+
+  // Get the bundled properties file for the app's locale
+  function getBundle(locale) {
+    let propertyPath = "locales/" + locale + ".properties";
+    let propertyFile = addon.getResourceURI(propertyPath);
+
+    // Get a bundle and test if it's able to do simple things
+    try {
+      let bundle = Services.strings.createBundle(propertyFile.spec);
+      bundle.getSimpleEnumeration();
+      return bundle;
+    }
+    catch(ex) {}
+
+    // The locale must not exist, so give nothing
+    return null;
+  }
+
+  // Use the current locale or the alternate as the primary bundle
+  let locale = Cc["@mozilla.org/chrome/chrome-registry;1"].
+    getService(Ci.nsIXULChromeRegistry).getSelectedLocale("global");
+  getString.bundle = getBundle(locale) || getBundle(getAlternate(locale));
+
+  // Create a fallback in-case a string is missing
+  getString.fallback = getBundle("en-US");
+
+  // Get the appropriate plural form getter
+  Cu.import("resource://gre/modules/PluralForm.jsm");
+  let rule = getString("pluralRule");
+  [getString.plural] = PluralForm.makeGetter(rule);
+}
+
+/**
  * Apply a callback to each open and new browser windows.
  *
  * @usage watchWindows(callback): Apply a callback to each browser window.
