@@ -1573,7 +1573,7 @@ function addDashboard(window) {
     // Nothing else to do if there's no page to add
     if (pageInfo == null) {
       history.topMatchBox = null;
-      pagePreview.reset();
+      history.unhighlight();
       return;
     }
 
