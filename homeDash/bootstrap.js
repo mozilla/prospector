@@ -3035,6 +3035,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Initialize the strings
   getString.init(addon, function(locale) {
+    // There's one (and only one?!) German, but some are reported as de-DE
+    if (locale.match(/^de/))
+      return "de";
+
     // Use es-ES until we get translations for other Spanish and Portuguese
     if (locale.match(/^(es|pt)/))
       return "es-ES";
