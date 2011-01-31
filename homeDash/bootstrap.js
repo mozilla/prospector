@@ -1240,7 +1240,11 @@ function addDashboard(window) {
     }
     // Use the highlighted entry which might be a top match
     else if (history.highlighted != null) {
-      url = history.highlighted.pageInfo.url;
+      // Adapt to this page when selecting with enter
+      let {pageInfo} = history.highlighted;
+      input.adapt(pageInfo);
+
+      url = pageInfo.url;
       preview = pagePreview;
     }
     // Just navigate to whatever the user typed in
