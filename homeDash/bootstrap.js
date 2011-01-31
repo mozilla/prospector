@@ -3043,10 +3043,6 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     if (locale.match(/^(es|pt)/))
       return "es-ES";
 
-    // Simplfied almost looks like traditional.. kinda... sometimes....
-    if (locale.match(/^zh/))
-      return "zh-CN";
-
     // Fall back to English for everything else
     return "en-US";
   });
