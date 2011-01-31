@@ -2966,7 +2966,8 @@ function addDashboard(window) {
   // Indicate what clicking will do
   fxIcon.addEventListener("mouseover", function() {
     fxIcon.style.opacity = "1";
-    statusLine.set("toggle", "Home Dash");
+    let action = dashboard.open ? "deactivate" : "activate";
+    statusLine.set(action, "Home Dash");
   }, false);
 
   fxIcon.addEventListener("mouseout", function() {
