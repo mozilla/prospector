@@ -544,7 +544,7 @@ function addDashboard(window) {
 
     // Indicate what clicking will do
     screen.addEventListener("mouseover", function() {
-      statusLine.set(controls.action, browser.contentDocument.title);
+      statusLine.set(replacePage.action, browser.contentDocument.title);
     }, false);
 
     screen.addEventListener("mouseout", function() {
@@ -683,7 +683,7 @@ function addDashboard(window) {
   // Persist the preview to the tab the user wants
   dashboard.usePreview = function(preview, url) {
     // Open the result in a new tab and switch to it
-    if (controls.newTab) {
+    if (!replacePage.checked) {
       let newTab = gBrowser.addTab();
       preview.persistTo(newTab, url);
 
@@ -1403,6 +1403,61 @@ function addDashboard(window) {
     }, false);
   });
 
+  //// 4.1.3: Replace page / new tab controls
+
+  let replacePage = createNode("checkbox");
+  replacePage.setAttribute("label", getString("replace.current.page"));
+  searchBox.appendChild(replacePage);
+
+  replacePage.style.pointerEvents = "auto";
+
+  // Indicate what action should be done for selecting a page
+  Object.defineProperty(replacePage, "action", {
+    get: function() replacePage.checked ? "replace" : "select"
+  });
+
+  // Default to checked so toggling tab will switch it off
+  onClose(function() {
+    replacePage.checked = true;
+  });
+
+  // Pick the appropriate state for various open reasons
+  onOpen(function(reason) {
+    switch (reason) {
+      // Replace the page for regular tabs but don't replace app tabs
+      case "location":
+        replacePage.checked = !gBrowser.selectedTab.pinned;
+        break;
+
+      // Default open searches in a new tab
+      case "search":
+        replacePage.checked = false;
+        break;
+
+      // Toggle the new tab state each time it's triggered
+      case "tab":
+        replacePage.checked = !replacePage.checked;
+        break;
+
+      // Default opening (clicking) to open in a new tab
+      default:
+        replacePage.checked = false;
+    }
+  });
+
+  // Indicate what clicking will do
+  replacePage.addEventListener("mouseover", function() {
+    let action = replacePage.checked ? "deactivate" : "activate";
+    statusLine.set(action, {
+      keys: cmd("tab"),
+      text: getString("replacing.current.page")
+    });
+  }, false);
+
+  replacePage.addEventListener("mouseout", function() {
+    statusLine.reset();
+  }, false);
+
   //// 4.2: History results
 
   let history = createNode("vbox", true);
@@ -1459,7 +1514,7 @@ function addDashboard(window) {
       // Show the preview and hide other things covering it
       pagePreview.load(pageInfo.url);
       sites.hide();
-      statusLine.set(controls.action, pageInfo.title);
+      statusLine.set(replacePage.action, pageInfo.title);
       tabs.hide();
     }, false);
 
@@ -1776,7 +1831,7 @@ function addDashboard(window) {
           siteThumb.setAttribute("src", thumbnail);
         }
       });
-      statusLine.set(controls.action, pageInfo.title);
+      statusLine.set(replacePage.action, pageInfo.title);
       tabs.hide();
 
       // Emphasize this one site and dim others
@@ -2122,7 +2177,7 @@ function addDashboard(window) {
 
         // Indicate what tab is being switched to with shortcut if available
         statusLine.set("switch", {
-          extra: tab == nextMRUTab ? "next.tab" : null,
+          extra: tab == nextMRUTab ? "next.page" : null,
           keys: quickNum.value != "" ? cmd(quickNum.value) : null,
           text: tab.getAttribute("label")
         });
@@ -2309,100 +2364,6 @@ function addDashboard(window) {
     // Get a thumbnail for already open tabs
     tabs.updateThumbnail(tab);
   });
-
-  //// 4.5: Browser controls
-
-  let controls = createNode("hbox");
-  controls.setAttribute("left", "30");
-  controls.setAttribute("top", "110");
-  dashboard.appendChild(controls);
-
-  controls.style.overflow = "visible";
-
-  let newTabButton = createNode("button");
-  newTabButton.setAttribute("label", "New tab");
-  controls.appendChild(newTabButton);
-
-  newTabButton.style.backgroundColor = "rgb(244, 244, 244)";
-  newTabButton.style.borderRadius = "5px";
-  newTabButton.style.padding = "5px";
-  newTabButton.style.pointerEvents = "auto";
-
-  // Indicate what action should be done for various clicks
-  Object.defineProperty(controls, "action", {
-    get: function() controls.newTab ? "tabify" : "select"
-  });
-
-  // Control if pages should be opened in new tabs or not
-  Object.defineProperty(controls, "newTab", {
-    get: function() !!newTabButton.checked,
-    set: function(val) {
-      newTabButton.checked = val;
-      newTabButton.updateLook();
-    }
-  });
-
-  // Provide a shared way to get the right look
-  newTabButton.updateLook = function() {
-    if (controls.newTab) {
-      newTabButton.style.opacity = "1";
-    }
-    else {
-      newTabButton.style.opacity = ".4";
-    }
-  };
-
-  // Reset and initialize various control state
-  onClose(function() {
-    controls.collapsed = false;
-    controls.newTab = false;
-  });
-
-  // Pick the appropriate new tab state for various open reasons
-  onOpen(function(reason) {
-    switch (reason) {
-      // Location changes from an app tab default to opening a new tab
-      case "location":
-        controls.newTab = gBrowser.selectedTab.pinned;
-        break;
-
-      // Default open searches in a new tab
-      case "search":
-        controls.newTab = true;
-        break;
-
-      // Don't show the controls when switching tabs
-      case "switch":
-        controls.collapsed = true;
-        break;
-
-      // Toggle the new tab state each time it's triggered
-      case "tab":
-        controls.newTab = !controls.newTab;
-        break;
-    }
-  });
-
-  // Toggle the new-tab-ness for each click
-  newTabButton.addEventListener("click", function() {
-    controls.newTab = !controls.newTab;
-  }, false);
-
-  // Indicate what clicking will do
-  newTabButton.addEventListener("mouseover", function() {
-    newTabButton.style.opacity = ".7";
-
-    let action = controls.newTab ? "deactivate" : "activate";
-    statusLine.set(action, {
-      keys: cmd("tab"),
-      text: "selecting pages as a new tab"
-    });
-  }, false);
-
-  newTabButton.addEventListener("mouseout", function() {
-    newTabButton.updateLook();
-    statusLine.reset();
-  }, false);
 
   //// 5: Status line
 
