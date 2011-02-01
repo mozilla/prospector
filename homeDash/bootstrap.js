@@ -3043,9 +3043,13 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     if (locale.match(/^de/))
       return "de";
 
-    // Use es-ES until we get translations for other Spanish and Portuguese
-    if (locale.match(/^(es|pt)/))
+    // Use es-ES until we get translations for other Spanish
+    if (locale.match(/^es/))
       return "es-ES";
+
+    // Use pt-PT until we get translations for other Portuguese
+    if (locale.match(/^pt/))
+      return "pt-PT";
 
     // Fall back to English for everything else
     return "en-US";
