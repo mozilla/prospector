@@ -196,7 +196,11 @@ function addDashboard(window) {
     }
 
     // Allow this node to be collapsed with a delay
-    node.hide = makeDelayable("showHide", function() node.collapsed = true);
+    let slowHide = makeDelayable("showHide", function() node.collapsed = true);
+    node.hide = function() {
+      shown = false;
+      slowHide.apply(global, arguments);
+    };
 
     // Set the opacity after a delay
     node.setOpacity = makeDelayable("opacity", function(val) {
@@ -204,7 +208,17 @@ function addDashboard(window) {
     });
 
     // Allow this node to be uncollapsed with a delay
-    node.show = makeDelayable("showHide", function() node.collapsed = false);
+    let slowShow  = makeDelayable("showHide", function() node.collapsed = false);
+    node.show = function() {
+      shown = true;
+      slowShow.apply(global, arguments);
+    };
+
+    // Indicate if the node should be shown even if it isn't visible yet
+    let shown = true;
+    Object.defineProperty(node, "shown", {
+      get: function() shown
+    });
 
     // Stop any timers that might be waiting
     onClose(function() {
@@ -817,16 +831,6 @@ function addDashboard(window) {
 
     // Prevent tabs under the mouse from activating immediately
     mouseSink.capture();
-
-    // Don't show a preview if it's for the current tab
-    if (gBrowser.selectedTab == previewed) {
-      statusLine.set("return", {keys: cmd("escape")});
-      return;
-    }
-
-    // Indicate what letting go of the modifier will do
-    statusLine.set("switch", previewed.getAttribute("label"));
-    tabPreview.swap(previewed);
   }
 
   // Provide a simple way to detect if we're switching
@@ -1080,7 +1084,10 @@ function addDashboard(window) {
     history.search(query, topMatch);
 
     // Only show the tabs that match
-    tabs.search(query);
+    tabs.search(query, {
+      highlight: gBrowser.selectedTab,
+      highlightNoLoad: true
+    });
   };
 
   // Indicate if the "left" engine is active for potential side-by-side
@@ -2033,6 +2040,24 @@ function addDashboard(window) {
     });
   };
 
+  // Emphasize a tab to preview
+  tabs.highlight = function(tabBox, noLoad) {
+    // Stop emphasizing the current highlight
+    tabs.unhighlight();
+
+    // Remember if we should reshow only if it's currently shown
+    if (!noLoad) {
+      tabs.reshowSites = sites.shown;
+      sites.hide();
+    }
+    else
+      tabs.reshowSites = false;
+
+    // Remember this item and emphasize it
+    tabs.highlighted = tabBox;
+    tabBox.emphasize(noLoad);
+  };
+
   // Keep track of what values to pass down to new tabs
   tabs.lastSelectCount = 1;
   tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
@@ -2047,7 +2072,7 @@ function addDashboard(window) {
   // Find the open tabs that match
   tabs.search = function(query, extra) {
     // Extract extra arguments if provided any
-    let {highlight, nextTab, transparent} = extra || {};
+    let {highlight, highlightNoLoad, nextTab, transparent} = extra || {};
 
     // Remove any existing search results and restore docshell if necessary
     tabs.reset();
@@ -2112,7 +2137,6 @@ function addDashboard(window) {
       tabBox.style.backgroundColor = "rgb(244, 244, 244)";
       tabBox.style.border = "1px solid rgb(0, 0, 0)";
       tabBox.style.borderRadius = "10px";
-      tabBox.style.cursor = "pointer";
       tabBox.style.position = "relative";
       tabBox.style.overflow = "hidden";
       tabBox.style.margin = "10px -122px 10px 0";
@@ -2154,6 +2178,48 @@ function addDashboard(window) {
       // Specially indicate that this pinned tab can be switched to
       else if (tab.pinned && tab._tPos < 8)
         quickNum.value = tab._tPos + 1 + "";
+
+      // Emphasize this item and show its preview
+      tabBox.emphasize = function(noLoad) {
+        tabBox.style.boxShadow = globalShadow;
+        tabBox.style.marginBottom = "0";
+        tabBox.style.marginTop = "0";
+        tabBox.style.cursor = "pointer";
+        tabThumb.style.height = "110px";
+        tabThumb.style.width = "146px";
+
+        // Don't load the preview and only change the style above
+        if (noLoad)
+          return;
+
+        // Don't show a preview of the current tab
+        if (gBrowser.selectedTab == tab) {
+          statusLine.set("return", {keys: cmd("escape")});
+          return;
+        }
+
+        // Indicate what tab is being switched to with shortcut if available
+        statusLine.set("switch", {
+          extra: tab == nextTab ? "next.page" : null,
+          keys: quickNum.value != "" ? cmd(quickNum.value) : null,
+          text: tab.getAttribute("label")
+        });
+
+        // Show the preview of this emphasized tab
+        tabPreview.swap(tab);
+      };
+
+      // Stop emphasizing this item and remove its preview
+      tabBox.unemphasize = function() {
+        tabBox.style.boxShadow = "";
+        tabBox.style.marginBottom = "10px";
+        tabBox.style.marginTop = "10px";
+        tabThumb.style.height = "90px";
+        tabThumb.style.width = "120px";
+
+        statusLine.reset();
+        tabPreview.reset();
+      };
 
       // Switch to the selected tab
       tabBox.addEventListener("click", function() {
@@ -2245,62 +2311,25 @@ function addDashboard(window) {
 
           // Do the action and update the display with a fresh search
           doneAction();
-          tabs.search(query);
+          tabs.search(query, extra);
         });
       }, false);
 
       // Indicate what clicking will do
       tabBox.addEventListener("mouseover", function() {
         // Don't focus this tab if we're still moving
-        if (moving) {
-          // Fix up the cursor to better indicate we're still dragging
-          tabBox.style.cursor = "move";
+        if (moving)
           return;
-        }
-
-        tabBox.style.boxShadow = globalShadow;
-        tabBox.style.marginBottom = "0";
-        tabBox.style.marginTop = "0";
-        tabThumb.style.height = "110px";
-        tabThumb.style.width = "146px";
-
-        // Don't need to do any more if the tab isn't interactable
-        if (transparent)
-          return;
-
-        // Show the tab preview and get rid of other things covering
-        sites.hide();
-
-        // Don't show a preview of the current tab
-        if (gBrowser.selectedTab == tab) {
-          statusLine.set("return", {keys: cmd("escape")});
-          return;
-        }
-
-        // Indicate what tab is being switched to with shortcut if available
-        statusLine.set("switch", {
-          extra: tab == nextTab ? "next.page" : null,
-          keys: quickNum.value != "" ? cmd(quickNum.value) : null,
-          text: tab.getAttribute("label")
-        });
-
-        tabPreview.swap(tab);
+        tabs.highlight(tabBox);
       }, false);
 
+      // Only unhighlight if the highlighted was still this item
       tabBox.addEventListener("mouseout", function() {
         // Don't restyle if we're still moving
         if (moving)
           return;
-
-        tabBox.style.boxShadow = "";
-        tabBox.style.marginBottom = "10px";
-        tabBox.style.marginTop = "10px";
-        tabThumb.style.height = "90px";
-        tabThumb.style.width = "120px";
-
-        sites.show(1000);
-        statusLine.reset();
-        tabPreview.reset();
+        if (tabs.highlighted == tabBox)
+          tabs.unhighlight();
       }, false);
 
       // Make a request to update the thumbnail
@@ -2329,8 +2358,10 @@ function addDashboard(window) {
       }
 
       // Remember that we've already found the thing to highlight
-      if (tab == highlight)
+      if (tab == highlight) {
+        tabs.highlight(tabBox, highlightNoLoad);
         highlight = null;
+      }
 
       // Equally space all the related tabs
       addSpacer(relation == "5none" ? 1 : 3);
@@ -2363,12 +2394,27 @@ function addDashboard(window) {
   tabs.showContext = function() {
     tabs.search("", {
       highlight: gBrowser.selectedTab,
+      highlightNoLoad: true,
       transparent: true
     });
 
     // Show immediately and hide after a little bit
     tabs.show();
     tabs.hide(5000);
+  };
+
+  // Stop tracking a tab as highlighted
+  tabs.unhighlight = function() {
+    if (tabs.highlighted == null)
+      return;
+
+    // Stop emphasizing if there's something highlighted
+    tabs.highlighted.unemphasize();
+    tabs.highlighted = null;
+
+    // Only reshow sites if it was supposed to be shown
+    if (tabs.reshowSites)
+      sites.show(1000);
   };
 
   // Keep track of what tabs we're still waiting to take a thumbnail
