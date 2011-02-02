@@ -629,6 +629,16 @@ function addDashboard(window) {
       return;
     }
 
+    // Give back the docshell now that we're closing
+    tabPreview.restoreTab();
+  };
+
+  // Restore a tab's docshell to where it came from
+  tabPreview.restoreTab = function() {
+    let {swappedTab} = tabPreview;
+    if (swappedTab == null)
+      return;
+
     // Restore the docshell to wherever it came from
     tabPreview.swapDocShells(swappedTab.linkedBrowser);
     gBrowser.setTabTitle(swappedTab);
@@ -637,6 +647,9 @@ function addDashboard(window) {
 
   // Borrow a tab's browser until the preview goes away
   tabPreview.swap = function(tab) {
+    // Don't overwrite existing swapped tabs
+    tabPreview.restoreTab();
+
     tabPreview.swappedTab = tab;
     tabPreview.swapDocShells(tab.linkedBrowser);
     tabPreviewStack.collapsed = false;
