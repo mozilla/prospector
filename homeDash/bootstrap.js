@@ -713,7 +713,6 @@ function addDashboard(window) {
       history.hide();
       searchBox.hide();
       sites.hide();
-      tabs.hide();
 
       pagePreview.reset();
       searchPreview1.reset();
@@ -797,6 +796,14 @@ function addDashboard(window) {
 
     // Update state of the newly previewed tab then highlight it
     showPage.previewed = previewed;
+    tabs.search(input.value, {
+      highlight: previewed,
+      nextTab: mruList[0]
+    });
+    tabs.show();
+
+    // Prevent tabs under the mouse from activating immediately
+    mouseSink.capture();
 
     // Don't show a preview if it's for the current tab
     if (gBrowser.selectedTab == previewed) {
@@ -1997,7 +2004,6 @@ function addDashboard(window) {
   tabs.style.borderRadius = "5px";
   tabs.style.boxShadow = globalShadow;
   tabs.style.overflow = "hidden";
-  tabs.style.pointerEvents = "auto";
 
   // Get an array of tabs that match a query
   tabs.filter = function(query) {
@@ -2026,15 +2032,25 @@ function addDashboard(window) {
   };
 
   // Find the open tabs that match
-  tabs.search = function(query) {
+  tabs.search = function(query, extra) {
+    // Extract extra arguments if provided any
+    let {highlight, nextTab, transparent} = extra || {};
+
     // Remove any existing search results and restore docshell if necessary
     tabs.reset();
     tabPreview.reset();
 
+    // Make the tabs transparent and not clickable if necessary
+    tabs.style.pointerEvents = transparent ? "none" : "auto";
+    tabs.setOpacity(transparent ? ".9" : "1");
+
     // Organize the tabs by relation relative to the current tab
     let selected = gBrowser.selectedTab;
     let sortedTabs = organizeTabsByRelation(tabs.filter(query), selected);
-    let nextMRUTab = sortedTabs[1];
+
+    // Figure out what the next tab to switch to will be
+    if (nextTab == null)
+      nextTab = sortedTabs[1];
 
     // Remember if a visual split is needed to separate unrelated tabs
     let needToSplit = true;
@@ -2119,12 +2135,12 @@ function addDashboard(window) {
       quickNum.style.pointerEvents = "none";
       quickNum.style.width = "20px";
 
-      // Specially indicate that this pinned tab can be switched to
-      if (tab.pinned && tab._tPos < 8)
-        quickNum.value = tab._tPos + 1 + "";
-      // Indicate that switching to the "last" tab is possible for this tab
-      else if (tab == nextMRUTab)
+      // Indicate that switching to the next tab is possible for this tab
+      if (tab == nextTab)
         quickNum.value = "9";
+      // Specially indicate that this pinned tab can be switched to
+      else if (tab.pinned && tab._tPos < 8)
+        quickNum.value = tab._tPos + 1 + "";
 
       // Switch to the selected tab
       tabBox.addEventListener("click", function() {
@@ -2235,6 +2251,10 @@ function addDashboard(window) {
         tabThumb.style.height = "110px";
         tabThumb.style.width = "146px";
 
+        // Don't need to do any more if the tab isn't interactable
+        if (transparent)
+          return;
+
         // Show the tab preview and get rid of other things covering
         sites.hide();
 
@@ -2246,7 +2266,7 @@ function addDashboard(window) {
 
         // Indicate what tab is being switched to with shortcut if available
         statusLine.set("switch", {
-          extra: tab == nextMRUTab ? "next.page" : null,
+          extra: tab == nextTab ? "next.page" : null,
           keys: quickNum.value != "" ? cmd(quickNum.value) : null,
           text: tab.getAttribute("label")
         });
@@ -2288,9 +2308,16 @@ function addDashboard(window) {
           addSpacer(1, tabBox).style.borderLeft = "1px dashed black";
         }
 
-        tabBox.style.marginRight = "-30px";
-        return true;
+        // Only show part of the unrelated tab then stop when not highlighting
+        if (highlight == null) {
+          tabBox.style.marginRight = "-30px";
+          return true;
+        }
       }
+
+      // Remember that we've already found the thing to highlight
+      if (tab == highlight)
+        highlight = null;
 
       // Equally space all the related tabs
       addSpacer(relation == "5none" ? 1 : 3);
@@ -2321,11 +2348,14 @@ function addDashboard(window) {
 
   // Temporarily show some context for the current tab
   tabs.showContext = function() {
-    tabs.search("");
-    tabs.setOpacity(".7");
+    tabs.search("", {
+      highlight: gBrowser.selectedTab,
+      transparent: true
+    });
+
+    // Show immediately and hide after a little bit
     tabs.show();
     tabs.hide(5000);
-    tabs.setOpacity("1", 5000);
   };
 
   // Keep track of what tabs we're still waiting to take a thumbnail
