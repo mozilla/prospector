@@ -803,11 +803,9 @@ function addDashboard(window) {
         if (dashboard.tabPreviewer == null) {
           dashboard.open = "switch";
 
-          // Figure out the order of most-recently-used tabs
-          let mruTabs = organizeTabsByUsed(tabs.filter(input.value));
-
           // Treat the current tab as previewed even if it is filtered out
           let previewedTab = gBrowser.selectedTab;
+          let mruTabs = organizeTabsByRelation(tabs.filter(input.value), previewedTab);
           if (previewedTab == mruTabs[0])
             mruTabs.shift();
 
@@ -1972,7 +1970,7 @@ function addDashboard(window) {
   tabs.setAttribute("left", 2 * sixthWidth + 10 + "");
   tabs.setAttribute("right", "10");
   tabs.setAttribute("top", "30");
-  dashboard.appendChild(tabs);
+  masterStack.appendChild(tabs);
 
   tabs.style.backgroundColor = "rgb(224, 224, 224)";
   tabs.style.borderRadius = "5px";
@@ -1999,25 +1997,11 @@ function addDashboard(window) {
   tabs.lastSelectCount = 1;
   tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
 
-  // Put app tabs first then most often selected sub sorted by most recently
-  tabs.prioritize = function(a, b) {
-    // Pinned tabs have priority over not-pinned but not each other
-    let pinA = a.hasAttribute("pinned");
-    let pinB = b.hasAttribute("pinned");
-    if (pinA && !pinB)
-      return -1;
-    if (pinA && pinB)
-      return 0;
-    if (pinB && !pinA)
-      return 1;
-
-    // For regular tabs, order by most frequently selected first
-    let countDiff = b.HDselectCount - a.HDselectCount;
-    if (countDiff != 0)
-      return countDiff;
-
-    // For ties on selection count, break with more recently selected
-    return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
+  // Clean up any tabs from a search when closing
+  tabs.reset = function() {
+    let node;
+    while ((node = tabs.lastChild) != null)
+      tabs.removeChild(node);
   };
 
   // Find the open tabs that match
@@ -2026,47 +2010,52 @@ function addDashboard(window) {
     tabs.reset();
     tabPreview.reset();
 
-    // Figure out what the next tab to switch to will be
-    let filteredTabs = tabs.filter(query);
-    let nextMRUTab = organizeTabsByUsed(filteredTabs)[1];
+    // Organize the tabs by relation relative to the current tab
+    let selected = gBrowser.selectedTab;
+    let sortedTabs = organizeTabsByRelation(tabs.filter(query), selected);
+    let nextMRUTab = sortedTabs[1];
 
-    // Track some state to determine when to separate tabs
-    let firstNormal = true;
-    let firstTab = true;
-
-    // Track various priorities to potentially assign to tabs
-    let highPriority, lowPriority;
+    // Remember if a visual split is needed to separate unrelated tabs
+    let needToSplit = true;
 
     // Keep state of moving a tab around
     let moving = false;
 
-    // Organize the tabs that match the query then add each one
-    filteredTabs.sort(tabs.prioritize).forEach(function(tab) {
-      // Put in a larger spacer between app-tabs and normal ones
-      let flex = 3;
-      if (!tab.pinned && firstNormal) {
-        firstNormal = false;
-        flex = 5;
-      }
-
-      // Unless it's the first tab, then put in a smaller spacer
-      if (firstTab) {
-        firstTab = false;
-        flex = 1;
-      }
-
-      // Only track high priorities from non-app tabs
-      if (!tab.pinned && highPriority == null)
-        highPriority = tab.HDselectCount;
-
-      // Always update the low priority so it eventually gets the lowest
-      lowPriority = tab.HDselectCount;
-
+    // Add a spacer of some flex size
+    let lastSpacer;
+    function addSpacer(flex, before) {
       // Insert a spacer before each tab
-      let spacer = createNode("spacer");
-      spacer.setAttribute("flex", flex + "");
-      tabs.appendChild(spacer);
+      lastSpacer = createNode("spacer");
 
+      let {width} = flex;
+      if (width != null)
+        lastSpacer.style.width = width + "px";
+      else
+        lastSpacer.setAttribute("flex", flex + "");
+
+      return tabs.insertBefore(lastSpacer, before);
+    }
+
+    // Put some buffer at the very beginning
+    addSpacer(1);
+
+    // Fix the last spacer so the last tab is fully left of it
+    let addedTab = false;
+    function maybeFixLastSpacer() {
+      // Only fix the spacer if a tab added another spacer
+      if (!addedTab)
+        return;
+      addedTab = false;
+
+      // Fix the last spacer to be as big as the initial spacer
+      lastSpacer.setAttribute("flex", "1");
+
+      // Add a tabBox-sized spacer as if the tab takes up space
+      addSpacer({width: 122}, lastSpacer.nextSibling);
+    }
+
+    // Keep adding tabs until we hit some stop condition
+    sortedTabs.some(function(tab) {
       let tabBox = createNode("stack");
       tabs.appendChild(tabBox);
 
@@ -2129,8 +2118,6 @@ function addDashboard(window) {
 
       // Prepare for moving if the user drags after clicking
       tabBox.addEventListener("mousedown", function(event) {
-        // Capture mouse events on the dashboard to detect mouse drags anywhere
-        dashboard.style.pointerEvents = "auto";
         tabBox.style.cursor = "move";
 
         // Update the non-local shared tab moving state
@@ -2143,7 +2130,7 @@ function addDashboard(window) {
         let startOffset = tabBox.boxObject.screenX;
 
         // Track mouse movement to figure out which way the tab should move
-        let stopMove = listen(window, dashboard, "mousemove", function(event) {
+        let stopMove = listen(window, masterStack, "mousemove", function(event) {
           let action;
 
           // Prioritize the tab if dragged left enough
@@ -2197,9 +2184,7 @@ function addDashboard(window) {
         });
 
         // Detect when the user stopped dragging to clean up
-        let stopUp = listen(window, dashboard, "mouseup", function() {
-          // Stop capturing the mouse events and various listeners
-          dashboard.style.pointerEvents = "none";
+        let stopUp = listen(window, masterStack, "mouseup", function() {
           moving = false;
           stopMove();
           stopUp();
@@ -2271,28 +2256,55 @@ function addDashboard(window) {
           return;
         tabThumb.setAttribute("src", thumbnail);
       });
+
+      // Make the unrelated tab only partially visible and stop adding tabs
+      let relation = getTabRelation(tab, selected);
+      if (relation == "5none") {
+        // Visually separate the unrelated tabs from the current group
+        if (needToSplit) {
+          needToSplit = false;
+          maybeFixLastSpacer();
+          addSpacer(1, tabBox).style.borderLeft = "1px dashed black";
+        }
+
+        tabBox.style.marginRight = "-30px";
+        return true;
+      }
+
+      // Equally space all the related tabs
+      addSpacer(relation == "5none" ? 1 : 3);
+      addedTab = true;
     });
 
-    // Fix up the right margin of the last tab and insert a spacer
-    let lastTab = tabs.lastChild;
-    if (lastTab != null) {
-      lastTab.style.marginRight = "0";
-
-      let spacer = createNode("spacer");
-      spacer.setAttribute("flex", "1");
-      tabs.appendChild(spacer);
-    }
-
-    // If we don't have a high priority for some reason, just take the low
-    if (highPriority == null)
-      highPriority = lowPriority;
+    // Make sure the last spacer is the same size as the initial one
+    maybeFixLastSpacer();
   };
 
-  // Clean up any tabs from a search when closing
-  tabs.reset = function() {
-    let node;
-    while ((node = tabs.lastChild) != null)
-      tabs.removeChild(node);
+  // Generate a session id but only keep it for a little while
+  Object.defineProperty(tabs, "sessionId", {
+    get: function() {
+      let sessionId = tabs._sessionId || Math.random();
+
+      if (tabs.sessionTimer != null)
+        clearTimeout(tabs.sessionTimer);
+
+      // Assume that tabs opened close in time to each other are related
+      tabs.sessionTimer = setTimeout(function() {
+        tabs._sessionId = null;
+        tabs.sessionTimer = null;
+      }, 30000);
+
+      return tabs._sessionId = sessionId;
+    }
+  });
+
+  // Temporarily show some context for the current tab
+  tabs.showContext = function() {
+    tabs.search("");
+    tabs.setOpacity(".7");
+    tabs.show();
+    tabs.hide(5000);
+    tabs.setOpacity("1", 5000);
   };
 
   // Keep track of what tabs we're still waiting to take a thumbnail
@@ -2385,6 +2397,11 @@ function addDashboard(window) {
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
     let tab = event.target;
 
+    tab.HDid = Math.random();
+    tab.HDparentId = gBrowser.selectedTab.HDid;
+    tab.HDsessionId = tabs.sessionId;
+    tab.HDsiblingId = gBrowser.selectedTab.HDid;
+
     // Inherit the full last selection time
     tab.HDlastSelect = tabs.lastSelectTime;
 
@@ -2406,23 +2423,36 @@ function addDashboard(window) {
     tabs.lastSelectCount = tab.HDselectCount;
     tabs.lastSelectTime = tab.HDlastSelect;
 
-    // Get the thumbnail of the selected tab
-    tabs.updateThumbnail(tab, {wait: 5000});
+    // Show some context of where the user just switched to
+    tabs.showContext();
   });
 
   // Clear out any state we set on external objects
   unload(function() {
+    if (tabs.sessionTimer != null)
+      clearTimeout(tabs.sessionTimer);
+
+    // For regular users, don't kill these values so easily
+    return;
     Array.forEach(gBrowser.tabs, function(tab) {
+      tab.HDid = null;
       tab.HDlastSelect = 0;
       tab.HDlastThumbUrl = "";
+      tab.HDparentId = null;
       tab.HDselectCount = 0;
+      tab.HDsessionId = null;
+      tab.HDsiblingId = null;
       tab.HDthumbnail = "";
     });
   });
 
   // Initialize various special state to something useful
   Array.forEach(gBrowser.tabs, function(tab) {
-    tab.HDselectCount = 1;
+    tab.HDid = tab.HDid || Math.random();
+    tab.HDparentId = tab.HDparentId || Math.random();
+    tab.HDselectCount = tab.HDselectCount || 1;
+    tab.HDsessionId = tab.HDsessionId || Math.random();
+    tab.HDsiblingId = tab.HDsiblingId || Math.random();
 
     // Get a thumbnail for already open tabs
     tabs.updateThumbnail(tab);

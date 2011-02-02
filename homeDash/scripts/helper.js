@@ -185,6 +185,32 @@ function getTabIcon(tab) {
   return images["defaultFavicon.png"];
 }
 
+// Figure out the ordered relationship between two tabs
+function getTabRelation(target, reference) {
+  // Highest priority is the same tab
+  if (target == reference)
+    return "0self";
+
+  // Child if the target has the reference as its parent
+  if (target.HDparentId == reference.HDid)
+    return "1child";
+
+  // Friend if opened during the same session
+  if (target.HDsessionId == reference.HDsessionId)
+    return "2friend";
+
+  // Sibling if matches the same sibling group
+  if (target.HDsiblingId == reference.HDsiblingId)
+    return "3sibling";
+
+  // Parent if target has id of reference's parent
+  if (target.HDid == reference.HDparentId)
+    return "4parent";
+
+  // No other direct relationships
+  return "5none";
+}
+
 // Try to find a usable text from a node
 function getTextContent(node) {
   // Nothing to do with nothing
@@ -281,10 +307,20 @@ function matchesBoundary(term, target, casedTarget) {
   return false;
 }
 
-// Sort the tabs that match a query by most recently used
-function organizeTabsByUsed(tabs) {
+// Sort the tabs based on the relationship to a reference tab
+function organizeTabsByRelation(tabs, reference) {
   // Make a copy of the input tabs to avoid changing its order
   return tabs.slice().sort(function(a, b) {
+    let relationA = getTabRelation(a, reference);
+    let relationB = getTabRelation(b, reference);
+
+    // Prefer the one with the closer relationship
+    if (relationA < relationB)
+      return -1;
+    if (relationA > relationB)
+      return 1;
+
+    // For things with the same relation, prefer most recently used
     return (b.HDlastSelect || 0) - (a.HDlastSelect || 0);
   });
 };
