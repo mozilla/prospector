@@ -923,8 +923,7 @@ function addDashboard(window) {
   // Add extra behavior for switching to most-recently-used tabs
   listen(window, window, "keydown", function(event) {
     switch (event.keyCode) {
-      // Watch for ctrl-tab, ctrl-9, cmd-9 to catch tab switching
-      case event.DOM_VK_TAB:
+      // Watch for ctrl/cmd-9 to catch tab switching
       case event.DOM_VK_9:
         // If neither ctrl or cmd are pressed, ignore this event
         if (!event.ctrlKey && !event.metaKey)
@@ -938,11 +937,31 @@ function addDashboard(window) {
     }
   });
 
-  // Prevent the default behavior for ctrl-tab key presses
-  listen(window, window, "keypress", function(event) {
-    if (event.keyCode == event.DOM_VK_TAB && event.ctrlKey)
-      event.stopPropagation();
+  // Make swiping with 3 fingers go forwards/backwards through pages
+  listen(window, window, "MozSwipeGesture", function(event) {
+    let backwards = false;
+    switch (event.direction) {
+      case event.DIRECTION_LEFT:
+        backwards = true;
+        break;
+
+      case event.DIRECTION_RIGHT:
+        break;
+
+      default:
+        return;
+    }
+    event.stopPropagation();
+    showPage(backwards, false);
   });
+
+  // Handle Browser:NextTab, ctrl-tab, cmd-}, alt-cmd-right, ctrl-pagedown
+  let (orig = gBrowser.tabContainer.advanceSelectedTab) {
+    gBrowser.tabContainer.advanceSelectedTab = function(dir, wrap) {
+      showPage(dir == -1, false);
+    };
+    unload(function() gBrowser.tabContainer.advanceSelectedTab = orig, window);
+  }
 
   //// 4.1: Search controls
 
