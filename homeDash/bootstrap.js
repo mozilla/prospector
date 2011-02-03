@@ -355,9 +355,8 @@ function addDashboard(window) {
 
   // Make sure we're in the right tab stack whenever the tab switches
   listen(window, gBrowser.tabContainer, "TabSelect", function() {
-    // Close the dashboard if the tab previewer isn't active (for tab close)
-    if (!showPage.active)
-      dashboard.open = false;
+    // Close the dashboard if the user somehow switched tabs
+    dashboard.open = false;
 
     // Make sure we don't have a tab in a preview as it'll lose its dochsell
     tabPreview.reset();
@@ -709,18 +708,17 @@ function addDashboard(window) {
 
   // Persist the preview to the tab the user wants
   dashboard.usePreview = function(preview, url) {
-    // Open the result in a new tab and switch to it
-    if (!replacePage.checked) {
-      let newTab = gBrowser.addTab();
-      preview.persistTo(newTab, url);
+    let targetTab = gBrowser.selectedTab;
 
-      // NB: Select the tab *after* persisting, so we don't close too early
-      gBrowser.selectedTab = newTab;
-      return;
-    }
+    // Open the result in a new tab
+    if (!replacePage.checked)
+      targetTab = gBrowser.addTab();
 
     // Save the preview to the current tab and then close
-    preview.persistTo(gBrowser.selectedTab, url);
+    preview.persistTo(targetTab, url);
+
+    // NB: Switch to the tab *after* saving the preview
+    gBrowser.selectedTab = targetTab;
     dashboard.open = false;
   };
 
@@ -761,6 +759,11 @@ function addDashboard(window) {
         reason = "location";
         break;
 
+      case "cmd_close":
+        event.stopPropagation();
+        showPage(false, true);
+        return;
+
       case "cmd_newNavigatorTab":
         reason = "tab";
         break;
@@ -798,7 +801,7 @@ function addDashboard(window) {
 
     // Remove the actual tab that's being previewed
     if (removeCurrent)
-      gBrowser.removeTab(previewed);
+      tabs.prepRemove(previewed);
 
     // Pick out the more recently used (or wrap to least)
     if (backwards) {
@@ -2047,6 +2050,10 @@ function addDashboard(window) {
   // Get an array of tabs that match a query
   tabs.filter = function(query) {
     return gBrowser.visibleTabs.filter(function(tab) {
+      // Don't include tabs that are about to be removed
+      if (tabs.toRemove.indexOf(tab) != -1)
+        return false;
+
       // Allow exact url matches to succeed without checking others
       if (tab.linkedBrowser.currentURI.spec == query)
         return true;
@@ -2080,6 +2087,19 @@ function addDashboard(window) {
   // Keep track of what values to pass down to new tabs
   tabs.lastSelectCount = 1;
   tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
+
+  // Track that this tab is about to be removed
+  tabs.prepRemove = function(tab) {
+    tabs.toRemove.push(tab);
+  };
+
+  // Actually remove the tabs that were prepped to remove
+  tabs.removeTabs = function() {
+    tabs.toRemove.forEach(function(tab) {
+      gBrowser.removeTab(tab);
+    });
+    tabs.toRemove.length = 0;
+  };
 
   // Clean up any tabs from a search when closing
   tabs.reset = function() {
@@ -2422,6 +2442,9 @@ function addDashboard(window) {
     tabs.hide(5000);
   };
 
+  // Keep track of the tabs that are supposed to be removed
+  tabs.toRemove = [];
+
   // Stop tracking a tab as highlighted
   tabs.unhighlight = function() {
     if (tabs.highlighted == null)
@@ -2520,6 +2543,9 @@ function addDashboard(window) {
   onClose(function() {
     tabs.hide();
     tabs.reset();
+
+    // Remove any tabs that were marked to be removed
+    tabs.removeTabs();
   });
 
   // Newly opened tabs inherit some properties of the last selected tab
@@ -2933,6 +2959,7 @@ function addDashboard(window) {
         notifications.skipPreview = false;
 
       // Select the tab which will remove this notification
+      dashboard.open = false;
       gBrowser.selectedTab = tab;
     }, false);
 
