@@ -2113,9 +2113,17 @@ function addDashboard(window) {
 
   // Actually remove the tabs that were prepped to remove
   tabs.removeTabs = function() {
-    tabs.toRemove.forEach(function(tab) {
-      gBrowser.removeTab(tab);
-    });
+    // Only actually remove tabs that aren't pinned
+    let notPinned = tabs.toRemove.filter(function({pinned}) !pinned);
+
+    // Don't end up with no tabs left
+    if (notPinned.length == gBrowser.tabs.length) {
+      gBrowser.selectedTab = gBrowser.addTab();
+      dashboard.open = true;
+    }
+
+    // Remove all the remaining tabs
+    notPinned.forEach(function(tab) gBrowser.removeTab(tab));
     tabs.toRemove.length = 0;
   };
 
@@ -2562,8 +2570,8 @@ function addDashboard(window) {
     tabs.hide();
     tabs.reset();
 
-    // Remove any tabs that were marked to be removed
-    tabs.removeTabs();
+    // NB: Wait for onClose to finish running before removing tabs
+    setTimeout(function() tabs.removeTabs(), 0);
   });
 
   // Newly opened tabs inherit some properties of the last selected tab
