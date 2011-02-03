@@ -848,6 +848,19 @@ function addDashboard(window) {
 
     let listeners = showPage.listeners = [];
 
+    // Watch for clicks to do special things when switching
+    listeners.push(listen(window, window, "click", function(event) {
+      // Close the current tab on right-click
+      if (event.button == 2)
+        showPage(event.shiftKey, true);
+      // Cancel out of previews for any other types of clicks
+      else
+        showPage.stop(true);
+
+      // Stop any normal click behavior
+      event.stopPropagation();
+    }));
+
     // Watch for keypresses to do special things when switching
     listeners.push(listen(window, window, "keydown", function(event) {
       switch (event.keyCode) {
@@ -890,6 +903,11 @@ function addDashboard(window) {
           showPage.stop(true);
           break;
       }
+    }));
+
+    // Dismiss the preview if the mouse moves
+    listeners.push(listen(window, window, "mousemove", function() {
+      showPage.stop(true);
     }));
 
     // Show the dashboard when first starting
@@ -3140,6 +3158,9 @@ function addDashboard(window) {
   fxIcon.style.pointerEvents = "auto";
   fxIcon.style.width = "22px";
 
+  // Remember when was the last scroll to prevent too many
+  fxIcon.lastScroll = Date.now();
+
   // Just go back to the default opacity when closing the dashboard
   fxIcon.reset = function() {
     fxIcon.style.opacity = dashboard.open ? "1" : ".3";
@@ -3149,15 +3170,19 @@ function addDashboard(window) {
   onClose(fxIcon.reset);
 
   // Allow toggling the dashboard by clicking
-  fxIcon.addEventListener("click", function() {
+  fxIcon.addEventListener("click", function(event) {
+    if (event.button == 2) {
+      showPage(event.shiftKey, true);
+      return;
+    }
+
     dashboard.toggle();
   }, false);
 
   // Indicate what clicking will do
   fxIcon.addEventListener("mouseover", function() {
     fxIcon.style.opacity = "1";
-    let action = dashboard.open ? "deactivate" : "activate";
-    statusLine.set(action, "Home Dash");
+    statusLine.set(dashboard.open ? "homehide" : "homeshow");
   }, false);
 
   fxIcon.addEventListener("mouseout", function() {
@@ -3165,10 +3190,21 @@ function addDashboard(window) {
     statusLine.reset();
   }, false);
 
+  // Allow scrolling through tabs when pointing at the icon
+  fxIcon.addEventListener("DOMMouseScroll", function({detail}) {
+    let now = Date.now();
+    if (now - fxIcon.lastScroll < 350)
+      return;
+    fxIcon.lastScroll = now;
+
+    // Do a "next tab" for down or right scrolls
+    showPage(detail < 0, false);
+  }, false);
+
   //// 8: Mouseover event sink
 
   let mouseSink = createNode("box");
-  masterStack.appendChild(mouseSink);
+  masterStack.insertBefore(mouseSink, fxIcon);
 
   // Capture mouse events so nodes under the mouse don't mouseover immediately
   mouseSink.capture = function() {
