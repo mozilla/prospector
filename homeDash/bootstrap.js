@@ -342,7 +342,7 @@ function addDashboard(window) {
   // Make sure we're in the right tab stack whenever the tab switches
   listen(window, gBrowser.tabContainer, "TabSelect", function() {
     // Close the dashboard if the tab previewer isn't active (for tab close)
-    if (dashboard.tabPreviewer == null)
+    if (!showPage.active)
       dashboard.open = false;
 
     // Make sure we don't have a tab in a preview as it'll lose its dochsell
@@ -759,138 +759,159 @@ function addDashboard(window) {
     commandSet.removeEventListener("command", commandWatcher, true);
   }, window);
 
+  // Switch through MRU tabs in order or backwards
+  function showPage(backwards, removeCurrent) {
+    // Initialize some state and listeners if necessary
+    showPage.start();
+
+    // Read out the current state
+    let {mruList, previewed} = showPage;
+
+    // Remove the current preview if necessary
+    tabPreview.reset();
+
+    // Remove the actual tab that's being previewed
+    if (removeCurrent)
+      gBrowser.removeTab(previewed);
+
+    // Pick out the more recently used (or wrap to least)
+    if (backwards) {
+      // Put the current preview on the front of the list
+      if (!removeCurrent)
+        mruList.unshift(previewed);
+      previewed = mruList.pop();
+    }
+    // Get the lesser recently used (or wrap to most)
+    else {
+      // Put the current preview on the end of the list
+      if (!removeCurrent)
+        mruList.push(previewed);
+      previewed = mruList.shift();
+    }
+
+    // Must have closed the last tab, so abort!
+    if (previewed == null) {
+      showPage.stop();
+      return;
+    }
+
+    // Update state of the newly previewed tab then highlight it
+    showPage.previewed = previewed;
+
+    // Don't show a preview if it's for the current tab
+    if (gBrowser.selectedTab == previewed) {
+      statusLine.set("return", {keys: cmd("escape")});
+      return;
+    }
+
+    // Indicate what letting go of the modifier will do
+    statusLine.set("switch", previewed.getAttribute("label"));
+    tabPreview.swap(previewed);
+  }
+
+  // Provide a simple way to detect if we're switching
+  Object.defineProperty(showPage, "active", {
+    get: function() showPage.listeners != null
+  });
+
+  // Initialize state and listeners needed for switching tabs
+  showPage.start = function() {
+    if (showPage.active)
+      return;
+
+    let listeners = showPage.listeners = [];
+
+    // Watch for keypresses to do special things when switching
+    listeners.push(listen(window, window, "keydown", function(event) {
+      switch (event.keyCode) {
+        // Allow closing of the current tab when tab previews are shown
+        case event.DOM_VK_BACK_SPACE:
+        case event.DOM_VK_DELETE:
+        case event.DOM_VK_W:
+          // Show the next preview while removing the current tab
+          showPage(event.shiftKey, true);
+          break;
+
+        // Provide an alternate way to select the current preview
+        case event.DOM_VK_ENTER:
+        case event.DOM_VK_RETURN:
+        case event.DOM_VK_SPACE:
+          showPage.stop(true);
+          break;
+
+        // Provide a way to cancel out of previewing tabs
+        case event.DOM_VK_ESCAPE:
+        case event.DOM_VK_0:
+          showPage.stop(false);
+          break;
+
+        // If it's not a key combo that we care about, abort
+        default:
+          return;
+      }
+
+      // We must have done something special, so don't allow normal behavior
+      event.preventDefault();
+      event.stopPropagation();
+    }));
+
+    // Listen for un-modifying keys (ctrl and cmd) to stop previewing
+    listeners.push(listen(window, window, "keyup", function(event) {
+      switch (event.keyCode) {
+        case event.DOM_VK_CONTROL:
+        case event.DOM_VK_META:
+          showPage.stop(true);
+          break;
+      }
+    }));
+
+    // Show the dashboard when first starting
+    dashboard.open = "switch";
+
+    // Treat the current tab as previewed even if it is filtered out
+    let selected = gBrowser.selectedTab;
+    let mruList = organizeTabsByRelation(tabs.filter(input.value), selected);
+    if (selected == mruList[0])
+      mruList.shift();
+
+    // Save some of these initial values for use when switching
+    showPage.mruList = mruList;
+    showPage.previewed = selected;
+  };
+
+  // Provide a way to stop showing the tab previews and clean up state
+  showPage.stop = function(selectTab) {
+    showPage.listeners.forEach(function(unlisten) unlisten());
+    showPage.listeners = null;
+
+    // Don't close the dashboard and switch tabs if no longer switching
+    if (dashboard.openReason != "switch")
+      return;
+
+    // NB: Closing the dashboard will restore/reset the tab docshell
+    dashboard.open = false;
+
+    // Switch to the previewed tab if desired
+    if (selectTab)
+      gBrowser.selectedTab = showPage.previewed;
+  };
+
   // Add extra behavior for switching to most-recently-used tabs
   listen(window, window, "keydown", function(event) {
     switch (event.keyCode) {
-      // Allow closing of the current tab when tab previews are shown
-      case event.DOM_VK_BACK_SPACE:
-      case event.DOM_VK_DELETE:
-      case event.DOM_VK_W:
-        if (dashboard.tabPreviewer == null)
-          return;
-
-        // Show the next preview while removing the current tab
-        dashboard.tabPreviewer(event.shiftKey, true);
-        break;
-
-      // Provide an alternate way to select the current preview
-      case event.DOM_VK_ENTER:
-      case event.DOM_VK_RETURN:
-      case event.DOM_VK_SPACE:
-        if (dashboard.tabPreviewer == null)
-          return;
-
-        dashboard.tabPreviewer.stop(true);
-        break;
-
-      // Provide a way to cancel out of previewing tabs
-      case event.DOM_VK_ESCAPE:
-      case event.DOM_VK_0:
-        if (dashboard.tabPreviewer == null)
-          return;
-
-        dashboard.tabPreviewer.stop(false);
-        break;
-
       // Watch for ctrl-tab, ctrl-9, cmd-9 to catch tab switching
       case event.DOM_VK_TAB:
       case event.DOM_VK_9:
         // If neither ctrl or cmd are pressed, ignore this event
         if (!event.ctrlKey && !event.metaKey)
           return;
-
-        // Initialize the tab previewer
-        if (dashboard.tabPreviewer == null) {
-          dashboard.open = "switch";
-
-          // Treat the current tab as previewed even if it is filtered out
-          let previewedTab = gBrowser.selectedTab;
-          let mruTabs = organizeTabsByRelation(tabs.filter(input.value), previewedTab);
-          if (previewedTab == mruTabs[0])
-            mruTabs.shift();
-
-          // Provide a helper to switch through MRU tabs in order or backwards
-          dashboard.tabPreviewer = function(backwards, removeCurrent) {
-            // Remove the current preview if necessary
-            tabPreview.reset();
-
-            // Remove the actual tab that's being previewed
-            if (removeCurrent)
-              gBrowser.removeTab(previewedTab);
-
-            // Pick out the more recently used (or wrap to least)
-            if (backwards) {
-              // Put the current preview on the front of the list
-              if (!removeCurrent)
-                mruTabs.unshift(previewedTab);
-              previewedTab = mruTabs.pop();
-            }
-            // Get the lesser recently used (or wrap to most)
-            else {
-              // Put the current preview on the end of the list
-              if (!removeCurrent)
-                mruTabs.push(previewedTab);
-              previewedTab = mruTabs.shift();
-            }
-
-            // Must have closed the last tab, so abort!
-            if (previewedTab == null) {
-              dashboard.tabPreviewer.stop();
-              return;
-            }
-
-            // Don't show a preview if it's for the current tab
-            if (gBrowser.selectedTab == previewedTab) {
-              statusLine.set("return", {keys: cmd("escape")});
-              return;
-            }
-
-            // Indicate what letting go of the modifier will do
-            statusLine.set("switch", previewedTab.getAttribute("label"));
-            tabPreview.swap(previewedTab);
-          };
-
-          // Provide a way to stop showing the tab previews
-          dashboard.tabPreviewer.stop = function(selectTab) {
-            // Remove the added tab preview functionality and state
-            unlisten();
-            dashboard.tabPreviewer = null;
-
-            // Don't close the dashboard and switch tabs if no longer switching
-            if (dashboard.openReason != "switch")
-              return;
-
-            // NB: Closing the dashboard will restore/reset the tab docshell
-            dashboard.open = false;
-
-            // Switch to the previewed tab if desired
-            if (selectTab)
-              gBrowser.selectedTab = previewedTab;
-          };
-
-          // Listen for un-modifying keys (ctrl and cmd) to stop previewing
-          let unlisten = listen(window, window, "keyup", function(event) {
-            switch (event.keyCode) {
-              case event.DOM_VK_CONTROL:
-              case event.DOM_VK_META:
-                dashboard.tabPreviewer.stop(true);
-                break;
-            }
-          });
-        }
+        event.preventDefault();
+        event.stopPropagation();
 
         // Immediately show the next preview
-        dashboard.tabPreviewer(event.shiftKey, false);
+        showPage(event.shiftKey, false);
         break;
-
-      // If it's not a key combo that we care about, abort
-      default:
-        return;
     }
-
-    // We must have done something special, so don't do what it would have done
-    event.stopPropagation();
-    event.preventDefault();
   });
 
   // Prevent the default behavior for ctrl-tab key presses
