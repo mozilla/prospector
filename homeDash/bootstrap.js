@@ -248,6 +248,9 @@ function addDashboard(window) {
     return canvas.toDataURL();
   }
 
+  // Remember what is being dragged
+  let dragged;
+
   const maxBoxObject = gBrowser.boxObject;
   const sixthWidth = maxBoxObject.width / 6;
 
@@ -2103,10 +2106,6 @@ function addDashboard(window) {
     tabBox.emphasize(noLoad);
   };
 
-  // Keep track of what values to pass down to new tabs
-  tabs.lastSelectCount = 1;
-  tabs.lastSelectTime = gBrowser.selectedTab.HDlastSelect = Date.now();
-
   // Track that this tab is about to be removed
   tabs.prepRemove = function(tab) {
     tabs.toRemove.push(tab);
@@ -2152,15 +2151,201 @@ function addDashboard(window) {
     let selected = gBrowser.selectedTab;
     let sortedTabs = organizeTabsByRelation(tabs.filter(query), selected);
 
+    // Don't bother with showing any tabs if there's no matches
+    if (sortedTabs.length == 0)
+      return;
+
+    // Add pinned tabs specially to the front of the list
+    let pinnedBox;
+    (function addPinnedSlots() {
+      // Remove anything added and reshow with potentially new information
+      function refresh() {
+        tabs.removeChild(pinnedBox);
+        addPinnedSlots();
+      }
+
+      let pinnedSlots = [];
+      function addSlot(tab, extra) {
+        let pinBox = createNode("stack");
+        pinnedSlots.push(pinBox);
+
+        pinBox.slotNum = pinnedSlots.length;
+
+        pinBox.style.backgroundColor = "rgb(244, 244, 244)";
+        pinBox.style.border = "1px solid rgb(0, 0, 0)";
+        pinBox.style.borderRadius = "5px";
+        pinBox.style.height = "22px";
+        pinBox.style.margin = "2px 2px 3px 2px";
+        pinBox.style.overflow = "hidden";
+        pinBox.style.padding = "1px";
+        pinBox.style.width = "22px";
+
+        // Hide the extra slot until later
+        if (extra)
+          pinBox.style.opacity = "0";
+
+        let pinNum = createNode("label");
+        pinNum.setAttribute("left", "2");
+        pinNum.setAttribute("top", "2");
+        pinNum.setAttribute("value", pinBox.slotNum + "");
+        pinBox.appendChild(pinNum);
+
+        pinNum.style.margin = "0";
+        if (pinBox.slotNum < 10) {
+          pinNum.style.fontSize = "14px";
+          pinNum.style.marginLeft = "2px";
+          pinNum.style.marginTop = "-1px";
+        }
+
+        // Hide the number until later
+        pinNum.collapsed = true;
+
+        let pinIcon = createNode("image");
+        pinIcon.setAttribute("height", "16");
+        pinIcon.setAttribute("width", "16");
+        pinBox.appendChild(pinIcon);
+
+        if (tab != null)
+          pinIcon.setAttribute("src", getTabIcon(tab));
+
+        // Save the information used to create this box
+        pinBox.tab = tab;
+        pinBox.extra = extra;
+
+        // Switch to the selected tab
+        pinBox.addEventListener("click", function() {
+          if (tab == null)
+            return;
+
+          // NB: Closing the dashboard has the tab preview restoring the docshell
+          dashboard.open = false;
+          gBrowser.selectedTab = tab;
+        }, false);
+
+        // Make the dragged-in tab a pinned tab
+        pinBox.addEventListener("drop", function() {
+          gBrowser.pinTab(dragged.tab);
+
+          // Refresh the pinned box contents
+          refresh();
+        }, false);
+
+        // Handle the pinned tab being dragged out
+        pinBox.addEventListener("dragend", function(event) {
+          if (event.dataTransfer.dropEffect != "move")
+            return;
+          // Refresh the pinned box contents
+          refresh();
+        }, false);
+
+        // Handle a tab being dragged out of the slot
+        pinBox.addEventListener("dragleave", function() {
+          if (tab == null)
+            pinIcon.removeAttribute("src");
+          else
+            pinIcon.setAttribute("src", getTabIcon(tab));
+
+          statusLine.reset();
+        }, false);
+
+        // Handle a tab being dragged over the slot
+        pinBox.addEventListener("dragover", function(event) {
+          if (dragged == null || dragged.type != "tab")
+            return;
+          event.preventDefault();
+
+          pinIcon.setAttribute("src", getTabIcon(dragged.tab));
+          statusLine.set("tabpin", dragged.tab.getAttribute("label"));
+        }, false);
+
+        // Allow a pinned tab to be dragged out
+        pinBox.addEventListener("dragstart", function(event) {
+          dragged = {
+            tab: tab,
+            type: "pinned"
+          };
+          event.dataTransfer.setData("text/home-dash", "");
+          event.dataTransfer.setDragImage(pinBox, 16, 16);
+        }, false);
+
+        // Indicate what clicking will do
+        pinBox.addEventListener("mouseover", function() {
+          if (tab == null) {
+            statusLine.set("dragpin");
+            return;
+          }
+
+          pinBox.style.cursor = "pointer";
+          sites.hide();
+
+          // Don't show a preview of the current tab
+          if (gBrowser.selectedTab == tab) {
+            statusLine.set("return", {keys: cmd("escape")});
+            return;
+          }
+
+          // Indicate what tab is being switched to with shortcut if available
+          statusLine.set("switch", {
+            keys: pinBox.slotNum < 9 ? cmd(pinBox.slotNum + "") : null,
+            text: tab.getAttribute("label")
+          });
+
+          // Show a preview of this pinned tab
+          tabPreview.swap(tab);
+        }, false);
+
+        // Clear out the preview of this tab
+        pinBox.addEventListener("mouseout", function() {
+          sites.show(1000);
+          statusLine.reset();
+          tabPreview.reset();
+        }, false);
+
+        return pinBox;
+      }
+
+      // Add a slot for each pinned tab
+      gBrowser.visibleTabs.every(function(tab) {
+        if (!tab.pinned)
+          return false;
+
+        addSlot(tab);
+        return true;
+      });
+
+      // Add up empty slots to fill a whole column
+      let origColumns = pinnedSlots.length / 4;
+      let columns = Math.ceil(origColumns);
+      while (pinnedSlots.length < columns * 4)
+        addSlot(null);
+
+      // Add a whole extra hidden column if the existing columns are full
+      if (origColumns == columns) {
+        columns++;
+        while (pinnedSlots.length < columns * 4)
+          addSlot(null, origColumns != 0);
+      }
+
+      // Use a div so that this block (instead of box) will wrap content
+      let pinnedBox = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+      tabs.insertBefore(pinnedBox, tabs.firstChild);
+
+      pinnedBox.style.margin = "3px 0 0 3px";
+      pinnedBox.style.pointerEvents = transparent ? "none" : "auto";
+      pinnedBox.style.width = columns * 27 + "px";
+
+      // Add the children column by column but preserve vertical ordering
+      for (let i = 0; i < 4; i++)
+        for (let j = 0; j < columns; j++)
+          pinnedBox.appendChild(pinnedSlots[i + j * 4]);
+    })();
+
     // Figure out what the next tab to switch to will be
     if (nextTab == null)
       nextTab = sortedTabs[1];
 
     // Remember if a visual split is needed to separate unrelated tabs
     let needToSplit = true;
-
-    // Keep state of moving a tab around
-    let moving = false;
 
     // Add a spacer of some flex size
     let lastSpacer;
@@ -2294,111 +2479,33 @@ function addDashboard(window) {
 
       // Switch to the selected tab
       tabBox.addEventListener("click", function() {
-        // Don't handle clicks if we're moving a tab
-        if (moving)
-          return;
-
         // NB: Closing the dashboard has the tab preview restoring the docshell
         dashboard.open = false;
         gBrowser.selectedTab = tab;
       }, false);
 
-      // Prepare for moving if the user drags after clicking
-      tabBox.addEventListener("mousedown", function(event) {
-        tabBox.style.cursor = "move";
+      // Stop tracking the tab being dragged
+      tabBox.addEventListener("dragend", function(event) {
+        dragged = null;
+      }, false);
 
-        // Update the non-local shared tab moving state
-        moving = true;
-
-        // Initialize some state for this potential drag
-        let doneAction;
-        let downPos = event.pageX;
-        let origMargin = parseInt(tabBox.style.marginRight);
-        let startOffset = tabBox.boxObject.screenX;
-
-        // Track mouse movement to figure out which way the tab should move
-        let stopMove = listen(window, masterStack, "mousemove", function(event) {
-          let action;
-
-          // Prioritize the tab if dragged left enough
-          let offset = event.pageX - downPos;
-          if (offset < -50) {
-            action = "moveup";
-
-            // Force the tab to be close to the left side of the tabs area
-            offset = tabs.firstChild.boxObject.screenX - startOffset + 5;
-
-            // If already pinned, make sure it'll be the first tab
-            if (tab.pinned)
-              doneAction = function() gBrowser.moveTabTo(tab, 0);
-            // Otherwise just make it the last pinned tab
-            else
-              doneAction = function() gBrowser.pinTab(tab);
-          }
-          // Deprioritize the tab if dragged right enough
-          else if (offset > 50) {
-            action = "movedown";
-
-            // Force the tab to be close to the right side of the tabs area
-            offset = tabs.lastChild.boxObject.screenX +
-                     tabs.lastChild.boxObject.width - startOffset - 148 - 5;
-
-            // If currently pinned, unpin it and give it the highest priority
-            if (tab.pinned) {
-              doneAction = function() {
-                gBrowser.unpinTab(tab);
-                tab.HDselectCount = highPriority * 1.01;
-              };
-            }
-            // Otherwise, give the tab the least priority
-            else
-              doneAction = function() tab.HDselectCount = lowPriority * .99;
-          }
-
-          // If nothing will happen to the tab, clear the status and do nothing
-          if (action == null) {
-            statusLine.reset();
-            doneAction = function() {};
-          }
-          // Indicate what unclicking will do to the tab
-          else
-            statusLine.set(action, tab.getAttribute("label"));
-
-          // Make the tab sit above other tabs and update its position
-          tabBox.style.zIndex = "1";
-          tabBox.style.marginLeft = offset + "px";
-          tabBox.style.marginRight = origMargin - offset + "px";
-        });
-
-        // Detect when the user stopped dragging to clean up
-        let stopUp = listen(window, masterStack, "mouseup", function() {
-          moving = false;
-          stopMove();
-          stopUp();
-
-          // Can only do an action (even if nothing) if dragged even a little
-          if (doneAction == null)
-            return;
-
-          // Do the action and update the display with a fresh search
-          doneAction();
-          tabs.search(query, extra);
-        });
+      // Allow a tab to be dragged
+      tabBox.addEventListener("dragstart", function(event) {
+        dragged = {
+          tab: tab,
+          type: "tab"
+        };
+        event.dataTransfer.setData("text/home-dash", "");
+        event.dataTransfer.setDragImage(tabBox, 32, 32);
       }, false);
 
       // Indicate what clicking will do
       tabBox.addEventListener("mouseover", function() {
-        // Don't focus this tab if we're still moving
-        if (moving)
-          return;
         tabs.highlight(tabBox);
       }, false);
 
       // Only unhighlight if the highlighted was still this item
       tabBox.addEventListener("mouseout", function() {
-        // Don't restyle if we're still moving
-        if (moving)
-          return;
         if (tabs.highlighted == tabBox)
           tabs.unhighlight();
       }, false);
@@ -2580,35 +2687,47 @@ function addDashboard(window) {
     setTimeout(function() tabs.removeTabs(), 0);
   });
 
+  // Allow pinned tabs to be dropped to unpin
+  tabs.addEventListener("drop", function() {
+    if (dragged.type != "pinned")
+      return;
+    gBrowser.unpinTab(dragged.tab);
+  }, false);
+
+  // Handle a pinned tab being dragged back out
+  tabs.addEventListener("dragleave", function() {
+    statusLine.reset();
+  }, false);
+
+  // Handle a pinned tab being dragged anywhere in the tabs
+  tabs.addEventListener("dragover", function(event) {
+    // Handle dragging pinned tabs out into the tabs area
+    if (dragged == null || dragged.type != "pinned")
+      return;
+    event.preventDefault();
+
+    statusLine.set("tabunpin", dragged.tab.getAttribute("label"));
+  }, false);
+
   // Newly opened tabs inherit some properties of the last selected tab
   listen(window, gBrowser.tabContainer, "TabOpen", function(event) {
     let tab = event.target;
 
+    // Inherit values from the selected tab
     tab.HDid = Math.random();
+    tab.HDlastSelect = gBrowser.selectedTab.HDlastSelect;
     tab.HDparentId = gBrowser.selectedTab.HDid;
     tab.HDsessionId = tabs.sessionId;
     tab.HDsiblingId = gBrowser.selectedTab.HDid;
-
-    // Inherit the full last selection time
-    tab.HDlastSelect = tabs.lastSelectTime;
-
-    // Reduce the count by a little bit but pass down most of the value
-    tabs.lastSelectCount *= .9;
-    tab.HDselectCount = tabs.lastSelectCount;
 
     // Wait a while before grabbing the thumbnail of a new tab
     tabs.updateThumbnail(tab, {wait: 10000});
   });
 
-  // Count how many times each tab is selected
+  // Update state and context when a tab is selected
   listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
     let tab = event.target;
     tab.HDlastSelect = Date.now();
-    tab.HDselectCount = tab.HDselectCount + 1;
-
-    // Remember this tab's selection count to inherit later
-    tabs.lastSelectCount = tab.HDselectCount;
-    tabs.lastSelectTime = tab.HDlastSelect;
 
     // Show some context of where the user just switched to
     tabs.showContext();
@@ -2626,7 +2745,6 @@ function addDashboard(window) {
       tab.HDlastSelect = 0;
       tab.HDlastThumbUrl = "";
       tab.HDparentId = null;
-      tab.HDselectCount = 0;
       tab.HDsessionId = null;
       tab.HDsiblingId = null;
       tab.HDthumbnail = "";
@@ -2636,6 +2754,7 @@ function addDashboard(window) {
   // Initialize various special state to something useful
   Array.forEach(gBrowser.tabs, function(tab) {
     tab.HDid = tab.HDid || Math.random();
+    tab.HDlastSelect = tab.HDlastSelect || Date.now();
     tab.HDparentId = tab.HDparentId || Math.random();
     tab.HDselectCount = tab.HDselectCount || 1;
     tab.HDsessionId = tab.HDsessionId || Math.random();
