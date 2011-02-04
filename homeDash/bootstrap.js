@@ -46,6 +46,7 @@ const images = {};
 
 // Define a global shadow to be used for various elements
 const globalShadow = "3px 3px 10px rgb(0, 0, 0)";
+const selectedShadow = "0px 0px 10px rgb(51, 102, 204)";
 
 /**
  * Remove all existing chrome of the browser window
@@ -2060,7 +2061,7 @@ function addDashboard(window) {
   tabs.setAttribute("top", "30");
   masterStack.appendChild(tabs);
 
-  tabs.style.backgroundColor = "rgb(224, 224, 224)";
+  tabs.style.backgroundImage = "-moz-linear-gradient(left, rgb(224, 224, 224) 50%, rgb(128, 128, 128))";
   tabs.style.borderRadius = "5px";
   tabs.style.boxShadow = globalShadow;
   tabs.style.overflow = "hidden";
@@ -2202,6 +2203,7 @@ function addDashboard(window) {
       tabBox.style.backgroundColor = "rgb(244, 244, 244)";
       tabBox.style.border = "1px solid rgb(0, 0, 0)";
       tabBox.style.borderRadius = "10px";
+      tabBox.style.boxShadow = tab == selected ? selectedShadow : "";
       tabBox.style.position = "relative";
       tabBox.style.overflow = "hidden";
       tabBox.style.margin = "10px -122px 10px 0";
@@ -2221,6 +2223,8 @@ function addDashboard(window) {
       tabIcon.setAttribute("top", "2");
       tabIcon.setAttribute("width", "16");
       tabBox.appendChild(tabIcon);
+
+      tabIcon.style.cursor = "move";
 
       // Show a quick switch number in the bottom left if necessary
       let quickNum = createNode("label");
@@ -2246,7 +2250,9 @@ function addDashboard(window) {
 
       // Emphasize this item and show its preview
       tabBox.emphasize = function(noLoad) {
-        tabBox.style.boxShadow = globalShadow;
+        let shadow = globalShadow;
+        shadow += tab == selected ? " " + selectedShadow : "";
+        tabBox.style.boxShadow = shadow;
         tabBox.style.marginBottom = "0";
         tabBox.style.marginTop = "0";
         tabBox.style.cursor = "pointer";
@@ -2276,7 +2282,7 @@ function addDashboard(window) {
 
       // Stop emphasizing this item and remove its preview
       tabBox.unemphasize = function() {
-        tabBox.style.boxShadow = "";
+        tabBox.style.boxShadow = tab == selected ? selectedShadow : "";
         tabBox.style.marginBottom = "10px";
         tabBox.style.marginTop = "10px";
         tabThumb.style.height = "90px";
