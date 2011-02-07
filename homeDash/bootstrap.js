@@ -3374,6 +3374,53 @@ function addDashboard(window) {
   // Restore normal events to the main browser
   onClose(mouseSink.reset);
 
+  //// 8: Random debug/help links
+
+  let linkSet = createNode("hbox");
+  linkSet.setAttribute("bottom", "0");
+  linkSet.setAttribute("left", "0");
+  dashboard.appendChild(linkSet);
+
+  linkSet.style.backgroundColor = "rgb(244, 244, 244)";
+  linkSet.style.pointerEvents = "auto";
+
+  [{text: "getmeout"},
+   {text: "addons", url: "about:addons"},
+   {text: "homedash", url: "https://mozillalabs.com/homedash"}
+  ].forEach(function({url, text}) {
+    text = "help." + text;
+
+    let label = createNode("label");
+    label.setAttribute("value", getString(text));
+    linkSet.appendChild(label);
+
+    label.addEventListener("click", function() {
+      if (url == null)
+        return;
+
+      dashboard.usePreview(pagePreview, url);
+    }, false);
+
+    label.addEventListener("mouseover", function() {
+      statusLine.set(text + ".status");
+      if (url == null)
+        return;
+
+      // Indicate and show the url if we have one
+      label.style.cursor = "pointer";
+      pagePreview.load(url);
+      sites.hide();
+      tabs.hide();
+    }, false);
+
+    label.addEventListener("mouseout", function() {
+      pagePreview.reset();
+      sites.show();
+      statusLine.reset();
+      tabs.show();
+    }, false);
+  });
+
   // Pretend the dashboard just closed to initialize things
   onClose();
 }
