@@ -889,6 +889,11 @@ function addDashboard(window) {
           showPage.stop(false);
           break;
 
+        // Make it hard to accidentally quit while switching
+        case event.DOM_VK_Q:
+          showPage(event.shiftKey, false);
+          break;
+
         // If it's not a key combo that we care about, abort
         default:
           return;
