@@ -346,7 +346,7 @@ function queryMatchesPage(query, {title, url}) {
     queryParts = queryMatchesPage.queryParts = [];
 
     // Get rid of prefixes and identify each term's case-ness
-    stripPrefix(query).split(/\s+/).forEach(function(part) {
+    stripPrefix(query).split(/[\/\s]+/).forEach(function(part) {
       // NB: Add the term to the front, so the last term is processed first as
       // it will fail-to-match faster than earlier terms that already matched
       // when doing an incremental search.
