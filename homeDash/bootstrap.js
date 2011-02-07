@@ -1690,7 +1690,7 @@ function addDashboard(window) {
   };
 
   // Chunk on number of rows processed as it always increases unlike frecency
-  const PAGES_PER_CHUNK = 750;
+  const PAGES_PER_CHUNK = 3000;
 
   // Get all pages by frecency
   history.allPagesByFrecency = Svc.History.DBConnection.createAsyncStatement(

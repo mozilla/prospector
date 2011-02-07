@@ -327,8 +327,8 @@ function organizeTabsByRelation(tabs, reference) {
 
 // Get both the original-case and lowercase prepared text
 function prepareMatchText(text) {
-  // Arbitrarily only search through the first 50 characters
-  text = stripPrefix(text).slice(0, 50);
+  // Arbitrarily only search through the first some characters
+  text = stripPrefix(text).slice(0, 100);
   return [text, text.toLowerCase()];
 }
 
