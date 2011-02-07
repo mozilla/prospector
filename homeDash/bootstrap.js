@@ -64,16 +64,9 @@ function removeChrome(window) {
   let parentBox = gBrowser.parentNode.boxObject;
 
   // Offset the expected top if there's a title bar showing on Windows
-  let titleBar = document.getElementById("titlebar-content");
+  let titleBar = document.getElementById("titlebar");
   function getTop() {
-    if (titleBar == null)
-      return 0;
-
-    // Adjust a little based on if the window is maximized or not
-    let baseOffset = titleBar.boxObject.height + 3;
-    if (window.windowState == window.STATE_MAXIMIZED)
-      return baseOffset + 10;
-    return baseOffset;
+    return titleBar == null ? 0 : titleBar.boxObject.height;
   }
 
   // Handle switching in and out of full screen
