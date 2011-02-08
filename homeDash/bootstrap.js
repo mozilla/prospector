@@ -618,8 +618,11 @@ function addDashboard(window) {
 
   // Create a stack for tab previews that allows swapping in tabs
   let tabPreviewStack = createNode("stack");
-  tabPreviewStack.setAttribute("left", 2 * sixthWidth + "");
-  tabPreviewStack.setAttribute("right", -2 * sixthWidth + "");
+  tabPreviewStack.resetAlignment = function() {
+    tabPreviewStack.setAttribute("left", 2 * sixthWidth + "");
+    tabPreviewStack.setAttribute("right", -2 * sixthWidth + "");
+  }
+  tabPreviewStack.resetAlignment();
   masterStack.appendChild(tabPreviewStack);
 
   // Prepare a browser to hold the docshell for the live preview
@@ -638,6 +641,7 @@ function addDashboard(window) {
   // Hide the preview and restore docshells
   tabPreview.reset = function() {
     tabPreviewStack.collapsed = true;
+    tabPreviewStack.resetAlignment();
 
     // Make sure the browser has a docshell to swap in the future
     let {swappedTab} = tabPreview;
@@ -660,16 +664,24 @@ function addDashboard(window) {
     tabPreview.swapDocShells(swappedTab.linkedBrowser);
     gBrowser.setTabTitle(swappedTab);
     tabPreview.swappedTab = null;
+    tabPreviewStack.resetAlignment();
   };
 
   // Borrow a tab's browser until the preview goes away
-  tabPreview.swap = function(tab) {
+  tabPreview.swap = function(tab, nearlyFullscreen) {
     // Don't overwrite existing swapped tabs
     tabPreview.restoreTab();
 
     tabPreview.swappedTab = tab;
     tabPreview.swapDocShells(tab.linkedBrowser);
     tabPreviewStack.collapsed = false;
+
+    if (nearlyFullscreen) {
+      tabPreviewStack.setAttribute("left", "44");
+      tabPreviewStack.setAttribute("right", "0");
+    } else {
+      tabPreviewStack.resetAlignment();
+    }
   };
 
   // Initialize and clean up tab preview state
@@ -3123,7 +3135,7 @@ function addDashboard(window) {
     tabIcon.addEventListener("mouseover", function() {
       // Only show an instant preview if it's not automatically "over"
       if (!notifications.skipPreview) {
-        tabPreview.swap(tab);
+        tabPreview.swap(tab, true);
 
         // Remove other things that might cover the preview
         if (dashboard.open) {
