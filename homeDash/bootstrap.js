@@ -908,7 +908,22 @@ function addDashboard(window) {
     }));
 
     // Dismiss the preview if the mouse moves
-    listeners.push(listen(window, window, "mousemove", function() {
+    let moveRef;
+    listeners.push(listen(window, window, "mousemove", function(event) {
+      // Record the initial mouse position as a reference
+      let {screenX, screenY} = event;
+      moveRef = moveRef || {
+        x: screenX,
+        y: screenY
+      };
+
+      // Allow the mouse to move a little from the start reference
+      let xDiff = Math.pow(screenX - moveRef.x, 2);
+      let yDiff = Math.pow(screenY - moveRef.y, 2);
+      if (xDiff + yDiff < 500)
+        return;
+
+      // Dismiss now that the mouse has moved enough
       showPage.stop(true);
     }));
 
