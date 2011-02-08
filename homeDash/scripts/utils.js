@@ -117,7 +117,9 @@ getString.init = function(addon, getAlternate) {
 
     // Get a bundle and test if it's able to do simple things
     try {
-      let bundle = Services.strings.createBundle(propertyFile.spec);
+      // Avoid caching issues by always getting a new file
+      let uniqueFileSpec = propertyFile.spec + "#" + Math.random();
+      let bundle = Services.strings.createBundle(uniqueFileSpec);
       bundle.getSimpleEnumeration();
       return bundle;
     }
