@@ -1003,6 +1003,36 @@ function addDashboard(window) {
     unload(function() gBrowser.tabContainer.advanceSelectedTab = orig, window);
   }
 
+  // Never warn about closing multiple tabs as only one closes at a time
+  let (orig = gBrowser.warnAboutClosingTabs) {
+    gBrowser.warnAboutClosingTabs = function() true;
+    unload(function() gBrowser.warnAboutClosingTabs = orig, window);
+  }
+
+  // Override the default behavior of clicking the window's x
+  let (orig = window.WindowIsClosing) {
+    window.WindowIsClosing = function() {
+      // Allow the normal behavior if it wasn't going to close
+      if (!orig())
+        return false;
+
+      // Dismiss the dashboard if it's open and not switching
+      if (dashboard.open && dashboard.openReason != "switch") {
+        dashboard.open = false;
+        return false;
+      }
+
+      // Allow closing the window if there's only pinned tabs left
+      if (gBrowser._numPinnedTabs == gBrowser.visibleTabs.length)
+        return true;
+
+      // Remove the current page and allow for multiple closes
+      showPage(false, true);
+      return false;
+    };
+    unload(function() window.WindowIsClosing = orig, window);
+  }
+
   //// 4.1: Search controls
 
   let searchBox = createNode("vbox", true);
