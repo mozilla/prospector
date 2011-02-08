@@ -2131,8 +2131,9 @@ function addDashboard(window) {
     // Only actually remove tabs that aren't pinned
     let notPinned = tabs.toRemove.filter(function({pinned}) !pinned);
 
-    // Don't end up with no tabs left
-    if (notPinned.length == gBrowser.tabs.length) {
+    // Don't end up with 0 tabs unless closing the one and only tab
+    let numTabs = gBrowser.tabs.length;
+    if (notPinned.length == numTabs && numTabs > 1) {
       gBrowser.selectedTab = gBrowser.addTab();
       dashboard.open = true;
     }
