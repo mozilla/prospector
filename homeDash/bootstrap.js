@@ -3131,8 +3131,17 @@ function addDashboard(window) {
           tabs.hide();
         }
       }
-
       statusLine.set("switch", tab.getAttribute("label"));
+    }, false);
+
+    tabIcon.addEventListener("MozMousePixelScroll", function(evt) {
+      if (evt.axis == evt.HORIZONTAL_AXIS) {
+        tabPreview.contentWindow.scrollBy(evt.detail, 0);
+      } else {
+        tabPreview.contentWindow.scrollBy(0, evt.detail);
+      }
+      evt.preventDefault();
+      evt.stopPropagation();
     }, false);
 
     tabIcon.addEventListener("mouseout", function() {
