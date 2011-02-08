@@ -961,22 +961,24 @@ function addDashboard(window) {
   });
 
   // Make swiping with 3 fingers go forwards/backwards through pages
-  listen(window, window, "MozSwipeGesture", function(event) {
-    let backwards = false;
-    switch (event.direction) {
-      case event.DIRECTION_LEFT:
-        backwards = true;
-        break;
+  let (orig = window.gGestureSupport.onSwipe) {
+    window.gGestureSupport.onSwipe = function(event) {
+      let backwards = false;
+      switch (event.direction) {
+        case event.DIRECTION_LEFT:
+          backwards = true;
+          break;
 
-      case event.DIRECTION_RIGHT:
-        break;
+        case event.DIRECTION_RIGHT:
+          break;
 
-      default:
-        return;
-    }
-    event.stopPropagation();
-    showPage(backwards, false);
-  });
+        default:
+          return orig.call(window.gGestureSupport, event);
+      }
+      showPage(backwards, false);
+    };
+    unload(function() window.gGestureSupport.onSwipe = orig, window);
+  }
 
   // Handle Browser:NextTab, ctrl-tab, cmd-}, alt-cmd-right, ctrl-pagedown
   let (orig = gBrowser.tabContainer.advanceSelectedTab) {
