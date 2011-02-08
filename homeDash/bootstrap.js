@@ -2406,10 +2406,6 @@ function addDashboard(window) {
           pinnedBox.appendChild(pinnedSlots[i + j * 4]);
     })();
 
-    // Figure out what the next tab to switch to will be
-    if (nextTab == null)
-      nextTab = sortedTabs[1];
-
     // Remember if a visual split is needed to separate unrelated tabs
     let needToSplit = true;
 
@@ -2446,8 +2442,17 @@ function addDashboard(window) {
       addSpacer({width: 122}, lastSpacer.nextSibling);
     }
 
+    // Make sure the selected tab is available to highlight as the first tab
+    let switching = dashboard.openReason == "switch";
+    if (switching && highlight == selected && sortedTabs[0] != selected)
+      sortedTabs.unshift(selected);
+
     // Keep adding tabs until we hit some stop condition
     sortedTabs.some(function(tab) {
+      // Treat this first tab as the next tab if it isn't the selected one
+      if (nextTab == null && tab != selected)
+        nextTab = tab;
+
       let tabBox = createNode("stack");
       tabs.appendChild(tabBox);
 
@@ -2594,8 +2599,8 @@ function addDashboard(window) {
           addSpacer(1, tabBox).style.borderLeft = "1px dashed black";
         }
 
-        // Only show part of the unrelated tab then stop when not highlighting
-        if (highlight == null) {
+        // Partially show an unrelated tab when not highlighting nor searching
+        if (highlight == null && query == "") {
           tabBox.style.marginRight = "-30px";
           return true;
         }
