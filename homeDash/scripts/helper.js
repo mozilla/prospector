@@ -222,9 +222,7 @@ function getTextContent(node) {
     return text.trim().replace(/\s+/, " ");
   }
 
-  // Use plain text content or alternative text when available
-  if (node.textContent.trim() != "")
-    return cleanup(node.textContent);
+  // Prefer alt text and titles when available
   if (node.alt != null && node.alt.trim() != "")
     return cleanup(node.alt);
   if (node.title != null && node.title.trim() != "")
@@ -233,12 +231,18 @@ function getTextContent(node) {
   // Go through child nodes to find the first useful text
   let ret = "";
   Array.some(node.childNodes, function(child) {
+    // Ignore certain tags as their text isn't useful
+    if (child.nodeName.match(/(script|style)/i))
+      return false;
+
     ret = getTextContent(child);
     if (ret != "")
       return true;
     return false;
   });
-  return ret;
+
+  // Use plain text content as a last alternative
+  return ret || cleanup(node.textContent);
 }
 
 // Get something that is host-y-ish
