@@ -3337,13 +3337,13 @@ function addDashboard(window) {
   fxIcon.style.pointerEvents = "auto";
   fxIcon.style.width = "22px";
 
-  // Remember when was the last scroll to prevent too many
-  fxIcon.lastScroll = Date.now();
-
   // Just go back to the default opacity when closing the dashboard
   fxIcon.reset = function() {
     fxIcon.style.opacity = dashboard.open ? "1" : ".3";
   };
+
+  // Remember how much has been scrolled so far
+  fxIcon.scrollAmount = 0;
 
   // Make sure the icon looks right
   onClose(fxIcon.reset);
@@ -3370,11 +3370,12 @@ function addDashboard(window) {
   }, false);
 
   // Allow scrolling through tabs when pointing at the icon
-  fxIcon.addEventListener("DOMMouseScroll", function({detail}) {
-    let now = Date.now();
-    if (now - fxIcon.lastScroll < 350)
+  fxIcon.addEventListener("MozMousePixelScroll", function({detail}) {
+    // Keep how much has been scrolled and switch after a threshold
+    fxIcon.scrollAmount += detail;
+    if (Math.abs(fxIcon.scrollAmount) < 45)
       return;
-    fxIcon.lastScroll = now;
+    fxIcon.scrollAmount = 0;
 
     // Do a "next tab" for down or right scrolls
     showPage(detail < 0, false);
