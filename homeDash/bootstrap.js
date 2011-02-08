@@ -787,33 +787,41 @@ function addDashboard(window) {
 
   // Switch through MRU tabs in order or backwards
   function showPage(backwards, removeCurrent) {
+    let firstPreview = !showPage.active;
+
     // Initialize some state and listeners if necessary
     showPage.start();
 
     // Read out the current state
-    let {mruList, previewed} = showPage;
+    let {mruList, previewPos} = showPage;
+    let previewed = mruList[previewPos];
+
+    // Remove the actual tab that's being previewed
+    if (removeCurrent) {
+      tabs.prepRemove(previewed);
+      mruList.splice(previewPos, 1);
+
+      // Fix up the position if it was the last one
+      if (previewPos >= mruList.length)
+        previewPos = mruList.length - 1;
+
+      // Grab the new preview tab
+      previewed = mruList[previewPos];
+    }
+    // Pick out the more recently used if not already at the front
+    else if (backwards && previewPos > 0)
+      previewed = mruList[--previewPos];
+    // Get the lesser recently used if not already at the end
+    else if (!backwards && previewPos < mruList.length - 1)
+      previewed = mruList[++previewPos];
+    // We have to show something if it's the first preview
+    else if (firstPreview) {}
+    // Must not have changed a tab to preview, so do nothing!
+    else
+      return;
 
     // Remove the current preview if necessary
     tabPreview.reset();
-
-    // Remove the actual tab that's being previewed
-    if (removeCurrent)
-      tabs.prepRemove(previewed);
-
-    // Pick out the more recently used (or wrap to least)
-    if (backwards) {
-      // Put the current preview on the front of the list
-      if (!removeCurrent)
-        mruList.unshift(previewed);
-      previewed = mruList.pop();
-    }
-    // Get the lesser recently used (or wrap to most)
-    else {
-      // Put the current preview on the end of the list
-      if (!removeCurrent)
-        mruList.push(previewed);
-      previewed = mruList.shift();
-    }
 
     // Must have closed the last tab, so abort!
     if (previewed == null) {
@@ -822,10 +830,10 @@ function addDashboard(window) {
     }
 
     // Update state of the newly previewed tab then highlight it
-    showPage.previewed = previewed;
+    showPage.previewPos = previewPos;
     tabs.search(input.value, {
       highlight: previewed,
-      nextTab: mruList[0]
+      nextTab: mruList[previewPos + 1] || previewed
     });
     tabs.show();
 
@@ -933,12 +941,14 @@ function addDashboard(window) {
     // Treat the current tab as previewed even if it is filtered out
     let selected = gBrowser.selectedTab;
     let mruList = organizeTabsByRelation(tabs.filter(input.value), selected);
-    if (selected == mruList[0])
-      mruList.shift();
+
+    // Make sure the selected tab is always available
+    if (mruList[0] != selected)
+      mruList.unshift(selected);
 
     // Save some of these initial values for use when switching
     showPage.mruList = mruList;
-    showPage.previewed = selected;
+    showPage.previewPos = 0;
   };
 
   // Provide a way to stop showing the tab previews and clean up state
@@ -954,8 +964,10 @@ function addDashboard(window) {
     dashboard.open = false;
 
     // Switch to the previewed tab if desired
-    if (selectTab)
-      gBrowser.selectedTab = showPage.previewed;
+    if (selectTab) {
+      let {mruList, previewPos} = showPage;
+      gBrowser.selectedTab = mruList[previewPos];
+    }
   };
 
   // Add extra behavior for switching to most-recently-used tabs
