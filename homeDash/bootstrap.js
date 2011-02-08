@@ -1007,6 +1007,14 @@ function addDashboard(window) {
     unload(function() window.gGestureSupport.onSwipe = orig, window);
   }
 
+  // Always have the close key state set to be enabled
+  let (orig = gBrowser._setCloseKeyState) {
+    gBrowser._setCloseKeyState = function() {
+      orig.call(gBrowser, true);
+    };
+    unload(function() gBrowser._setCloseKeyState = orig, window);
+  }
+
   // Handle Browser:NextTab, ctrl-tab, cmd-}, alt-cmd-right, ctrl-pagedown
   let (orig = gBrowser.tabContainer.advanceSelectedTab) {
     gBrowser.tabContainer.advanceSelectedTab = function(dir, wrap) {
