@@ -93,9 +93,12 @@ function removeChrome(window) {
   Utils.delay(function() {
     let style = gBrowser.style;
     change(style, "marginTop", getTopOffset());
-    change(style, "position", "relative");
     change(style, "zIndex", "1");
   });
+
+  // Change the browser to be relative to push it over toolbars
+  // NB: Don't clear this on unload as plugins reload each time this changes
+  gBrowser.style.position = "relative";
 }
 
 /**
