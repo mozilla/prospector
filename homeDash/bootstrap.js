@@ -60,34 +60,25 @@ function removeChrome(window) {
   }
 
   // Resize the chrome based on the original size containing the main browser
-  let {document, gBrowser} = window;
-  let parentBox = gBrowser.parentNode.boxObject;
+  let {document, gBrowser, gNavToolbox} = window;
 
-  // Offset the expected top if there's a title bar showing on Windows
-  let titleBar = document.getElementById("titlebar");
-  function getTop() {
-    return titleBar == null ? 0 : titleBar.boxObject.height;
+  // Figure out how much to shift the main browser
+  function getTopOffset() {
+    // Subtract from the top of topmost thing we want to cover (navigation)
+    let windowTop = Math.max(0, gNavToolbox.boxObject.y);
+    // With the normal top of the browser (the un-offsetted amount)
+    return windowTop - gBrowser.parentNode.boxObject.y + "px";
   }
 
   // Handle switching in and out of full screen
   change(window.FullScreen, "mouseoverToggle", function(orig) {
-    return function(exitingFullScreen) {
-      try {
-        // Nothing to fix if not transitioning in or out of full screen
-        if (!window.fullScreen)
-          return;
+    return function() {
+      // Wait a bit for the UI to switch when going in/out of full screen
+      if (window.fullScreen)
+        Utils.delay(function() gBrowser.style.marginTop = getTopOffset());
 
-        // Wait a bit for the UI to switch
-        Utils.delay(function() {
-          // If we're exiting, shift away all the chrome, otherwise just 1px
-          let offset = exitingFullScreen ? getTop() - parentBox.y : -1;
-          gBrowser.style.marginTop = offset + "px";
-        });
-      }
-      finally {
-        // Always do the original functionality
-        return orig.apply(this, arguments);
-      }
+      // Always do the original functionality
+      return orig.apply(this, arguments);
     };
   });
 
@@ -101,7 +92,7 @@ function removeChrome(window) {
   // Wait a bit for the UI to flow to grab the right size
   Utils.delay(function() {
     let style = gBrowser.style;
-    change(style, "marginTop", getTop() - parentBox.y + "px");
+    change(style, "marginTop", getTopOffset());
     change(style, "position", "relative");
     change(style, "zIndex", "1");
   });
