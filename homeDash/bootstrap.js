@@ -70,18 +70,6 @@ function removeChrome(window) {
     return windowTop - gBrowser.parentNode.boxObject.y + "px";
   }
 
-  // Handle switching in and out of full screen
-  change(window.FullScreen, "mouseoverToggle", function(orig) {
-    return function() {
-      // Wait a bit for the UI to switch when going in/out of full screen
-      if (window.fullScreen)
-        Utils.delay(function() gBrowser.style.marginTop = getTopOffset());
-
-      // Always do the original functionality
-      return orig.apply(this, arguments);
-    };
-  });
-
   // Remove the lightweight theme to avoid browser size and color changes
   Cu.import("resource://gre/modules/LightweightThemeManager.jsm");
   change(LightweightThemeManager, "currentTheme", null);
@@ -3560,6 +3548,21 @@ function activateHomeDash(activating) {
 
     // Wait for the chrome to be removed and resized before adding
     Utils.delay(function() addDashboard(window));
+
+    // Detect resizes (including full screen) to restart Home Dash
+    let {clearTimeout, setTimeout} = window;
+    let resizeTimeout;
+    listen(window, window, "resize", function(event) {
+      if (event.target != window)
+        return;
+
+      // Only restart a little after the user finishes resizing/dragging
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function() {
+        unload()
+        activateHomeDash(true);
+      }, 1000);
+    });
   });
 }
 
