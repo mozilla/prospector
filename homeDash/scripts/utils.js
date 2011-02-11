@@ -144,6 +144,41 @@ getString.init = function(addon, getAlternate) {
 }
 
 /**
+ * Create a trigger that allows adding callbacks by default then triggering all
+ * of them.
+ */
+function makeTrigger() {
+  let callbacks = [];
+
+  // Provide the main function to add callbacks that can be removed
+  function addCallback(callback) {
+    callbacks.push(callback);
+    return function() {
+      let index = callbacks.indexOf(callback);
+      if (index != -1)
+        callbacks.splice(index, 1);
+    };
+  }
+
+  // Provide a way to clear out all the callbacks
+  addCallback.reset = function() {
+    callbacks.length = 0;
+  };
+
+  // Run each callback in order ignoring failures
+  addCallback.trigger = function(reason) {
+    callbacks.slice().forEach(function(callback) {
+      try {
+        callback(reason);
+      }
+      catch(ex) {}
+    });
+  };
+
+  return addCallback;
+}
+
+/**
  * Apply a callback to each open and new browser windows.
  *
  * @usage watchWindows(callback): Apply a callback to each browser window.

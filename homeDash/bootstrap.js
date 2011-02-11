@@ -96,40 +96,10 @@ function addDashboard(window) {
   let {clearInterval, clearTimeout, document, gBrowser, setInterval, setTimeout} = window;
 
   // Track what to do when the dashboard goes away
-  function onClose(callback) {
-    // Initialize the array of onClose listeners
-    let callbacks = onClose.callbacks;
-    if (callbacks == null)
-      callbacks = onClose.callbacks = [];
-
-    // Calling with no arguments runs all the callbacks
-    if (callback == null) {
-      callbacks.forEach(function(callback) callback());
-      return;
-    }
-
-    // Save the callback and give it back
-    callbacks.push(callback);
-    return callback;
-  }
+  let onClose = makeTrigger();
 
   // Track what to do when the dashboard appears for a reason
-  function onOpen(reasonOrCallback) {
-    // Initialize the array of onOpen listeners
-    let callbacks = onOpen.callbacks;
-    if (callbacks == null)
-      callbacks = onOpen.callbacks = [];
-
-    // Calling with not a function is to trigger the callbacks with the reason
-    if (typeof reasonOrCallback != "function") {
-      callbacks.forEach(function(callback) callback(reasonOrCallback));
-      return;
-    }
-
-    // Save the callback and give it back
-    callbacks.push(reasonOrCallback);
-    return reasonOrCallback;
-  }
+  let onOpen = makeTrigger();
 
   // Create a XUL node that can get some extra functionality
   function createNode(nodeName, extend) {
@@ -496,7 +466,7 @@ function addDashboard(window) {
     };
 
     // Hide and stop the preview
-    stack.reset = onClose(function() {
+    stack.reset = function() {
       runUnload();
       stack.collapsed = true;
       stack.lastLoadedUrl = null;
@@ -513,7 +483,7 @@ function addDashboard(window) {
 
       // Clear out any docshell state by going to somewhere empty
       browser.loadURI("about:blank");
-    });
+    };
 
     // Provide a way to stop listening for the preview load
     stack.unlisten = function() {
@@ -523,6 +493,8 @@ function addDashboard(window) {
       browser.removeEventListener("DOMContentLoaded", stack.listener, false);
       stack.listener = null;
     };
+
+    onClose(stack.reset);
 
     // Prevent errors from browser.js/xul when it gets unexpected title changes
     browser.addEventListener("DOMTitleChanged", function(event) {
@@ -673,10 +645,10 @@ function addDashboard(window) {
 
       // Inform why we're opening
       if (dashboard.open)
-        onOpen(reason);
+        onOpen.trigger(reason);
       // Run all close callbacks that include hiding the dashboard
       else
-        onClose();
+        onClose.trigger();
     }
   });
 
@@ -3471,7 +3443,7 @@ function addDashboard(window) {
   });
 
   // Pretend the dashboard just closed to initialize things
-  onClose();
+  onClose.trigger();
 }
 
 /**
