@@ -2603,7 +2603,23 @@ function addDashboard(window) {
 
     // Show immediately and hide after a little bit
     tabs.show();
-    tabs.hide(5000);
+
+    // Keep track of various listeners to clean up
+    let onClean = makeTrigger();
+    function hideAndClean() {
+      tabs.hide();
+      onClean.trigger();
+    }
+
+    // Provide various ways to get rid of the tab context
+    let timer = setTimeout(hideAndClean, 5000);
+    onClean(function() clearTimeout(timer));
+    onClean(listen(window, window, "keydown", hideAndClean));
+    onClean(listen(window, window, "mousedown", hideAndClean));
+    onClean(listen(window, window, "DOMMouseScroll", hideAndClean));
+
+    // Don't hide tabs but clean up if opening before cleaning
+    onClean(onOpen(function() onClean.trigger()));
   };
 
   // Keep track of the tabs that are supposed to be removed
