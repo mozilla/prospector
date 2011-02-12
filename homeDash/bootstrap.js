@@ -44,9 +44,11 @@ Cu.import("resource://gre/modules/Services.jsm");
 // Keep a reference to various packaged images
 const images = {};
 
-// Define a global shadow to be used for various elements
-const globalShadow = "3px 3px 10px rgb(0, 0, 0)";
-const selectedShadow = "0px 0px 10px rgb(51, 102, 204)";
+// Define various shadows to be commonly shared across various elements
+const shadows = {
+  global: "3px 3px 10px rgb(0, 0, 0)",
+  selected: "0px 0px 10px rgb(51, 102, 204)",
+};
 
 /**
  * Remove all existing chrome of the browser window
@@ -333,7 +335,7 @@ function addDashboard(window) {
     browser.setAttribute("type", "content");
     stack.appendChild(browser);
 
-    browser.style.boxShadow = globalShadow;
+    browser.style.boxShadow = shadows.global;
     browser.style.overflow = "hidden";
 
     // Put a screen over the browser to accept clicks
@@ -574,7 +576,7 @@ function addDashboard(window) {
   tabPreview.setAttribute("type", "content");
   tabPreviewStack.appendChild(tabPreview);
 
-  tabPreview.style.boxShadow = globalShadow;
+  tabPreview.style.boxShadow = shadows.global;
 
   // Prevent clicks/mouse events on the tab preview
   let tabPreviewScreen = createNode("box");
@@ -1017,7 +1019,7 @@ function addDashboard(window) {
 
   searchBox.style.backgroundColor = "rgb(224, 224, 224)";
   searchBox.style.borderRadius = "5px";
-  searchBox.style.boxShadow = globalShadow;
+  searchBox.style.boxShadow = shadows.global;
   searchBox.style.padding = "5px";
   searchBox.style.pointerEvents = "auto";
 
@@ -1587,7 +1589,7 @@ function addDashboard(window) {
   dashboard.appendChild(history);
 
   history.style.backgroundColor = "rgb(224, 224, 224)";
-  history.style.boxShadow = globalShadow;
+  history.style.boxShadow = shadows.global;
 
   // Add a single page info to the list of history results
   history.add = function(pageInfo) {
@@ -1695,7 +1697,7 @@ function addDashboard(window) {
     history.highlight(entryBox, true);
 
     // Specially style the top match
-    entryBox.style.boxShadow = globalShadow;
+    entryBox.style.boxShadow = shadows.global;
     entryBox.style.fontSize = "20px";
     entryBox.style.fontWeight = "bold";
     entryBox.style.margin = "0 -10px 5px -5px";
@@ -1968,7 +1970,7 @@ function addDashboard(window) {
 
     siteBox.style.backgroundColor = "rgb(244, 244, 244)";
     siteBox.style.borderRadius = "10px";
-    siteBox.style.boxShadow = globalShadow;
+    siteBox.style.boxShadow = shadows.global;
     siteBox.style.overflow = "hidden";
 
     // The main content is the page thumbnail
@@ -2085,7 +2087,7 @@ function addDashboard(window) {
 
   tabs.style.backgroundImage = "-moz-linear-gradient(left, rgb(224, 224, 224) 50%, rgb(128, 128, 128))";
   tabs.style.borderRadius = "5px";
-  tabs.style.boxShadow = globalShadow;
+  tabs.style.boxShadow = shadows.global;
   tabs.style.overflow = "hidden";
 
   // Get an array of tabs that match a query
@@ -2413,7 +2415,7 @@ function addDashboard(window) {
       tabBox.style.backgroundColor = "rgb(244, 244, 244)";
       tabBox.style.border = "1px solid rgb(0, 0, 0)";
       tabBox.style.borderRadius = "10px";
-      tabBox.style.boxShadow = tab == selected ? selectedShadow : "";
+      tabBox.style.boxShadow = tab == selected ? shadows.selected : "";
       tabBox.style.position = "relative";
       tabBox.style.overflow = "hidden";
       tabBox.style.margin = "10px -122px 10px 0";
@@ -2460,8 +2462,8 @@ function addDashboard(window) {
 
       // Emphasize this item and show its preview
       tabBox.emphasize = function(noLoad) {
-        let shadow = globalShadow;
-        shadow += tab == selected ? " " + selectedShadow : "";
+        let shadow = shadows.global;
+        shadow += tab == selected ? ", " + shadows.selected : "";
         tabBox.style.boxShadow = shadow;
         tabBox.style.marginBottom = "0";
         tabBox.style.marginTop = "0";
@@ -2492,7 +2494,7 @@ function addDashboard(window) {
 
       // Stop emphasizing this item and remove its preview
       tabBox.unemphasize = function() {
-        tabBox.style.boxShadow = tab == selected ? selectedShadow : "";
+        tabBox.style.boxShadow = tab == selected ? shadows.selected : "";
         tabBox.style.marginBottom = "10px";
         tabBox.style.marginTop = "10px";
         tabThumb.style.height = "90px";
