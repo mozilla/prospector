@@ -3631,6 +3631,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     if (locale.match(/^es/))
       return "es-ES";
 
+    // Use it for all it-like locales including it-IT
+    if (locale.match(/^it/))
+      return "it";
+
     // Use pt-PT until we get translations for other Portuguese
     if (locale.match(/^pt/))
       return "pt-PT";
