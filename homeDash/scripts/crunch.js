@@ -123,7 +123,7 @@ function processAdaptive() {
               "JOIN moz_places " +
               "ON id = place_id " +
               "WHERE input NOT NULL " +
-              "ORDER BY frecency DESC";
+              "ORDER BY ROUND(use_count) DESC, frecency DESC";
   let cols = ["input", "url", "title"];
   let stmt = Utils.createStatement(Svc.History.DBConnection, query);
 
