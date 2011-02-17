@@ -56,7 +56,7 @@ const shadows = {
 function removeChrome(window) {
   // Resize the chrome based on the original size containing the main browser
   let {document, gBrowser, gNavToolbox} = window;
-  let {change} = makeWindowHelpers(window);
+  let {async, change} = makeWindowHelpers(window);
 
   // Figure out how much to shift the main browser
   function getTopOffset() {
@@ -74,7 +74,7 @@ function removeChrome(window) {
   change(window.TabsOnTop, "enabled", false);
 
   // Wait a bit for the UI to flow to grab the right size
-  Utils.delay(function() {
+  async(function() {
     let style = gBrowser.style;
     change(style, "marginTop", getTopOffset());
     change(style, "zIndex", "1");
@@ -89,8 +89,8 @@ function removeChrome(window) {
  * Add a dashboard that shows up over the main browsing area
  */
 function addDashboard(window) {
-  let {clearInterval, clearTimeout, document, gBrowser, setInterval, setTimeout} = window;
-  let {createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
+  let {clearInterval, document, gBrowser, setInterval} = window;
+  let {async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
 
   // Track what to do when the dashboard goes away
   let onClose = makeTrigger();
@@ -112,8 +112,7 @@ function addDashboard(window) {
     unload(function() window.HDtriedOnce = false, window);
 
     // Recursively try again a little later
-    let timeout = setTimeout(function() addDashboard(window), 5000);
-    unload(function() clearTimeout(timeout), window);
+    async(function() addDashboard(window), 5000);
     return;
   }
 
@@ -300,12 +299,10 @@ function addDashboard(window) {
           if (typeof onThumbnail == "function") {
             // Check the thumbnail multiple times as it loads
             for (let wait = 0; wait <= 4; wait++) {
-              let timeout = setTimeout(function() {
-                onThumbnail(createThumbnail(browser));
-              }, wait * 2500);
-
               // Remember how to get rid of these timeouts when unloading
-              unloadCallbacks.push(function() clearTimeout(timeout));
+              unloadCallbacks.push(async(function() {
+                onThumbnail(createThumbnail(browser));
+              }, wait * 2500));
             }
           }
         };
@@ -1738,7 +1735,7 @@ function addDashboard(window) {
         }
         // We got exactly the number of pages per chunk, so continue later!
         else {
-          setTimeout(function() {
+          async(function() {
             // Only continue if the active search is still this one
             if (thisSearch != history.activeSearch)
               return;
@@ -2482,11 +2479,12 @@ function addDashboard(window) {
     get: function() {
       let sessionId = tabs._sessionId || Math.random();
 
+      // Stop an existing session timer if necessary
       if (tabs.sessionTimer != null)
-        clearTimeout(tabs.sessionTimer);
+        tabs.sessionTimer();
 
       // Assume that tabs opened close in time to each other are related
-      tabs.sessionTimer = setTimeout(function() {
+      tabs.sessionTimer = async(function() {
         tabs._sessionId = null;
         tabs.sessionTimer = null;
       }, 30000);
@@ -2514,8 +2512,7 @@ function addDashboard(window) {
     }
 
     // Provide various ways to get rid of the tab context
-    let timer = setTimeout(hideAndClean, 5000);
-    onClean(function() clearTimeout(timer));
+    onClean(async(hideAndClean, 5000));
     onClean(listen(window, window, "keydown", hideAndClean));
     onClean(listen(window, window, "mousedown", hideAndClean));
     onClean(listen(window, window, "DOMMouseScroll", hideAndClean));
@@ -2580,7 +2577,7 @@ function addDashboard(window) {
       wait *= 2;
 
     // Wait a little bit before taking the thumbnail to let the tab update
-    setTimeout(function() {
+    async(function() {
       try {
         // Might not have been restored yet so abort
         let browser = tab.linkedBrowser;
@@ -2627,7 +2624,7 @@ function addDashboard(window) {
     tabs.reset();
 
     // NB: Wait for onClose to finish running before removing tabs
-    setTimeout(function() tabs.removeTabs(), 0);
+    async(function() tabs.removeTabs());
   });
 
   // Allow pinned tabs to be dropped to unpin
@@ -2678,9 +2675,6 @@ function addDashboard(window) {
 
   // Clear out any state we set on external objects
   unload(function() {
-    if (tabs.sessionTimer != null)
-      clearTimeout(tabs.sessionTimer);
-
     // For regular users, don't kill these values so easily
     return;
     Array.forEach(gBrowser.tabs, function(tab) {
@@ -3436,21 +3430,24 @@ function activateHomeDash(activating) {
 
   // Change the main browser windows
   watchWindows(function(window) {
+    let {async} = makeWindowHelpers(window);
     removeChrome(window);
 
     // Wait for the chrome to be removed and resized before adding
-    Utils.delay(function() addDashboard(window));
+    async(function() addDashboard(window));
 
     // Detect resizes (including full screen) to restart Home Dash
-    let {clearTimeout, setTimeout} = window;
-    let resizeTimeout;
+    let resizeTimer;
     listen(window, window, "resize", function(event) {
       if (event.target != window)
         return;
 
+      // Stop an existing resize timer if necessary
+      if (resizeTimer != null)
+        resizeTimer();
+
       // Only restart a little after the user finishes resizing/dragging
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(function() {
+      resizeTimer = async(function() {
         unload()
         activateHomeDash(true);
       }, 1000);

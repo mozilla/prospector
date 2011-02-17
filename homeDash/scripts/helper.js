@@ -276,6 +276,29 @@ function makeWindowHelpers(window) {
   const maxBoxObject = gBrowser.boxObject;
   const sixthWidth = maxBoxObject.width / 6;
 
+  // Call a function after waiting a little bit
+  function async(callback, delay) {
+    let timer = setTimeout(function() {
+      stopTimer();
+      callback();
+    }, delay);
+
+    // Provide a way to stop an active timer
+    function stopTimer() {
+      if (timer == null)
+        return;
+      clearTimeout(timer);
+      timer = null;
+      unUnload();
+    }
+
+    // Make sure to stop the timer when unloading
+    let unUnload = unload(stopTimer, window);
+
+    // Give the caller a way to cancel the timer
+    return stopTimer;
+  }
+
   // Replace a value with another value or a function of the original value
   function change(obj, prop, val) {
     let orig = obj[prop];
@@ -293,33 +316,29 @@ function makeWindowHelpers(window) {
 
     // Make a delayable function that uses a sharable timer
     function makeDelayable(timerName, func) {
+      timerName += "Timer";
       return function() {
         // Stop the shared timer if it's still waiting
-        stopTimer(timerName);
+        if (node[timerName] != null)
+          node[timerName]();
 
         // Pick out the arguments that the function wants
         let args = Array.slice(arguments, 0, func.length);
         function callFunc() {
+          node[timerName] = null;
           func.apply(global, args);
         }
 
         // If we have some amount of time to wait, wait
         let delay = arguments[func.length];
         if (delay)
-          node[timerName + "Timer"] = setTimeout(callFunc, delay);
+          node[timerName] = async(callFunc, delay);
         // Otherwise do it synchronously
-        else
+        else {
           callFunc();
+          node[timerName] = null;
+        }
       };
-    }
-
-    // Stop a timer if it's still waiting
-    function stopTimer(timerName) {
-      timerName = timerName + "Timer";
-      if (node[timerName] == null)
-        return;
-      clearTimeout(node[timerName]);
-      node[timerName] = null;
     }
 
     // Allow this node to be collapsed with a delay
@@ -369,6 +388,7 @@ function makeWindowHelpers(window) {
   }
 
   return {
+    async: async,
     change: change,
     createNode: createNode,
     createThumbnail: createThumbnail,
