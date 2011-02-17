@@ -3325,7 +3325,7 @@ function addDashboard(window) {
 
   let fxIcon = createNode("image");
   fxIcon.setAttribute("left", "0");
-  fxIcon.setAttribute("src", images["firefox22.png"]);
+  fxIcon.setAttribute("src", images.firefox22);
   fxIcon.setAttribute("top", "0");
   masterStack.appendChild(fxIcon);
 
@@ -3473,8 +3473,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Get references to the packaged images
-  ["defaultFavicon.png", "firefox22.png"].forEach(function(fileName) {
-    images[fileName] = addon.getResourceURI("images/" + fileName).spec;
+  ["default16",
+   "firefox22",
+  ].forEach(function(fileName) {
+    images[fileName] = addon.getResourceURI("images/" + fileName + ".png").spec;
   });
 
   // Load various javascript includes for helper functions

@@ -182,7 +182,7 @@ function getTabIcon(tab) {
     return src;
 
   // Use the default tab favicon
-  return images["defaultFavicon.png"];
+  return images.default16;
 }
 
 // Figure out the ordered relationship between two tabs
