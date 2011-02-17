@@ -54,15 +54,9 @@ const shadows = {
  * Remove all existing chrome of the browser window
  */
 function removeChrome(window) {
-  // Replace a value with another value or a function of the original value
-  function change(obj, prop, val) {
-    let orig = obj[prop];
-    obj[prop] = typeof val == "function" ? val(orig) : val;
-    unload(function() obj[prop] = orig, window);
-  }
-
   // Resize the chrome based on the original size containing the main browser
   let {document, gBrowser, gNavToolbox} = window;
+  let {change} = makeWindowHelpers(window);
 
   // Figure out how much to shift the main browser
   function getTopOffset() {
@@ -96,6 +90,7 @@ function removeChrome(window) {
  */
 function addDashboard(window) {
   let {clearInterval, clearTimeout, document, gBrowser, setInterval, setTimeout} = window;
+  let {createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
 
   // Track what to do when the dashboard goes away
   let onClose = makeTrigger();
@@ -103,103 +98,8 @@ function addDashboard(window) {
   // Track what to do when the dashboard appears for a reason
   let onOpen = makeTrigger();
 
-  // Create a XUL node that can get some extra functionality
-  function createNode(nodeName, extend) {
-    const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-    let node = document.createElementNS(XUL, nodeName);
-
-    // Only extend certain top-level nodes that want to be
-    if (!extend)
-      return node;
-
-    // Make a delayable function that uses a sharable timer
-    function makeDelayable(timerName, func) {
-      return function() {
-        // Stop the shared timer
-        stopTimer(timerName);
-
-        // Pick out the arguments that the function wants
-        let args = Array.slice(arguments, 0, func.length);
-        function callFunc() {
-          func.apply(global, args);
-        }
-
-        // If we have some amount of time to wait, wait
-        let delay = arguments[func.length];
-        if (delay)
-          node[timerName + "Timer"] = setTimeout(callFunc, delay);
-        // Otherwise do it synchronously
-        else
-          callFunc();
-      };
-    }
-
-    // Stop a timer if it's still waiting
-    function stopTimer(timerName) {
-      timerName = timerName + "Timer";
-      if (node[timerName] == null)
-        return;
-      clearTimeout(node[timerName]);
-      node[timerName] = null;
-    }
-
-    // Allow this node to be collapsed with a delay
-    let slowHide = makeDelayable("showHide", function() node.collapsed = true);
-    node.hide = function() {
-      shown = false;
-      slowHide.apply(global, arguments);
-    };
-
-    // Set the opacity after a delay
-    node.setOpacity = makeDelayable("opacity", function(val) {
-      node.style.opacity = val;
-    });
-
-    // Allow this node to be uncollapsed with a delay
-    let slowShow  = makeDelayable("showHide", function() node.collapsed = false);
-    node.show = function() {
-      shown = true;
-      slowShow.apply(global, arguments);
-    };
-
-    // Indicate if the node should be shown even if it isn't visible yet
-    let shown = true;
-    Object.defineProperty(node, "shown", {
-      get: function() shown
-    });
-
-    // Stop any timers that might be waiting
-    onClose(function() {
-      stopTimer("opacity");
-      stopTimer("showHide");
-    });
-
-    return node;
-  }
-
-  // Create a data url thumbnail of a browser
-  function createThumbnail(browser) {
-    let canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
-    canvas.width = 1.15 * sixthWidth;
-    canvas.height = canvas.width / 4 * 3;
-
-    // Shrink the page a little bit
-    let ctx = canvas.getContext("2d");
-    ctx.scale(.3, .3);
-
-    // Draw the page into the canvas and give back the data url
-    let content = browser.contentWindow;
-    let {scrollX, scrollY} = content;
-    let {height, width} = maxBoxObject;
-    ctx.drawWindow(content, scrollX, scrollY, width, height, "white");
-    return canvas.toDataURL();
-  }
-
   // Remember what is being dragged
   let dragged;
-
-  const maxBoxObject = gBrowser.boxObject;
-  const sixthWidth = maxBoxObject.width / 6;
 
   // Maybe the window is still loading so we got some impossible size
   if (sixthWidth < 50) {

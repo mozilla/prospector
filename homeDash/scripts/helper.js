@@ -266,6 +266,117 @@ function makePageInfo(title, url) {
   };
 }
 
+// Take a window and create various helper properties and functions
+function makeWindowHelpers(window) {
+  const XHTML = "http://www.w3.org/1999/xhtml";
+  const XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
+  let {document, clearTimeout, gBrowser, setTimeout} = window;
+
+  const maxBoxObject = gBrowser.boxObject;
+  const sixthWidth = maxBoxObject.width / 6;
+
+  // Replace a value with another value or a function of the original value
+  function change(obj, prop, val) {
+    let orig = obj[prop];
+    obj[prop] = typeof val == "function" ? val(orig) : val;
+    unload(function() obj[prop] = orig, window);
+  }
+
+  // Create a XUL node that can get some extra functionality
+  function createNode(nodeName, extend) {
+    let node = document.createElementNS(XUL, nodeName);
+
+    // Only extend certain top-level nodes that want to be
+    if (!extend)
+      return node;
+
+    // Make a delayable function that uses a sharable timer
+    function makeDelayable(timerName, func) {
+      return function() {
+        // Stop the shared timer if it's still waiting
+        stopTimer(timerName);
+
+        // Pick out the arguments that the function wants
+        let args = Array.slice(arguments, 0, func.length);
+        function callFunc() {
+          func.apply(global, args);
+        }
+
+        // If we have some amount of time to wait, wait
+        let delay = arguments[func.length];
+        if (delay)
+          node[timerName + "Timer"] = setTimeout(callFunc, delay);
+        // Otherwise do it synchronously
+        else
+          callFunc();
+      };
+    }
+
+    // Stop a timer if it's still waiting
+    function stopTimer(timerName) {
+      timerName = timerName + "Timer";
+      if (node[timerName] == null)
+        return;
+      clearTimeout(node[timerName]);
+      node[timerName] = null;
+    }
+
+    // Allow this node to be collapsed with a delay
+    let slowHide = makeDelayable("showHide", function() node.collapsed = true);
+    node.hide = function() {
+      shown = false;
+      slowHide.apply(global, arguments);
+    };
+
+    // Set the opacity after a delay
+    node.setOpacity = makeDelayable("opacity", function(val) {
+      node.style.opacity = val;
+    });
+
+    // Allow this node to be uncollapsed with a delay
+    let slowShow  = makeDelayable("showHide", function() node.collapsed = false);
+    node.show = function() {
+      shown = true;
+      slowShow.apply(global, arguments);
+    };
+
+    // Indicate if the node should be shown even if it isn't visible yet
+    let shown = true;
+    Object.defineProperty(node, "shown", {
+      get: function() shown
+    });
+
+    return node;
+  }
+
+  // Create a data url thumbnail of a browser
+  function createThumbnail(browser) {
+    let canvas = document.createElementNS(XHTML, "canvas");
+    canvas.width = 1.15 * sixthWidth;
+    canvas.height = canvas.width / 4 * 3;
+
+    // Shrink the page a little bit
+    let ctx = canvas.getContext("2d");
+    ctx.scale(.3, .3);
+
+    // Draw the page into the canvas and give back the data url
+    let content = browser.contentWindow;
+    let {scrollX, scrollY} = content;
+    let {height, width} = maxBoxObject;
+    ctx.drawWindow(content, scrollX, scrollY, width, height, "white");
+    return canvas.toDataURL();
+  }
+
+  return {
+    change: change,
+    createNode: createNode,
+    createThumbnail: createThumbnail,
+    maxBoxObject: maxBoxObject,
+    sixthWidth: sixthWidth,
+  };
+}
+
 // Checks if a term matches on a word boundary
 function matchesBoundary(term, target, casedTarget) {
   // Nothing left to do if the term doesn't show up in the rest of the target
