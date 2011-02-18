@@ -276,6 +276,32 @@ function makeWindowHelpers(window) {
   const maxBoxObject = gBrowser.boxObject;
   const sixthWidth = maxBoxObject.width / 6;
 
+  // Add an image with various properties
+  function addImage(parent, properties) {
+    let node = createNode("image");
+
+    // Allow some attributes to be set if provided
+    ["bottom", "collapsed", "left", "right", "src", "top"
+    ].forEach(function(attribute) {
+      let val = properties[attribute];
+      if (val != null)
+        node.setAttribute(attribute, val + "");
+    });
+
+    // Add the node now that it has its attributes
+    parent.appendChild(node);
+
+    // Allow some styles to be set if provided
+    ["cursor", "height", "opacity", "pointerEvents", "width"
+    ].forEach(function(style) {
+      let val = properties[style];
+      if (val != null)
+        node.style[style] = val + "";
+    });
+
+    return node;
+  }
+
   // Call a function after waiting a little bit
   function async(callback, delay) {
     let timer = setTimeout(function() {
@@ -388,6 +414,7 @@ function makeWindowHelpers(window) {
   }
 
   return {
+    addImage: addImage,
     async: async,
     change: change,
     createNode: createNode,

@@ -90,7 +90,7 @@ function removeChrome(window) {
  */
 function addDashboard(window) {
   let {clearInterval, document, gBrowser, setInterval} = window;
-  let {async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
+  let {addImage, async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
 
   // Track what to do when the dashboard goes away
   let onClose = makeTrigger();
@@ -1506,14 +1506,14 @@ function addDashboard(window) {
     entryBox.style.fontSize = "16px";
     entryBox.style.pointerEvents = "auto";
 
-    let iconNode = createNode("image");
-    iconNode.setAttribute("src", pageInfo.icon);
-    entryBox.appendChild(iconNode);
+    let iconNode = addImage(entryBox, {
+      height: "16px",
+      pointerEvents: "none",
+      src: pageInfo.icon,
+      width: "16px",
+    });
 
-    iconNode.style.height = "16px";
     iconNode.style.marginLeft = "2px";
-    iconNode.style.pointerEvents = "none";
-    iconNode.style.width = "16px";
 
     let titleNode = createNode("label");
     titleNode.setAttribute("crop", "end");
@@ -1871,24 +1871,22 @@ function addDashboard(window) {
     siteBox.style.overflow = "hidden";
 
     // The main content is the page thumbnail
-    let siteThumb = createNode("image");
-    siteBox.appendChild(siteThumb);
-
-    siteThumb.style.height = height + "px";
-    siteThumb.style.pointerEvents = "none";
-    siteThumb.style.width = width + "px";
+    let siteThumb = addImage(siteBox, {
+      height: height + "px",
+      pointerEvents: "none",
+      width: width + "px",
+    });
 
     // Put a favicon in the top left corner
-    let siteIcon = createNode("image");
-    siteIcon.setAttribute("collapsed", "true");
-    siteIcon.setAttribute("height", "16");
-    siteIcon.setAttribute("left", "2");
-    siteIcon.setAttribute("src", pageInfo.icon);
-    siteIcon.setAttribute("top", "2");
-    siteIcon.setAttribute("width", "16");
-    siteBox.appendChild(siteIcon);
-
-    siteIcon.style.pointerEvents = "none";
+    let siteIcon = addImage(siteBox, {
+      collapsed: true,
+      height: "16px",
+      left: 2,
+      pointerEvents: "none",
+      src: pageInfo.icon,
+      top: 2,
+      width: "16px",
+    });
 
     siteBox.pageInfo = pageInfo;
 
@@ -2134,13 +2132,11 @@ function addDashboard(window) {
         // Hide the number until later
         pinNum.collapsed = true;
 
-        let pinIcon = createNode("image");
-        pinIcon.setAttribute("height", "16");
-        pinIcon.setAttribute("width", "16");
-        pinBox.appendChild(pinIcon);
-
-        if (tab != null)
-          pinIcon.setAttribute("src", getTabIcon(tab));
+        let pinIcon = addImage(pinBox, {
+          height: "16px",
+          src: tab && getTabIcon(tab),
+          width: "16px",
+        });
 
         // Save the information used to create this box
         pinBox.tab = tab;
@@ -2333,22 +2329,21 @@ function addDashboard(window) {
       tabBox.style.margin = "10px -122px 10px 0";
 
       // The main content is the tab thubmnail
-      let tabThumb = createNode("image");
-      tabThumb.setAttribute("src", tab.HDthumbnail);
-      tabThumb.style.height = "90px";
-      tabThumb.style.width = "120px";
-      tabBox.appendChild(tabThumb);
+      let tabThumb = addImage(tabBox, {
+        height: "90px",
+        src: tab.HDthumbnail,
+        width: "120px",
+      });
 
       // Put a favicon in the top left corner
-      let tabIcon = createNode("image");
-      tabIcon.setAttribute("height", "16");
-      tabIcon.setAttribute("left", "2");
-      tabIcon.setAttribute("src", getTabIcon(tab));
-      tabIcon.setAttribute("top", "2");
-      tabIcon.setAttribute("width", "16");
-      tabBox.appendChild(tabIcon);
-
-      tabIcon.style.cursor = "move";
+      let tabIcon = addImage(tabBox, {
+        cursor: "move",
+        height: "16px",
+        left: 2,
+        src: getTabIcon(tab),
+        top: 2,
+        width: "16px",
+      });
 
       // Show a quick switch number in the bottom left if necessary
       let quickNum = createNode("label");
@@ -3232,16 +3227,13 @@ function addDashboard(window) {
 
   //// 7: Firefox icon
 
-  let fxIcon = createNode("image");
-  fxIcon.setAttribute("left", "0");
-  fxIcon.setAttribute("src", images.firefox22);
-  fxIcon.setAttribute("top", "0");
-  masterStack.appendChild(fxIcon);
-
-  fxIcon.style.height = "22px";
-  fxIcon.style.opacity = ".3";
-  fxIcon.style.pointerEvents = "auto";
-  fxIcon.style.width = "22px";
+  let fxIcon = addImage(masterStack, {
+    left: 0,
+    opacity: .3,
+    pointerEvents: "auto",
+    src: images.firefox22,
+    top: 0,
+  });
 
   // Just go back to the default opacity when closing the dashboard
   fxIcon.reset = function() {
