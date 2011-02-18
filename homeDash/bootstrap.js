@@ -1875,6 +1875,7 @@ function addDashboard(window) {
     siteBox.appendChild(siteThumb);
 
     siteThumb.style.height = height + "px";
+    siteThumb.style.pointerEvents = "none";
     siteThumb.style.width = width + "px";
 
     // Put a favicon in the top left corner
@@ -1886,6 +1887,8 @@ function addDashboard(window) {
     siteIcon.setAttribute("top", "2");
     siteIcon.setAttribute("width", "16");
     siteBox.appendChild(siteIcon);
+
+    siteIcon.style.pointerEvents = "none";
 
     siteBox.pageInfo = pageInfo;
 
@@ -1931,7 +1934,14 @@ function addDashboard(window) {
       // Don't re-show sites that are already hidden
       if (siteBox.style.opacity == "0")
         return;
-      siteBox.setOpacity(siteBox == targetBox ? "1" : ".3");
+
+      // Highlight a site and fade out the others
+      if (siteBox == targetBox)
+        siteBox.setOpacity("1");
+      else {
+        siteBox.setOpacity(".3");
+        siteBox.style.pointerEvents = "none";
+      }
     });
   };
 
