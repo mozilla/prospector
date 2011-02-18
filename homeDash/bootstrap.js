@@ -1879,6 +1879,7 @@ function addDashboard(window) {
 
     // Put a favicon in the top left corner
     let siteIcon = createNode("image");
+    siteIcon.setAttribute("collapsed", "true");
     siteIcon.setAttribute("height", "16");
     siteIcon.setAttribute("left", "2");
     siteIcon.setAttribute("src", pageInfo.icon);
@@ -1902,6 +1903,9 @@ function addDashboard(window) {
           siteThumb.setAttribute("src", thumbnail);
         }
       });
+
+      siteIcon.collapsed = false;
+
       statusLine.set(replacePage.action, pageInfo.title);
       tabs.hide();
 
@@ -1910,6 +1914,7 @@ function addDashboard(window) {
     }, false);
 
     siteBox.addEventListener("mouseout", function() {
+      siteIcon.collapsed = true;
       pagePreview.reset();
       statusLine.reset();
       tabs.show(1000);
