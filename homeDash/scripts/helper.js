@@ -276,6 +276,34 @@ function makeWindowHelpers(window) {
   const maxBoxObject = gBrowser.boxObject;
   const sixthWidth = maxBoxObject.width / 6;
 
+  // Add click and drag listener to a node
+  function addDragListener(node, processOffset, dragStep, dragFinish) {
+    node.addEventListener("mousedown", function(event) {
+      let lastProcess;
+      let startX = event.screenX;
+      let startY = event.screenY;
+
+      // Process the drag offset and give it to the callback
+      let unMove = listen(window, window, "mousemove", function(event) {
+        lastProcess = processOffset({
+          xDiff: event.screenX - startX,
+          yDiff: event.screenY - startY
+        });
+        dragStep(lastProcess);
+      });
+
+      // Give the last processed offset when finishing
+      let unUp = listen(window, window, "mouseup", function() {
+        if (lastProcess != null)
+          dragFinish(lastProcess);
+
+        // Make sure to clean up the added listeners
+        unMove();
+        unUp();
+      });
+    }, false);
+  }
+
   // Add an image with various properties
   function addImage(parent, properties) {
     let node = createNode("image");
@@ -292,7 +320,7 @@ function makeWindowHelpers(window) {
     parent.appendChild(node);
 
     // Allow some styles to be set if provided
-    ["cursor", "height", "opacity", "pointerEvents", "width"
+    ["background", "borderRadius", "boxShadow", "cursor", "height", "opacity", "padding", "pointerEvents", "width"
     ].forEach(function(style) {
       let val = properties[style];
       if (val != null)
@@ -414,6 +442,7 @@ function makeWindowHelpers(window) {
   }
 
   return {
+    addDragListener: addDragListener,
     addImage: addImage,
     async: async,
     change: change,

@@ -48,6 +48,7 @@ const images = {};
 const shadows = {
   global: "3px 3px 10px rgb(0, 0, 0)",
   selected: "0px 0px 10px rgb(51, 102, 204)",
+  selectedInset: "0px 0px 10px rgb(51, 102, 204) inset",
 };
 
 /**
@@ -90,7 +91,7 @@ function removeChrome(window) {
  */
 function addDashboard(window) {
   let {clearInterval, document, gBrowser, setInterval} = window;
-  let {addImage, async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
+  let {addDragListener, addImage, async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
 
   // Track what to do when the dashboard goes away
   let onClose = makeTrigger();
@@ -1815,6 +1816,13 @@ function addDashboard(window) {
   sites.setAttribute("top", (maxBoxObject.height - 140) / 2 + 140 + "");
   dashboard.appendChild(sites);
 
+  // Keep track of what site is being edited
+  let editingSite;
+  let onSiteEdit = makeTrigger();
+  let onSiteUnedit = makeTrigger();
+  onSiteEdit(function(targetBox) editingSite = targetBox);
+  onSiteUnedit(function() editingSite = null);
+
   // Set the base width and height ratio to fit the bottom-right sites area
   const sizeScale = sixthWidth / 3.5;
   const siteRatio = (maxBoxObject.height - 140) / (4 * sixthWidth);
@@ -1865,20 +1873,41 @@ function addDashboard(window) {
     siteBox.setAttribute("top", top + "");
     sites.appendChild(siteBox);
 
-    siteBox.style.backgroundColor = "rgb(244, 244, 244)";
-    siteBox.style.borderRadius = "10px";
-    siteBox.style.boxShadow = shadows.global;
-    siteBox.style.overflow = "hidden";
+    let previewBox = createNode("stack");
+    siteBox.appendChild(previewBox);
+
+    previewBox.style.backgroundColor = "rgb(244, 244, 244)";
+    previewBox.style.borderRadius = "10px";
+    previewBox.style.boxShadow = shadows.global;
+    previewBox.style.height = height + "px";
+    previewBox.style.overflow = "hidden";
+    previewBox.style.width = width + "px";
+
+    let zoom = .5;
+    let offsetLeft = 0;
+    let offsetTop = 0;
+    let browserHeight = 640;
+    let browserWidth = 640;
+
+    let siteBrowser = createNode("browser");
+    siteBrowser.setAttribute("collapsed", "true");
+    siteBrowser.setAttribute("left", offsetLeft + "");
+    siteBrowser.setAttribute("top", offsetTop + "");
+    siteBrowser.setAttribute("type", "content");
+    previewBox.appendChild(siteBrowser);
+
+    siteBrowser.style.height = browserHeight + "px";
+    siteBrowser.style.overflow = "hidden";
+    siteBrowser.style.pointerEvents = "none";
+    siteBrowser.style.width = browserWidth + "px";
 
     // The main content is the page thumbnail
-    let siteThumb = addImage(siteBox, {
-      height: height + "px",
+    let siteThumb = addImage(previewBox, {
       pointerEvents: "none",
-      width: width + "px",
     });
 
     // Put a favicon in the top left corner
-    let siteIcon = addImage(siteBox, {
+    let siteIcon = addImage(previewBox, {
       collapsed: true,
       height: "16px",
       left: 2,
@@ -1888,25 +1917,242 @@ function addDashboard(window) {
       width: "16px",
     });
 
+    let editBox = createNode("stack");
+    editBox.setAttribute("collapsed", "true");
+    siteBox.appendChild(editBox);
+
+    let moveScreen = addImage(editBox, {
+      boxShadow: shadows.selectedInset,
+    });
+
+    let offsetScreen = addImage(editBox, {
+      bottom: 0,
+      cursor: "move",
+      left: 16,
+      right: 0,
+      top: 16,
+    });
+
+    let resizeHorizontal = addImage(editBox, {
+      bottom: 0,
+      cursor: "ew-resize",
+      right: 0,
+      top: 0,
+      width: "16px",
+    });
+
+    let resizeVertical = addImage(editBox, {
+      bottom: 0,
+      cursor: "ns-resize",
+      height: "16px",
+      left: 0,
+      right: 0,
+    });
+
+    let zoomGrip = addImage(editBox, {
+      bottom: 0,
+      cursor: "nwse-resize",
+      right: 0,
+      src: images.zoomIn16,
+    });
+
+    let doneIcon = addImage(editBox, {
+      background: "rgb(244, 244, 244)",
+      borderRadius: "5px 5px 0 0",
+      left: 10,
+      padding: "0 1px",
+      src: images.done16,
+      top: -16,
+    });
+
+    let editIcon = addImage(siteBox, {
+      background: "rgb(244, 244, 244)",
+      borderRadius: "5px 5px 0 0",
+      collapsed: true,
+      left: 10,
+      padding: "0 1px",
+      src: images.edit16,
+      top: -16,
+    });
+
     siteBox.pageInfo = pageInfo;
+
+    onSiteEdit(function(targetBox) {
+      if (targetBox != siteBox)
+        return;
+
+      editBox.collapsed = false;
+      editIcon.collapsed = true;
+      previewBox.style.borderRadius = "";
+      siteBrowser.collapsed = false;
+      siteBrowser.loadURI(pageInfo.url);
+      siteBrowser.markupDocumentViewer.fullZoom = zoom;
+      siteThumb.collapsed = true;
+      siteIcon.collapsed = true;
+    });
+
+    onSiteUnedit(function(targetBox) {
+      if (targetBox != siteBox)
+        return;
+
+      // Save the thumbnail snapshot as an image
+      let canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+      canvas.width = width;
+      canvas.height = height;
+      let ctx = canvas.getContext("2d");
+      ctx.scale(zoom, zoom);
+      let content = siteBrowser.contentWindow;
+      ctx.drawWindow(content,
+                     -offsetLeft / zoom,
+                     -offsetTop / zoom,
+                     width / zoom,
+                     height / zoom,
+                     "white");
+      let thumbnail = canvas.toDataURL();
+
+      editBox.collapsed = true;
+      editIcon.collapsed = false;
+      previewBox.style.borderRadius = "10px";
+      siteBrowser.collapsed = true;
+      siteThumb.setAttribute("src", thumbnail);
+      siteThumb.collapsed = false;
+      siteIcon.collapsed = false;
+    });
+
+    addDragListener(moveScreen, function(diffs) {
+      return diffs;
+    }, function({xDiff, yDiff}) {
+      siteBox.setAttribute("left", left + xDiff + "");
+      siteBox.setAttribute("top", top + yDiff + "");
+    }, function({xDiff, yDiff}) {
+      left += xDiff;
+      top += yDiff;
+    });
+
+    addDragListener(offsetScreen, function(diffs) {
+      return diffs;
+    }, function({xDiff, yDiff}) {
+      siteBrowser.setAttribute("left", offsetLeft + xDiff + "");
+      siteBrowser.setAttribute("top", offsetTop + yDiff + "");
+    }, function({xDiff, yDiff}) {
+      offsetLeft += xDiff;
+      offsetTop += yDiff;
+    });
+
+    addDragListener(resizeHorizontal, function({xDiff}) {
+      return Math.max(32 - width, xDiff);
+    }, function(xDiff) {
+      previewBox.style.width = width + xDiff + "px";
+    }, function(xDiff) {
+      width += xDiff;
+    });
+
+    addDragListener(resizeVertical, function({yDiff}) {
+      return Math.max(32 - height, yDiff);
+    }, function(yDiff) {
+      previewBox.style.height = height + yDiff + "px";
+    }, function(yDiff) {
+      height += yDiff;
+    });
+
+    addDragListener(zoomGrip, function({xDiff, yDiff}) {
+      let zoomDiff;
+      if (yDiff * width / height > xDiff)
+        zoomDiff = yDiff / height;
+      else
+        zoomDiff = xDiff / width;
+      return Math.max(32 / height, 32 / width, 1 + zoomDiff);
+    }, function(zoomPercent) {
+      previewBox.style.height = zoomPercent * height + "px";
+      previewBox.style.width = zoomPercent * width + "px";
+      siteBrowser.markupDocumentViewer.fullZoom = zoomPercent * zoom;
+      siteBrowser.setAttribute("left", zoomPercent * offsetLeft + "");
+      siteBrowser.setAttribute("top", zoomPercent * offsetTop + "");
+      siteBrowser.style.height = zoomPercent * browserHeight + "px";
+      siteBrowser.style.width = zoomPercent * browserHeight + "px";
+    }, function(zoomPercent) {
+      browserHeight *= zoomPercent;
+      browserWidth *= zoomPercent;
+      height *= zoomPercent;
+      offsetLeft *= zoomPercent;
+      offsetTop *= zoomPercent;
+      width *= zoomPercent;
+      zoom *= zoomPercent;
+    });
+
+    moveScreen.addEventListener("mouseover", function() {
+      statusLine.set("site.move");
+    }, false);
+
+    moveScreen.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
+
+    offsetScreen.addEventListener("mouseover", function() {
+      statusLine.set("site.offset");
+    }, false);
+
+    offsetScreen.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
+
+    resizeHorizontal.addEventListener("mouseover", function() {
+      statusLine.set("site.resize.horizontal");
+    }, false);
+
+    resizeHorizontal.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
+
+    resizeVertical.addEventListener("mouseover", function() {
+      statusLine.set("site.resize.vertical");
+    }, false);
+
+    resizeVertical.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
+
+    zoomGrip.addEventListener("mouseover", function() {
+      statusLine.set("site.zoom");
+    }, false);
+
+    zoomGrip.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
+
+    doneIcon.addEventListener("click", function(event) {
+      event.stopPropagation();
+      onSiteUnedit.trigger(editingSite);
+    }, false);
+
+    editIcon.addEventListener("click", function(event) {
+      event.stopPropagation();
+      onSiteEdit.trigger(siteBox);
+    }, false);
 
     // Save the page preview when clicked
     siteBox.addEventListener("click", function() {
+      if (editingSite)
+        return;
+
       input.adapt(pageInfo);
       dashboard.usePreview(pagePreview, pageInfo.url);
     }, false);
 
+    siteBrowser.addEventListener("DOMTitleChanged", function(event) {
+      event.stopPropagation();
+    }, true);
+
     // Indicate what clicking will do
     siteBox.addEventListener("mouseover", function() {
-      // Update the thumbnail as the preview loads
-      pagePreview.load(pageInfo.url, {
-        onThumbnail: function(thumbnail) {
-          siteThumb.setAttribute("src", thumbnail);
-        }
-      });
+      if (editingSite)
+        return;
 
+      editIcon.collapsed = false;
       siteIcon.collapsed = false;
 
+      // Show a large preview of the page
+      pagePreview.load(pageInfo.url);
       statusLine.set(replacePage.action, pageInfo.title);
       tabs.hide();
 
@@ -1914,7 +2160,11 @@ function addDashboard(window) {
       sites.highlight(siteBox);
     }, false);
 
-    siteBox.addEventListener("mouseout", function() {
+    siteBox.addEventListener("mouseout", function({relatedTarget}) {
+      if (editingSite || relatedTarget == siteBox || relatedTarget == editIcon)
+        return;
+
+      editIcon.collapsed = true;
       siteIcon.collapsed = true;
       pagePreview.reset();
       statusLine.reset();
@@ -3375,7 +3625,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Get references to the packaged images
   ["default16",
+   "done16",
+   "edit16",
    "firefox22",
+   "zoomIn16",
   ].forEach(function(fileName) {
     images[fileName] = addon.getResourceURI("images/" + fileName + ".png").spec;
   });
