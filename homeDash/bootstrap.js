@@ -641,37 +641,28 @@ function addDashboard(window) {
 
   // Switch through MRU tabs in order or backwards
   function showPage(backwards, removeCurrent) {
-    let firstPreview = !showPage.active;
-
     // Initialize some state and listeners if necessary
     showPage.start();
 
     // Read out the current state
-    let {mruList, previewPos} = showPage;
-    let previewed = mruList[previewPos];
+    let {mruList, lastPreview, previewPos} = showPage;
 
     // Remove the actual tab that's being previewed
     if (removeCurrent) {
-      tabs.prepRemove(previewed);
+      tabs.prepRemove(mruList[previewPos]);
       mruList.splice(previewPos, 1);
-
-      // Fix up the position if it was the last one
-      if (previewPos >= mruList.length)
-        previewPos = mruList.length - 1;
-
-      // Grab the new preview tab
-      previewed = mruList[previewPos];
     }
+
     // Pick out the more recently used if not already at the front
-    else if (backwards && previewPos > 0)
-      previewed = mruList[--previewPos];
+    if (backwards)
+      previewPos = Math.max(0, previewPos - 1);
     // Get the lesser recently used if not already at the end
-    else if (!backwards && previewPos < mruList.length - 1)
-      previewed = mruList[++previewPos];
-    // We have to show something if it's the first preview
-    else if (firstPreview) {}
-    // Must not have changed a tab to preview, so do nothing!
     else
+      previewPos = Math.min(mruList.length - 1, previewPos + !removeCurrent);
+
+    // Must not have changed a tab to preview, so do nothing!
+    let previewed = mruList[previewPos];
+    if (previewed == lastPreview)
       return;
 
     // Remove the current preview if necessary
@@ -684,6 +675,7 @@ function addDashboard(window) {
     }
 
     // Update state of the newly previewed tab then highlight it
+    showPage.lastPreview = previewed;
     showPage.previewPos = previewPos;
     tabs.search(input.value, {
       highlight: previewed,
@@ -801,6 +793,7 @@ function addDashboard(window) {
       mruList.unshift(selected);
 
     // Save some of these initial values for use when switching
+    showPage.lastPreview = null;
     showPage.mruList = mruList;
     showPage.previewPos = 0;
   };
