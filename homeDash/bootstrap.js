@@ -40,6 +40,7 @@ const global = this;
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 // Keep a reference to various packaged images
 const images = {};
@@ -50,6 +51,12 @@ const shadows = {
   selected: "0px 0px 10px rgb(51, 102, 204)",
   selectedInset: "0px 0px 10px rgb(51, 102, 204) inset",
 };
+
+// Get and set preferences under the prospector pref branch
+XPCOMUtils.defineLazyGetter(global, "prefs", function() {
+  Cu.import("resource://services-sync/ext/Preferences.js");
+  return new Preferences("extensions.prospector.homeDash.");
+});
 
 /**
  * Remove all existing chrome of the browser window
@@ -3684,6 +3691,9 @@ function shutdown(data, reason) {
   // Clean up with unloaders when we're deactivating
   if (reason != APP_SHUTDOWN)
     unload();
+
+  // Persist data across restarts and disables
+  prefs.set("topSites", JSON.stringify(topSites));
 }
 
 /**
@@ -3694,4 +3704,8 @@ function install(data, reason) {}
 /**
  * Handle the add-on being uninstalled
  */
-function uninstall(data, reason) {}
+function uninstall(data, reason) {
+  // Clear out any persisted data when the user gets rid of the add-on
+  if (reason == ADDON_UNINSTALL)
+    prefs.resetBranch("");
+}

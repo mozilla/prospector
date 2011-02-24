@@ -39,6 +39,13 @@
 // Figure out what are the most frecently used sites
 let topSites = [];
 function computeTopSites() {
+  // Use the saved top sites if it exists and is valid
+  try {
+    topSites = JSON.parse(prefs.get("topSites"));
+    return;
+  }
+  catch(ex) {}
+
   let db = Svc.History.DBConnection;
   let stm = Utils.createStatement(db,
     "SELECT * " +
