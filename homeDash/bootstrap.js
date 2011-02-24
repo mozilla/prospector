@@ -3663,23 +3663,25 @@ function activateHomeDash(activating) {
     removeChrome(window);
 
     // Wait for the chrome to be removed and resized before adding
-    async(function() addDashboard(window));
+    async(function() {
+      addDashboard(window);
 
-    // Detect resizes (including full screen) to restart Home Dash
-    let resizeTimer;
-    listen(window, window, "resize", function(event) {
-      if (event.target != window)
-        return;
+      // Detect resizes (including full screen) to restart Home Dash
+      let resizeTimer;
+      listen(window, window, "resize", function(event) {
+        if (event.target != window)
+          return;
 
-      // Stop an existing resize timer if necessary
-      if (resizeTimer != null)
-        resizeTimer();
+        // Stop an existing resize timer if necessary
+        if (resizeTimer != null)
+          resizeTimer();
 
-      // Only restart a little after the user finishes resizing/dragging
-      resizeTimer = async(function() {
-        unload()
-        activateHomeDash(true);
-      }, 1000);
+        // Only restart a little after the user finishes resizing/dragging
+        resizeTimer = async(function() {
+          unload()
+          activateHomeDash(true);
+        }, 1000);
+      });
     });
   });
 }
