@@ -47,10 +47,15 @@ function computeTopSites() {
     "ORDER BY frecency DESC " +
     "LIMIT 100");
 
+  const HEIGHT = 180;
+  const SPACING = 10;
+  const WIDTH = 270;
+
   let seenDomains = {};
   Utils.queryAsync(stm, ["url", "title"]).forEach(function({url, title}) {
-    // Stop at 24 sites for now
-    if (topSites.length == 24)
+    // Stop at 9 sites for now
+    let index = topSites.length;
+    if (index == 9)
       return;
 
     // Only allow one site per domain for now until the user can customize
@@ -65,7 +70,18 @@ function computeTopSites() {
     }
 
     // Save this top site to display later
-    topSites.push(makePageInfo(title, url));
+    topSites.push({
+      browserHeight: 640,
+      browserWidth: 640,
+      height: HEIGHT,
+      left: (WIDTH + SPACING) * (index % 3 - 1) - WIDTH / 2,
+      offsetLeft: 0,
+      offsetTop: 0,
+      pageInfo: makePageInfo(title, url),
+      top: (HEIGHT + SPACING) * (Math.floor(index / 3) - 1) - HEIGHT / 2,
+      width: WIDTH,
+      zoom: .5,
+    });
   });
 }
 

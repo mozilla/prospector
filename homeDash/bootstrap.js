@@ -1816,51 +1816,11 @@ function addDashboard(window) {
   onSiteEdit(function(targetBox) editingSite = targetBox);
   onSiteUnedit(function() editingSite = null);
 
-  // Set the base width and height ratio to fit the bottom-right sites area
-  const sizeScale = sixthWidth / 3.5;
-  const siteRatio = (maxBoxObject.height - 140) / (4 * sixthWidth);
-
-  // Define the positions and size of the top sites
-  const siteSizes = [
-    [-2, -2, 2],
-    [ 2, -2, 2],
-    [-2,  2, 2],
-    [ 2,  2, 2],
-    [-5, -5, 1],
-    [-3, -5, 1],
-    [-1, -5, 1],
-    [ 1, -5, 1],
-    [ 3, -5, 1],
-    [ 5, -5, 1],
-    [-5, -3, 1],
-    [ 5, -3, 1],
-    [-5, -1, 1],
-    [ 5, -1, 1],
-    [-5,  1, 1],
-    [ 5,  1, 1],
-    [-5,  3, 1],
-    [ 5,  3, 1],
-    [-5,  5, 1],
-    [-3,  5, 1],
-    [-1,  5, 1],
-    [ 1,  5, 1],
-    [ 3,  5, 1],
-    [ 5,  5, 1]
-  ];
-
   // Place the top sites in-order at pre-defined locations/sizes
-  topSites.forEach(function(pageInfo, index) {
-    // Can't show the site if we don't know where to put it
-    if (index >= siteSizes.length)
-      return;
+  topSites.forEach(function(siteInfo) {
+    let {pageInfo, zoom} = siteInfo;
 
-    let [leftBase, topBase, size] = siteSizes[index];
-
-    let width = sizeScale * size * 2;
-    let height = sizeScale * size * siteRatio * 2;
-    let left = 1.1 * sizeScale * leftBase - width / 2;
-    let top = 1.1 * sizeScale * topBase * siteRatio - height / 2;
-
+    let {left, top} = siteInfo;
     let siteBox = createNode("stack", true);
     siteBox.setAttribute("left", left + "");
     siteBox.setAttribute("top", top + "");
@@ -1869,6 +1829,7 @@ function addDashboard(window) {
     let previewBox = createNode("stack");
     siteBox.appendChild(previewBox);
 
+    let {height, width} = siteInfo;
     previewBox.style.backgroundColor = "rgb(244, 244, 244)";
     previewBox.style.borderRadius = "10px";
     previewBox.style.boxShadow = shadows.global;
@@ -1876,12 +1837,7 @@ function addDashboard(window) {
     previewBox.style.overflow = "hidden";
     previewBox.style.width = width + "px";
 
-    let zoom = .5;
-    let offsetLeft = 0;
-    let offsetTop = 0;
-    let browserHeight = 640;
-    let browserWidth = 640;
-
+    let {offsetLeft, offsetTop} = siteInfo;
     let siteBrowser = createNode("browser");
     siteBrowser.setAttribute("collapsed", "true");
     siteBrowser.setAttribute("left", offsetLeft + "");
@@ -1889,6 +1845,7 @@ function addDashboard(window) {
     siteBrowser.setAttribute("type", "content");
     previewBox.appendChild(siteBrowser);
 
+    let {browserHeight, browserWidth} = siteInfo;
     siteBrowser.style.height = browserHeight + "px";
     siteBrowser.style.overflow = "hidden";
     siteBrowser.style.pointerEvents = "none";
