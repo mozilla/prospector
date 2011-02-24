@@ -1853,6 +1853,7 @@ function addDashboard(window) {
 
     // The main content is the page thumbnail
     let siteThumb = addImage(previewBox, {
+      src: siteInfo.thumbnail,
       pointerEvents: "none",
     });
 
@@ -1967,6 +1968,17 @@ function addDashboard(window) {
       siteThumb.setAttribute("src", thumbnail);
       siteThumb.collapsed = false;
       siteIcon.collapsed = false;
+
+      siteInfo.browserHeight = browserHeight;
+      siteInfo.browserWidth = browserWidth;
+      siteInfo.height = height;
+      siteInfo.left = left;
+      siteInfo.offsetLeft = offsetLeft;
+      siteInfo.offsetTop = offsetTop;
+      siteInfo.thumbnail = thumbnail;
+      siteInfo.top = top;
+      siteInfo.width = width;
+      siteInfo.zoom = zoom;
     });
 
     addDragListener(moveScreen, function(diffs) {
