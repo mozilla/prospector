@@ -1808,6 +1808,7 @@ function addDashboard(window) {
 
   // Place the top sites in-order at pre-defined locations/sizes
   topSites.forEach(function(siteInfo) {
+    let ignoreOneClick = false;
     let {pageInfo, zoom} = siteInfo;
 
     let {left, top} = siteInfo;
@@ -2007,6 +2008,29 @@ function addDashboard(window) {
       height += yDiff;
     });
 
+    // Allow dragging without going into edit mode
+    addDragListener(siteBox, function(diffs) {
+      return diffs;
+    }, function({xDiff, yDiff}) {
+      if (editingSite)
+        return;
+
+      siteBox.setAttribute("left", left + xDiff + "");
+      siteBox.setAttribute("top", top + yDiff + "");
+    }, function({xDiff, yDiff}) {
+      if (editingSite)
+        return;
+
+      // Ignore clicks without drags
+      if (xDiff == 0 && yDiff == 0)
+        return;
+
+      // Save the move and prevent selecting the page immediately
+      siteInfo.left = left += xDiff;
+      siteInfo.top = top += yDiff;
+      ignoreOneClick = true;
+    });
+
     addDragListener(zoomGrip, function({xDiff, yDiff}) {
       let zoomDiff;
       if (yDiff * width / height > xDiff)
@@ -2086,6 +2110,11 @@ function addDashboard(window) {
     siteBox.addEventListener("click", function() {
       if (editingSite)
         return;
+
+      if (ignoreOneClick) {
+        ignoreOneClick = false;
+        return;
+      }
 
       input.adapt(pageInfo);
       dashboard.usePreview(pagePreview, pageInfo.url);
