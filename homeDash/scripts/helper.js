@@ -330,6 +330,25 @@ function makeWindowHelpers(window) {
     return node;
   }
 
+  // Watch for mouse move events that go further than some threshold
+  function addMoveLimitListener(threshold, moveExceed) {
+    let moveRef;
+    return listen(window, window, "mousemove", function(event) {
+      // Record the initial mouse position as a reference
+      let {screenX, screenY} = event;
+      moveRef = moveRef || {
+        x: screenX,
+        y: screenY
+      };
+
+      // Allow the mouse to move a little from the start reference
+      let xDiff = Math.pow(screenX - moveRef.x, 2);
+      let yDiff = Math.pow(screenY - moveRef.y, 2);
+      if (xDiff + yDiff >= threshold)
+        moveExceed();
+    });
+  }
+
   // Call a function after waiting a little bit
   function async(callback, delay) {
     let timer = setTimeout(function() {
@@ -444,6 +463,7 @@ function makeWindowHelpers(window) {
   return {
     addDragListener: addDragListener,
     addImage: addImage,
+    addMoveLimitListener: addMoveLimitListener,
     async: async,
     change: change,
     createNode: createNode,

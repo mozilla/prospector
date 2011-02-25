@@ -98,7 +98,7 @@ function removeChrome(window) {
  */
 function addDashboard(window) {
   let {clearInterval, document, gBrowser, setInterval} = window;
-  let {addDragListener, addImage, async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
+  let {addDragListener, addImage, addMoveLimitListener, async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
 
   // Track what to do when the dashboard goes away
   let onClose = makeTrigger();
@@ -706,6 +706,9 @@ function addDashboard(window) {
 
     let listeners = showPage.listeners = [];
 
+    // Select the preview if the mouse moves a bit
+    listeners.push(addMoveLimitListener(400, function() showPage.stop(true)));
+
     // Watch for clicks to do special things when switching
     listeners.push(listen(window, window, "click", function(event) {
       // Close the current tab on right-click
@@ -766,26 +769,6 @@ function addDashboard(window) {
           showPage.stop(true);
           break;
       }
-    }));
-
-    // Dismiss the preview if the mouse moves
-    let moveRef;
-    listeners.push(listen(window, window, "mousemove", function(event) {
-      // Record the initial mouse position as a reference
-      let {screenX, screenY} = event;
-      moveRef = moveRef || {
-        x: screenX,
-        y: screenY
-      };
-
-      // Allow the mouse to move a little from the start reference
-      let xDiff = Math.pow(screenX - moveRef.x, 2);
-      let yDiff = Math.pow(screenY - moveRef.y, 2);
-      if (xDiff + yDiff < 500)
-        return;
-
-      // Dismiss now that the mouse has moved enough
-      showPage.stop(true);
     }));
 
     // Show the dashboard when first starting
@@ -2742,6 +2725,7 @@ function addDashboard(window) {
 
     // Provide various ways to get rid of the tab context
     onClean(async(hideAndClean, 5000));
+    onClean(addMoveLimitListener(400, hideAndClean));
     onClean(listen(window, window, "keydown", hideAndClean));
     onClean(listen(window, window, "mousedown", hideAndClean));
     onClean(listen(window, window, "DOMMouseScroll", hideAndClean));
