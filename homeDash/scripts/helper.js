@@ -308,27 +308,42 @@ function makeWindowHelpers(window) {
   function addImage(parent, properties) {
     let node = createNode("image");
 
-    // Allow some attributes to be set if provided
-    ["bottom", "collapsed", "left", "right", "src", "top"
-    ].forEach(function(attribute) {
-      let val = properties[attribute];
-      if (val != null)
-        node.setAttribute(attribute, val + "");
-    });
+    // Set some selected attributes or styles if provided
+    for (let key in properties) {
+      let val = properties[key];
+      if (key in addImage.attributes)
+        node.setAttribute(key, val);
+      else if (key in addImage.styles)
+        node.style[key] = val;
+    }
 
     // Add the node now that it has its attributes
     parent.appendChild(node);
-
-    // Allow some styles to be set if provided
-    ["background", "borderRadius", "boxShadow", "cursor", "height", "opacity", "padding", "pointerEvents", "width"
-    ].forEach(function(style) {
-      let val = properties[style];
-      if (val != null)
-        node.style[style] = val + "";
-    });
-
     return node;
   }
+
+  // Only look for certain attributes for adding images
+  addImage.attributes = {
+    bottom: 1,
+    collapsed: 1,
+    left: 1,
+    right: 1,
+    src: 1,
+    top: 1,
+  };
+
+  // Only look for certain styles for adding images
+  addImage.styles = {
+    background: 1,
+    borderRadius: 1,
+    boxShadow: 1,
+    cursor: 1,
+    height: 1,
+    opacity: 1,
+    padding: 1,
+    pointerEvents: 1,
+    width: 1,
+  };
 
   // Watch for mouse move events that go further than some threshold
   function addMoveLimitListener(threshold, moveExceed) {
