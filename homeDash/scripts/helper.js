@@ -403,18 +403,26 @@ function makeWindowHelpers(window) {
       return node;
 
     // Make a delayable function that uses a sharable timer
-    function makeDelayable(timerName, func) {
+    let makeDelayable = function(timerName, func) {
       timerName += "Timer";
-      return function() {
+      return function(arg) {
         // Stop the shared timer if it's still waiting
         if (node[timerName] != null)
           node[timerName]();
 
         // Pick out the arguments that the function wants
-        let args = Array.slice(arguments, 0, func.length);
+        let numArgs = func.length;
+        let args;
+        if (numArgs > 1)
+          args = Array.slice(arguments, 0, func.length);
         function callFunc() {
           node[timerName] = null;
-          func.apply(global, args);
+          if (numArgs == 0)
+            func.call(global);
+          else if (numArgs == 1)
+            func.call(global, arg);
+          else
+            func.apply(global, args);
         }
 
         // If we have some amount of time to wait, wait
