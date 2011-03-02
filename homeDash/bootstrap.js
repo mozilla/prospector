@@ -2242,13 +2242,14 @@ function addDashboard(window) {
         return false;
 
       // Allow exact url matches to succeed without checking others
-      if (tab.linkedBrowser.currentURI.spec == query)
+      let url = tab.linkedBrowser.currentURI.spec;
+      if (url == query)
         return true;
 
       // For other queries, do the same filtering as other page matches
       return queryMatchesPage(query, {
         title: tab.getAttribute("label"),
-        url: tab.linkedBrowser.currentURI.spec
+        url: url
       });
     });
   };
