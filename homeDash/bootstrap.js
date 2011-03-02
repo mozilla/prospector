@@ -256,6 +256,9 @@ function addDashboard(window) {
 
     // Run each unload callback and clear them
     function runUnload() {
+      if (unloadCallbacks.length == 0)
+        return;
+
       unloadCallbacks.slice().forEach(function(callback) callback());
       unloadCallbacks.length = 0;
     }
