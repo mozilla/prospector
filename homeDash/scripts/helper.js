@@ -583,7 +583,9 @@ function queryMatchesPage(query, title, url) {
     queryParts = queryMatchesPage.queryParts = [];
 
     // Get rid of prefixes and identify each term's case-ness
-    stripPrefix(query).split(/[\/\s]+/).forEach(function(part) {
+    let parts = stripPrefix(query).split(/[\/\s]+/);
+    for (let i = 0; i < parts.length; i++) {
+      let part = parts[i];
       let ignoreCase = part == part.toLowerCase();
       queryParts.push({
         ignoreCase: ignoreCase,
@@ -592,7 +594,7 @@ function queryMatchesPage(query, title, url) {
 
       // Remember if any terms are to ignore
       queryParts.anyIgnore = queryParts.anyIgnore || ignoreCase;
-    });
+    }
   }
 
   // Fix up the title for searching; lazily fix the others
