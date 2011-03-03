@@ -3407,8 +3407,13 @@ function addDashboard(window) {
 
   // Watch for title changes in background tabs
   listen(window, gBrowser, "DOMTitleChanged", function(event) {
+    // Ignore blank tabs with no title
+    let targetDoc = event.target;
+    if (targetDoc.location == "about:blank")
+      return;
+
     // Only care about top-level title changes
-    let content = event.target.defaultView;
+    let content = targetDoc.defaultView;
     if (content != content.top)
       return;
 
