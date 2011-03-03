@@ -90,7 +90,8 @@ function getAdaptiveInfo(query) {
       return false;
 
     // Make sure the page info still matches the query
-    if (!queryMatchesPage(query, pageInfo))
+    let {title, url} = pageInfo;
+    if (!queryMatchesPage(query, title, url))
       return false;
 
     // Must be a good page!
@@ -569,7 +570,7 @@ function prepareMatchText(text) {
 }
 
 // Check if a query string matches some page information
-function queryMatchesPage(query, {title, url}) {
+function queryMatchesPage(query, title, url) {
   // Just short circuit if it's the empty query
   if (query == "")
     return true;

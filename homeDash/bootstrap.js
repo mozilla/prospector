@@ -1660,8 +1660,9 @@ function addDashboard(window) {
     if (query.indexOf(history.lastQuery) == 0) {
       // Make a copy before iterating as we're removing unwanted entries
       Array.slice(history.childNodes).forEach(function(entryBox) {
-        if (!queryMatchesPage(query, entryBox.pageInfo)) {
-          delete history.resultMap[entryBox.pageInfo.url];
+        let {title, url} = entryBox.pageInfo;
+        if (!queryMatchesPage(query, title, url)) {
+          delete history.resultMap[url];
           history.removeChild(entryBox);
         }
       });
@@ -1752,15 +1753,19 @@ function addDashboard(window) {
           // Keep track of how many rows we see to know where to continue
           numProcessed++;
 
-          // Construct a page info to test and potentially add
-          let pageInfo = {
-            title: row.getResultByName("title") || "",
-            url: row.getResultByName("url")
-          };
+          // Extract the relevant page information for matching
+          let title = row.getResultByName("title") || "";
+          let url = row.getResultByName("url");
 
           // Determine if we should show add the result
-          if (!queryMatchesPage(query, pageInfo))
+          if (!queryMatchesPage(query, title, url))
             continue;
+
+          // Construct a page info now that we know it matches
+          let pageInfo = {
+            title: title,
+            url: url,
+          };
 
           // Fill in some more page info values now that we want it
           let URI = Services.io.newURI(pageInfo.url, null, null);
@@ -2192,6 +2197,7 @@ function addDashboard(window) {
     // Find out which pages match the query
     let pageMatches = [];
     Array.forEach(sites.childNodes, function(siteBox) {
+      let {title, url} = siteBox.pageInfo;
       let opacity;
       // Just show the site if there's no query
       if (query == "") {
@@ -2199,7 +2205,7 @@ function addDashboard(window) {
         siteBox.style.pointerEvents = "auto";
       }
       // Emphasize the match and record it
-      else if (queryMatchesPage(query, siteBox.pageInfo)) {
+      else if (queryMatchesPage(query, title, url)) {
         opacity = 1;
         siteBox.style.pointerEvents = "auto";
         pageMatches.push(siteBox.pageInfo);
@@ -2247,10 +2253,7 @@ function addDashboard(window) {
         return true;
 
       // For other queries, do the same filtering as other page matches
-      return queryMatchesPage(query, {
-        title: tab.getAttribute("label"),
-        url: url
-      });
+      return queryMatchesPage(query, tab.getAttribute("label"), url);
     });
   };
 
