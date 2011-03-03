@@ -559,11 +559,13 @@ function organizeTabsByRelation(tabs, reference) {
   });
 };
 
-// Get both the original-case and lowercase prepared text
+// Prepare the text by removing prefixes and shortening
 function prepareMatchText(text) {
   // Arbitrarily only search through the first some characters
-  text = stripPrefix(text).slice(0, 100);
-  return [text, text.toLowerCase()];
+  text = stripPrefix(text);
+  if (text.length > 100)
+    text = text.slice(0, 100);
+  return text;
 }
 
 // Check if a query string matches some page information
@@ -581,38 +583,73 @@ function queryMatchesPage(query, {title, url}) {
 
     // Get rid of prefixes and identify each term's case-ness
     stripPrefix(query).split(/[\/\s]+/).forEach(function(part) {
-      // NB: Add the term to the front, so the last term is processed first as
-      // it will fail-to-match faster than earlier terms that already matched
-      // when doing an incremental search.
-      queryParts.unshift({
-        ignoreCase: part == part.toLowerCase(),
+      let ignoreCase = part == part.toLowerCase();
+      queryParts.push({
+        ignoreCase: ignoreCase,
         term: part
       });
+
+      // Remember if any terms are to ignore
+      queryParts.anyIgnore = queryParts.anyIgnore || ignoreCase;
     });
   }
 
-  // Fix up both the title and url in preparation for searching
-  let [title, lowerTitle] = prepareMatchText(title);
-  let [url, lowerUrl] = prepareMatchText(url);
+  // Fix up the title for searching; lazily fix the others
+  let prepTitle = prepareMatchText(title);
+  let lowerTitle, lowerUrl, prepUrl;
+
+  // Compute the lowercase title immediately if any term needs it
+  if (queryParts.anyIgnore)
+    lowerTitle = prepTitle.toLowerCase();
 
   // Make sure every term in the query matches
-  return queryParts.every(function({ignoreCase, term}) {
+  for (let i = queryParts.length; --i >= 0; ) {
+    let queryPart = queryParts[i];
+    let term = queryPart.term;
+
     // For case insensitive terms, match against the lowercase text
-    if (ignoreCase) {
-      return matchesBoundary(term, lowerTitle, title) ||
-             matchesBoundary(term, lowerUrl, url);
+    if (queryPart.ignoreCase) {
+      if (matchesBoundary(term, lowerTitle, prepTitle))
+        continue;
+
+      // Now prepare the other text if they aren't ready
+      if (prepUrl == null) {
+        prepUrl = prepareMatchText(url);
+        lowerUrl = prepUrl.toLowerCase();
+      }
+      else if (lowerUrl == null)
+        lowerUrl = prepUrl.toLowerCase();
+
+      // Check the url if the title didn't match
+      if (matchesBoundary(term, lowerUrl, prepUrl))
+        continue;
+      return false;
     }
 
     // For case sensitive terms, just use the original casing text
-    return matchesBoundary(term, title, title) ||
-           matchesBoundary(term, url, url);
-  });
+    if (matchesBoundary(term, prepTitle, prepTitle))
+      continue;
+
+    // Prepare the url for a case sensitive check
+    if (prepUrl == null)
+      prepUrl = prepareMatchText(url);
+    if (matchesBoundary(term, prepUrl, prepUrl))
+      continue;
+    return false;
+  }
+  return true;
 }
 
 // Remove common protocol and subdomain prefixes
 function stripPrefix(text) {
-  return text.replace(/^(?:(?:ftp|https?):\/{0,2})?(?:ftp|w{3}\d*)?\.?/, "");
+  // Don't bother creating a new string if there's nothing to replace
+  if (text.search(stripPrefix.pattern) == -1)
+    return text;
+  return text.replace(stripPrefix.pattern, "");
 }
+
+// Look for http/https/ftp and some common subdomains
+stripPrefix.pattern = /^(?:(?:ftp|https?):\/{0,2})?(?:ftp|w{3}\d*)?\.?/;
 
 // Update the input history with some input and page info
 function updateAdaptive(input, pageInfo) {
