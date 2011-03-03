@@ -1596,6 +1596,7 @@ function addDashboard(window) {
   history.allPagesByFrecency = Svc.History.DBConnection.createAsyncStatement(
     "SELECT title, url " +
     "FROM moz_places " +
+    "WHERE AUTOCOMPLETE_MATCH(:query, url, title, '', 0, 0, 0, 0, 2, 0) " +
     "ORDER BY frecency DESC " +
     "LIMIT :offset, " + PAGES_PER_CHUNK);
 
@@ -1708,6 +1709,7 @@ function addDashboard(window) {
   history.searchPlaces = function(offset) {
     let statement = history.allPagesByFrecency;
     statement.params.offset = offset;
+    statement.params.query = history.lastQuery;
 
     // Filter out history results based on the current query
     let thisSearch = history.activeSearch = statement.executeAsync({
