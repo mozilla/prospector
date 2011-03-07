@@ -3317,6 +3317,9 @@ function addDashboard(window) {
       statusLine.reset();
       tabPreview.reset();;
     }, false);
+
+    // Start updating the notification in-case it's the first one
+    notifications.startTimer();
   };
 
   // Provide a way to pause/unpause
@@ -3329,44 +3332,53 @@ function addDashboard(window) {
         return;
       notifications._paused = val;
 
-      // Nothing more to do if we're unpausing
-      if (!notifications.paused)
+      // Re-start the update timer when unpausing
+      if (!notifications.paused) {
+        notifications.startTimer();
         return;
+      }
 
-      // Make all notifications opaque
-      Array.forEach(notifications.childNodes, function(notification) {
-        notification.style.opacity = "1";
-      });
+      // Stop the update timer if necessary
+      notifications.stopTimer();
+
+      // Make sure all notifications are opaque
+      let children = notifications.childNodes;
+      for (let i = children.length; --i >= 0; )
+        children[i].style.opacity = "1";
     }
   });
   notifications._paused = false;
 
-  // Continue updating when closing
-  onClose(function() {
-    notifications.paused = false;
-  });
+  // Start a repeating timer if not already started
+  notifications.startTimer = function() {
+    if (notifications.updateTimer != null)
+      return;
+    notifications.updateTimer = setInterval(function() {
+      notifications.update();
+    }, 100);
+  };
 
-  // Pause updating when opening
-  onOpen(function(reason) {
-    notifications.paused = true;
-
-    // Re-show the notifications that have been hidden
-    Array.forEach(notifications.childNodes, function(notification) {
-      notification.collapsed = false;
-    });
-  });
+  // Stop the repeating timer to avoid updating state
+  notifications.stopTimer = function() {
+    if (notifications.updateTimer == null)
+      return;
+    clearInterval(notifications.updateTimer);
+    notifications.updateTimer = null;
+  };
 
   // Keep updating notification icons and remove old ones
-  let notifyInt = setInterval(function() {
-    // Don't update the state when paused
-    if (notifications.paused)
-      return;
+  notifications.update = function() {
+    // Remember if there's more to update
+    let moreUpdates = false;
 
     // Figure out opaqueness of all notifications
-    Array.forEach(notifications.childNodes, function(notification) {
+    let children = notifications.childNodes;
+    for (let i = children.length; --i >= 0; ) {
+      let notification = children[i];
+
       // Skip notifications that aren't visible anyway
       if (notification.collapsed)
-        return;
+        continue;
 
       // Update until 600 iterations (60 seconds)
       let state = ++notification.state;
@@ -3379,10 +3391,35 @@ function addDashboard(window) {
         // Decrease opacity to 0 as state -> 600
         opacity = Math.pow(opacity * Math.pow(1 - state / 600, .3), .2);
         notification.style.opacity = opacity;
+
+        // Not at the last state, so we must have more
+        moreUpdates = true;
       }
-    });
-  }, 100);
-  unload(function() clearInterval(notifyInt), window);
+    }
+
+    // Only stop the timer if there's nothing left to update
+    if (moreUpdates)
+      return;
+    notifications.stopTimer();
+  };
+
+  // Make sure to clean up the timer if it's still going when unloading
+  unload(function() notifications.stopTimer(), window);
+
+  // Continue updating when closing
+  onClose(function() {
+    notifications.paused = false;
+  });
+
+  // Pause updating when opening
+  onOpen(function(reason) {
+    notifications.paused = true;
+
+    // Re-show the notifications that have been hidden
+    let children = notifications.childNodes;
+    for (let i = children.length; --i >= 0; )
+      children[i].collapsed = false;
+  });
 
   // Pause updating opacity if the user might click
   notifications.addEventListener("mouseover", function() {
