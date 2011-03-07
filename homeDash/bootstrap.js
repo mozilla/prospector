@@ -3010,42 +3010,38 @@ function addDashboard(window) {
     statusLine.value = text;
   };
 
-  // Show loading status of the current tab
-  statusLine.setLoading = function(state) {
-    switch (state) {
-      // Only show start when transitioning from stopped
-      case "start":
-        if (statusLine.loadingState == null)
-          break;
-        return;
+  // Set the status text of a background status
+  statusLine.setBackground = function(text) {
+    // Ignore duplicate background statuses
+    if (statusLine.backgroundText == text)
+      return;
 
-      // Only show stop if not already stopped
-      case "stop":
-        if (statusLine.loadingState == null)
-          return;
-        state = null;
-        break;
+    // Show this status immediately
+    statusLine.backgroundText = text;
+    statusLine.collapsed = false;
+    statusLine.value = text;
 
-      // Only show load when transitioning from start
-      case "load":
-        if (statusLine.loadingState == "start")
-          break;
-        return;
+    // Cancel any previous timers
+    if (statusLine.backgroundTimer != null)
+      statusLine.backgroundTimer();
 
-      default:
-        return;
-    }
+    // Start a timer that will clear out the background status
+    statusLine.backgroundTimer = async(function() {
+      statusLine.backgroundTimer = null;
 
-    // Update the current state and show it (or remove it)
-    statusLine.loadingState = state;
-    statusLine.reset();
+      // Clear out the background text if it's still being shown
+      if (statusLine.value == statusLine.backgroundText)
+        statusLine.reset();
+
+      statusLine.backgroundText = "";
+    }, 10000);
   };
 
   // Clear out the status line when closing or resetting
   statusLine.reset = function() {
-    // Show a connecting or loading state instead of just clearing
-    if (statusLine.loadingState != null) {
-      statusLine.set("progress" + statusLine.loadingState);
+    // Show the background status instead of nothing
+    if (statusLine.backgroundTimer != null) {
+      statusLine.value = statusLine.backgroundText;
       return;
     }
 
@@ -3073,33 +3069,18 @@ function addDashboard(window) {
   // Initialize and get rid of any status
   onClose(statusLine.reset);
 
-  // Track the state and progress of the current tab
-  let progressListener = {
-    onLocationChange: function() {},
+  // Show the title when the tab is selected or focused
+  listen(window, window, "focus", function(event) {
+    // Ignore non-window targets
+    let targetWindow = event.target.top;
+    if (targetWindow == null)
+      return;
 
-    // Indicate that the page is loading
-    onProgressChange: function() {
-      statusLine.setLoading("load");
-    },
-
-    onSecurityChange: function() {},
-
-    onStateChange: function(progress, request, state, status) {
-      // Only care about the top level state changes
-      if (!(state & Ci.nsIWebProgressListener.STATE_IS_WINDOW))
-        return;
-
-      // Track only starts and stops
-      if (state & Ci.nsIWebProgressListener.STATE_START)
-        statusLine.setLoading("start");
-      else if (state & Ci.nsIWebProgressListener.STATE_STOP)
-        statusLine.setLoading("stop");
-    },
-
-    onStatusChange: function() {}
-  };
-  gBrowser.addProgressListener(progressListener);
-  unload(function() gBrowser.removeProgressListener(progressListener), window);
+    // Only care about focus to the selected tab
+    let tab = gBrowser.selectedTab;
+    if (targetWindow == tab.linkedBrowser.contentWindow)
+      statusLine.setBackground(tab.label);
+  });
 
   // Detect when we start shifting
   listen(window, window, "keydown", function(event) {
@@ -3113,9 +3094,11 @@ function addDashboard(window) {
       statusLine.shifted = false;
   });
 
-  // Clear out any existing loading status when switching tabs
-  listen(window, gBrowser.tabContainer, "TabSelect", function(event) {
-    statusLine.setLoading("stop");
+  // Show the title when it changes for the current tab
+  listen(window, gBrowser.tabContainer, "TabAttrModified", function(event) {
+    let tab = gBrowser.selectedTab;
+    if (event.target == tab)
+      statusLine.setBackground(tab.label);
   });
 
   // Don't allow opening new windows while clicking with shift
