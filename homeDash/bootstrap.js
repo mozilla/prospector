@@ -58,6 +58,9 @@ XPCOMUtils.defineLazyGetter(global, "prefs", function() {
   return new Preferences("extensions.prospector.homeDash.");
 });
 
+// How long to wait before reshowing other data on leaving another data
+const RESHOW_DELAY = 100;
+
 /**
  * Remove all existing chrome of the browser window
  */
@@ -1014,10 +1017,10 @@ function addDashboard(window) {
     searchPreview1.reset();
     searchPreview2.reset();
 
-    // Immediately show history but wait to show sites and tabs
+    // Immediately show various data in the dashboard
     history.show();
-    sites.show(1000);
-    tabs.show(1000);
+    sites.show();
+    tabs.show();
 
     // Filter out the sites display as well as get the top sites
     let topMatch = sites.search(query)[0];
@@ -1529,10 +1532,10 @@ function addDashboard(window) {
     entryBox.unemphasize = function() {
       entryBox.style.textDecoration = "";
 
-      sites.show(1000);
-      statusLine.reset();
       pagePreview.reset();
-      tabs.show(1000);
+      sites.show(RESHOW_DELAY);
+      statusLine.reset();
+      tabs.show(RESHOW_DELAY);
     };
 
     // Save the page preview when clicked
@@ -2159,7 +2162,7 @@ function addDashboard(window) {
       siteIcon.collapsed = true;
       pagePreview.reset();
       statusLine.reset();
-      tabs.show(1000);
+      tabs.show(RESHOW_DELAY);
 
       // Revert to the highlighting behavior of the last query
       sites.search({repeat: true});
@@ -2219,7 +2222,7 @@ function addDashboard(window) {
       }
 
       // Set the desired opacity, but wait if it's a repeat search
-      siteBox.setOpacity(opacity + "", repeat ? 1000 : 0);
+      siteBox.setOpacity(opacity + "", repeat ? RESHOW_DELAY : 0);
     });
     return pageMatches;
   };
@@ -2466,7 +2469,7 @@ function addDashboard(window) {
 
         // Clear out the preview of this tab
         pinBox.addEventListener("mouseout", function() {
-          sites.show(1000);
+          sites.show(RESHOW_DELAY);
           statusLine.reset();
           tabPreview.reset();
         }, false);
@@ -2786,7 +2789,7 @@ function addDashboard(window) {
 
     // Only reshow sites if it was supposed to be shown
     if (tabs.reshowSites)
-      sites.show(1000);
+      sites.show(RESHOW_DELAY);
   };
 
   // Keep track of what tabs we're still waiting to take a thumbnail
