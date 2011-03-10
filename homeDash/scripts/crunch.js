@@ -134,8 +134,9 @@ function collectBookmarkKeywords() {
   });
 }
 
-// Save an in-memory array of adaptive data
+// Save an in-memory array of adaptive and domain data
 let adaptiveData = [];
+let domainData = [];
 
 // Figure out what keywords might be useful to suggest to the user
 let sortedKeywords = [];
@@ -154,7 +155,7 @@ function processAdaptive() {
   function explode(text, splitter) {
     return (text || "").toLowerCase().split(splitter).filter(function(word) {
       // Only interested in not too-short words
-      return word && word.length > 3;
+      return word && word.length >= 3;
     });
   }
 
@@ -191,22 +192,42 @@ function processAdaptive() {
     addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
   });
 
-  // Add in some typed subdomains/domains as potential keywords
-  function addDomains(extraQuery) {
-    let query = "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery;
-    let cols = ["url"];
-    let stmt = Utils.createStatement(Svc.History.DBConnection, query);
-    Utils.queryAsync(stmt, cols).forEach(function({url}) {
-      try {
-        allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
-      }
-      // Must have be some strange format url that we probably don't care about
-      catch(ex) {}
-    });
-  }
-  addDomains("AND typed = 1 ORDER BY frecency DESC");
-  addDomains("ORDER BY visit_count DESC LIMIT 100");
-  addDomains("ORDER BY last_visit_date DESC LIMIT 100");
+  // Add in some domains as potential keywords
+  let domains = [];
+  let query = "SELECT rev_host " +
+              "FROM moz_places " +
+              "WHERE rev_host NOT NULL AND rev_host != '.' " +
+              "GROUP BY rev_host " +
+              "ORDER BY MAX(typed) = 1 DESC, " +
+                       "MAX(frecency) DESC, " +
+                       "MAX(visit_count) DESC, " +
+                       "MAX(last_visit_date) DESC";
+  let cols = ["rev_host"];
+  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  Utils.queryAsync(stmt, cols).forEach(function({rev_host}) {
+    // Remove the trailing dot and make it the right order
+    rev_host = rev_host.slice(0, -1);
+    let domain = rev_host.split("").reverse().join("");
+
+    // Remove submdomains from the full domain
+    try {
+      domain = Services.eTLD.getBaseDomainFromHost(domain);
+    }
+    catch(ex) {}
+
+    // Ignore duplicate domains
+    if (domains.indexOf(domain) != -1)
+      return;
+
+    allKeywords.push(explode(domain, /\./));
+    domains.push(domain);
+  });
+
+  // Generate a bunch of page infos for the collected domains
+  domains.forEach(function(domain) {
+    let url = "http://" + domain + "/";
+    domainData.push([domain, makePageInfo("", url)]);
+  });
 
   // Add bookmark keywords to the list of potential keywords
   let query = "SELECT * FROM moz_keywords";

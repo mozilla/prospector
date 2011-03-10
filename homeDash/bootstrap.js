@@ -1028,9 +1028,10 @@ function addDashboard(window) {
     // Use the single search as a top match if searching
     if (searchPreview2.engineIcon != null)
       topMatch = searchPreview2.engineIcon.getPageInfo(query);
-    // Get top matches in order: keyword, adaptive, top site
+    // Get top matches in order: keyword, adaptive, domain, top site
     else
-      topMatch = getKeywordInfo(query) || getAdaptiveInfo(query) || topMatch;
+      topMatch = getKeywordInfo(query) || getAdaptiveInfo(query) ||
+                 getDomainInfo(query) || topMatch;
 
     // Do a full history search with a suggested top site
     history.search(query, topMatch);
@@ -1482,8 +1483,11 @@ function addDashboard(window) {
   history.add = function(pageInfo) {
     // Don't allow duplicate results with the same url
     let existingResult = history.resultMap[pageInfo.url];
-    if (existingResult != null)
+    if (existingResult != null) {
+      // Might have a better title to display
+      existingResult.updatePageInfo(pageInfo);
       return existingResult;
+    }
 
     let entryBox = createNode("hbox");
     entryBox.setAttribute("align", "center");
@@ -1526,6 +1530,18 @@ function addDashboard(window) {
         sites.hide();
         tabs.hide();
       }
+    };
+
+    // Provide a way to get a newer page info
+    entryBox.updatePageInfo = function(newPageInfo) {
+      // Don't bother if not fake or new stuff is fake
+      if (!pageInfo.fakeTitle || newPageInfo.fakeTitle)
+        return;
+
+      // Update display with new values
+      pageInfo.fakeTitle = false;
+      pageInfo.title = newPageInfo.title;
+      titleNode.setAttribute("value", pageInfo.title);
     };
 
     // Stop emphasizing this entry and remove its preview
@@ -1767,17 +1783,7 @@ function addDashboard(window) {
             continue;
 
           // Construct a page info now that we know it matches
-          let pageInfo = {
-            title: title,
-            url: url,
-          };
-
-          // Fill in some more page info values now that we want it
-          let URI = Services.io.newURI(pageInfo.url, null, null);
-          if (pageInfo.title == "")
-            pageInfo.title = getHostText(URI);
-          pageInfo.icon = Svc.Favicon.getFaviconImageForPage(URI).spec;
-          history.add(pageInfo);
+          history.add(makePageInfo(title, url));
 
           // Stop processing current and future results if we have enough
           if (history.childNodes.length > 60) {

@@ -77,6 +77,11 @@ function cmd(command) {
 
 // Search through the adaptive info in-order for a matching query
 function getAdaptiveInfo(query) {
+  return getCachedInfo(query, adaptiveData);
+}
+
+// Search through some cached data for a matching page info
+function getCachedInfo(query, cachedData) {
   // Short circuit for empty queries
   let queryLen = query.length;
   if (queryLen == 0)
@@ -84,7 +89,7 @@ function getAdaptiveInfo(query) {
 
   // Continue until one matching adaptive data is found
   let matchingInfo;
-  adaptiveData.some(function([input, pageInfo]) {
+  cachedData.some(function([input, pageInfo]) {
     // Not interested in an input that doesn't prefix match
     if (input.slice(0, queryLen) != query)
       return false;
@@ -99,6 +104,11 @@ function getAdaptiveInfo(query) {
     return true;
   });
   return matchingInfo;
+}
+
+// Search through the domain info in-order for a matching query
+function getDomainInfo(query) {
+  return getCachedInfo(query, domainData);
 }
 
 // Extract the sub/domains of a URI
@@ -260,9 +270,14 @@ function hosty(URI, noPort) {
 // Make a page info object and fill in some data
 function makePageInfo(title, url) {
   let URI = Services.io.newURI(url, null, null);
+  let fakeTitle = !title;
+  if (fakeTitle)
+    title = getHostText(URI);
+
   return {
+    fakeTitle: fakeTitle,
     icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
-    title: title || getHostText(URI),
+    title: title,
     url: url
   };
 }
