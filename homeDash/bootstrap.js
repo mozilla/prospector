@@ -3622,12 +3622,20 @@ function addDashboard(window) {
 
   // Show the temporary browser controls
   controls.activate = function() {
+    // Hide any popups and menus that might be open
+    if (controls.openPopup != null)
+      controls.openPopup.hidePopup();
+
     controls.show();
   };
 
   // Hide and clean up state from showing controls
   controls.reset = function() {
     controls.hide();
+
+    // Move the Firefox icon and controls back to the default position
+    controlStack.setAttribute("left", "0");
+    controlStack.setAttribute("top", "0");
   };
 
   // Add various buttons as controls
@@ -3663,12 +3671,29 @@ function addDashboard(window) {
   // Get ready to show controls when the mouse is pressed
   listen(window, window, "mousedown", function(event) {
     fxIcon.watchMove();
+
+    // Move the controls close to where the user right-clicked
+    let {button, clientX, clientY} = event;
+    if (button != 2)
+      return;
+
+    controlStack.setAttribute("left", Math.max(0, clientX - 22));
+    controlStack.setAttribute("top", Math.max(0, clientY - 22));
   });
 
   // Stop watching for movement and clean up controls if necessary
   listen(window, window, "mouseup", function(event) {
     fxIcon.unWatchMove();
     controls.reset();
+  });
+
+  // Track what popup or context menu is currently open
+  listen(window, window, "popupshowing", function(event) {
+    controls.openPopup = event.target;
+  });
+
+  listen(window, window, "popuphiding", function(event) {
+    controls.openPopup = null;
   });
 
   //// 9: Mouseover event sink
