@@ -987,7 +987,11 @@ function addDashboard(window) {
       input.firstSuggestion = keyword;
 
     // Update the suggestion list with the new suggestion ordering
-    suggestList.show(input.suggestions);
+    if (input.suggestions.length > 1)
+      suggestList.show(input.suggestions);
+    // Don't bother if there's only the identity suggestion
+    else
+      suggestList.reset();
   };
 
   // Take the current value in the input box and search with it
