@@ -285,6 +285,10 @@ function addDashboard(window) {
       if (typeof callback == "function")
         unloadCallbacks.push(callback);
 
+      // Stop the preview in-case it's loading, but only if we can
+      if (browser.stop != null)
+        browser.stop();
+
       // Start loading the provided url
       browser.loadURI(url);
       stack.lastRequestedUrl = url;
@@ -293,10 +297,6 @@ function addDashboard(window) {
       if (stack.collapsed) {
         stack.unlisten();
         stack.listener = function() {
-          // Might get the load from the previous page, so just ignore
-          if (browser.docShell.currentDocumentChannel.originalURI.spec != url)
-            return;
-
           // Only trigger once to unhide the preview
           stack.unlisten();
           stack.collapsed = false;
@@ -1574,6 +1574,41 @@ function addDashboard(window) {
     return entryBox;
   };
 
+  // Add the query itself or complete the best matching domain
+  history.addIdentityMatch = function(query) {
+    // Can't provide a domain match with nothing!
+    if (query == "")
+      return;
+
+    // Show an entry with what the user typed
+    let pageInfo = getDomainInfo(query);
+    if (pageInfo == null) {
+      let fixedUrl = Cc["@mozilla.org/docshell/urifixup;1"].
+        getService(Ci.nsIURIFixup).createFixupURI(query, 1).spec;
+      pageInfo = makePageInfo(query, fixedUrl);
+    }
+    // Complete to the best matching domain
+    else {
+      // Fix up the title for domain matches without tampering the original
+      pageInfo = {
+        icon: pageInfo.icon,
+        title: pageInfo.url.match(/^http:\/\/([^\/]+)\/$/)[1],
+        url: pageInfo.url,
+      };
+    }
+
+    // Insert at the beginning but not before the top match
+    let entryBox = history.add(pageInfo);
+    let beforeBox = history.topMatchBox;
+    if  (beforeBox == null)
+      beforeBox = history.firstChild;
+    else
+      beforeBox = beforeBox.nextSibling;
+    history.insertBefore(entryBox, beforeBox);
+
+    return entryBox;
+  };
+
   // Specially handle adding the single top match result
   history.addTopMatch = function(pageInfo) {
     // Remove styling of any previous top match
@@ -1597,6 +1632,7 @@ function addDashboard(window) {
 
     // Add the top match and remember it for later
     let entryBox = history.topMatchBox = history.add(pageInfo);
+    history.insertBefore(entryBox, history.firstChild);
     history.highlight(entryBox, true);
 
     // Specially style the top match
@@ -1687,10 +1723,9 @@ function addDashboard(window) {
         }
       });
 
-      // Make sure the top match exists and is first
-      let entryBox = history.addTopMatch(topMatch);
-      if (entryBox != null)
-        history.insertBefore(entryBox, history.firstChild);
+      // Add some special matches to the front
+      history.addTopMatch(topMatch);
+      history.addIdentityMatch(query);
 
       // Update the query for active and new searches
       history.lastQuery = query;
@@ -1712,8 +1747,9 @@ function addDashboard(window) {
       if (query == "")
         return;
 
-      // Add the top match if we have one
+      // Add some special matches to the front if necessary
       history.addTopMatch(topMatch);
+      history.addIdentityMatch(query);
 
       // Initialize the some data to process places results
       history.lastOffset = 0;
