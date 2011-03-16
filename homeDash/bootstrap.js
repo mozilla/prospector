@@ -911,7 +911,6 @@ function addDashboard(window) {
   searchBox.style.pointerEvents = "auto";
 
   let input = createNode("textbox");
-  input.setAttribute("timeout", "1");
   input.setAttribute("type", "search");
   searchBox.appendChild(input);
 
@@ -1091,7 +1090,6 @@ function addDashboard(window) {
 
   // Clear out current state when closing
   onClose(function() {
-    input.expectEnter = false;
     input.firstEmptyOpen = true;
     input.firstSuggestion = "";
     input.lastQuery = null;
@@ -1164,6 +1162,12 @@ function addDashboard(window) {
     input.search();
   }, false);
 
+  // Immediately trigger the command instead of waiting on a timer
+  input.addEventListener("input", function(event) {
+    event.stopPropagation();
+    input.doCommand();
+  }, true);
+
   // Handle some special key hits from the input box
   input.addEventListener("keydown", function(event) {
     let {firstSuggestion, selectionStart, textLength, value} = input;
@@ -1173,12 +1177,6 @@ function addDashboard(window) {
       case event.DOM_VK_DOWN:
         history.highlight({direction: "down"});
         event.preventDefault();
-        break;
-
-      // Track when we see key downs for enter
-      case event.DOM_VK_ENTER:
-      case event.DOM_VK_RETURN:
-        input.expectEnter = true;
         break;
 
       // Close the dashboard when hitting escape from an empty input box
@@ -1213,25 +1211,19 @@ function addDashboard(window) {
     }
   }, false);
 
-  // Look for enter after "command" has fired
-  input.addEventListener("keyup", function(event) {
+  // Override the searchbox handling enter to select a result
+  input.addEventListener("keypress", function(event) {
     // Only care about enter and return
     switch (event.keyCode) {
       case event.DOM_VK_ENTER:
       case event.DOM_VK_RETURN:
+        // Prevent "command" from firing on enter
+        event.stopPropagation();
         break;
 
       default:
         return;
     }
-
-    // Only expect enter once, so clear it, but save it first
-    let expecting = input.expectEnter;
-    input.expectEnter = false;
-
-    // If we weren't expecting the enter, don't handle it
-    if (!expecting)
-      return;
 
     // Figure out which preview to use and url to load
     let preview, url;
@@ -1257,7 +1249,7 @@ function addDashboard(window) {
     }
 
     dashboard.usePreview(preview, url);
-  }, false);
+  }, true);
 
   // Describe the input box
   input.addEventListener("mouseover", function() {
