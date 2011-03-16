@@ -1523,7 +1523,9 @@ function addDashboard(window) {
 
     // Emphasize this entry and show its preview
     entryBox.emphasize = function(allowOtherData) {
-      entryBox.style.textDecoration = "underline";
+      let shadow = shadows.selectedInset;
+      shadow += entryBox == history.topMatchBox ? ", " + shadows.global : "";
+      entryBox.style.boxShadow = shadow;
 
       // Show the preview and indicate what click/enter will do
       pagePreview.load(pageInfo.url);
@@ -1550,7 +1552,7 @@ function addDashboard(window) {
 
     // Stop emphasizing this entry and remove its preview
     entryBox.unemphasize = function() {
-      entryBox.style.textDecoration = "";
+      entryBox.style.boxShadow = entryBox == history.topMatchBox ? shadows.global : "";
 
       pagePreview.reset();
       sites.show(RESHOW_DELAY);
@@ -1640,7 +1642,7 @@ function addDashboard(window) {
     history.highlight(entryBox, true);
 
     // Specially style the top match
-    entryBox.style.boxShadow = shadows.global;
+    entryBox.style.boxShadow = shadows.global + ", " + shadows.selectedInset;
     entryBox.style.fontSize = "20px";
     entryBox.style.fontWeight = "bold";
     entryBox.style.margin = "0 -10px 5px -5px";
