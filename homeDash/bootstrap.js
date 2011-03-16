@@ -1324,9 +1324,14 @@ function addDashboard(window) {
     let engineIcon = createNode("box");
     engines.appendChild(engineIcon);
 
+    // Figure out what to show for the icon
+    let iconUrl = images.default16;
+    if (engine.iconURI != null)
+      iconUrl = engine.iconURI.spec;
+
     // Style the search engine icon
     engineIcon.style.backgroundColor = "rgba(0, 0, 0, .3)";
-    engineIcon.style.backgroundImage = "url(" + engine.iconURI.spec + ")";
+    engineIcon.style.backgroundImage = "url(" + iconUrl + ")";
     engineIcon.style.backgroundPosition = "center center";
     engineIcon.style.backgroundRepeat = "no-repeat";
     engineIcon.style.backgroundSize = "16px 16px";
@@ -1351,7 +1356,7 @@ function addDashboard(window) {
     // Create a page info from a search query
     engineIcon.getPageInfo = function(query) {
       return {
-        icon: engine.iconURI.spec,
+        icon: iconUrl,
         title: engine.name + ": " + query,
         url: engineIcon.getSearchUrl(query)
       };
