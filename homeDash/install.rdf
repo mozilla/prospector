@@ -8,7 +8,7 @@
     <iconURL>http://mozillalabs.com/wp-content/themes/labs_project/img/prospector-header.png</iconURL>
     <id>home.dash@prospector.labs.mozilla</id>
     <name>Mozilla Labs: Prospector - Home Dash</name>
-    <version>7</version>
+    <version>8</version>
 
     <bootstrap>true</bootstrap>
     <type>2</type>
