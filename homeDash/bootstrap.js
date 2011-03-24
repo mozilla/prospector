@@ -3643,6 +3643,8 @@ function addDashboard(window) {
    ["forward", 0, 1, function() gBrowser.selectedBrowser.goForward()],
    ["reload", 0, 2, function() gBrowser.selectedBrowser.reload()],
    ["stop", 0, 3, function() gBrowser.selectedBrowser.stop()],
+   ["closeTab", 1, 0, function(event) showPage(event.shiftKey, true)],
+   ["undoClose", 1, 1, function() window.undoCloseTab()],
   ].forEach(function([name, row, col, onMouseUp]) {
     let button = addImage(controls, {
       background: "rgb(244, 244, 244)",
@@ -3792,6 +3794,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Get references to the packaged images
   ["back24",
+   "closeTab24",
    "default16",
    "done16",
    "edit16",
@@ -3799,6 +3802,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
    "forward24",
    "reload24",
    "stop24",
+   "undoClose24",
    "zoomIn16",
   ].forEach(function(fileName) {
     images[fileName] = addon.getResourceURI("images/" + fileName + ".png").spec;
