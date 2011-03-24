@@ -3541,7 +3541,12 @@ function addDashboard(window) {
 
   //// 7: Firefox icon
 
-  let fxIcon = addImage(masterStack, {
+  let controlStack = createNode("stack");
+  controlStack.setAttribute("left", "0");
+  controlStack.setAttribute("top", "0");
+  masterStack.appendChild(controlStack);
+
+  let fxIcon = addImage(controlStack, {
     left: 0,
     opacity: .3,
     pointerEvents: "auto",
@@ -3557,16 +3562,31 @@ function addDashboard(window) {
   // Remember how much has been scrolled so far
   fxIcon.scrollAmount = 0;
 
+  // Provide a way to detect movement over the icon
+  fxIcon.watchMove = function() {
+    if (fxIcon.unMove != null)
+      return;
+
+    // Show the transient controls when there's movement
+    fxIcon.unMove = listen(window, fxIcon, "mousemove", function() {
+      fxIcon.unWatchMove();
+      controls.activate();
+    });
+  };
+
+  // Stop watching for movement over the icon
+  fxIcon.unWatchMove = function() {
+    if (fxIcon.unMove == null)
+      return;
+    fxIcon.unMove();
+    fxIcon.unMove = null;
+  };
+
   // Make sure the icon looks right
   onClose(fxIcon.reset);
 
   // Allow toggling the dashboard by clicking
-  fxIcon.addEventListener("click", function(event) {
-    if (event.button == 2) {
-      showPage(event.shiftKey, true);
-      return;
-    }
-
+  fxIcon.addEventListener("mouseup", function(event) {
     dashboard.toggle();
   }, false);
 
@@ -3593,10 +3613,68 @@ function addDashboard(window) {
     showPage(detail < 0, false);
   }, false);
 
-  //// 8: Mouseover event sink
+  //// 8: Transient Controls
+
+  let controls = createNode("stack", true);
+  controls.setAttribute("top", "44");
+  controls.setAttribute("left", "24");
+  controlStack.appendChild(controls);
+
+  // Show the temporary browser controls
+  controls.activate = function() {
+    controls.show();
+  };
+
+  // Hide and clean up state from showing controls
+  controls.reset = function() {
+    controls.hide();
+  };
+
+  // Add various buttons as controls
+  [["back", 0, 0, function() gBrowser.selectedBrowser.goBack()],
+   ["forward", 0, 1, function() gBrowser.selectedBrowser.goForward()],
+   ["reload", 0, 2, function() gBrowser.selectedBrowser.reload()],
+   ["stop", 0, 3, function() gBrowser.selectedBrowser.stop()],
+  ].forEach(function([name, row, col, onMouseUp]) {
+    let button = addImage(controls, {
+      background: "rgb(244, 244, 244)",
+      borderRadius: "3px",
+      left: col * 26,
+      pointerEvents: "auto",
+      src: images[name + 24],
+      top: row * 26,
+    });
+
+    button.addEventListener("mouseover", function() {
+      statusLine.set("control." + name);
+    }, false);
+
+    button.addEventListener("mouseout", function() {
+      statusLine.reset();
+    }, false);
+
+    button.addEventListener("mouseup", onMouseUp, false);
+  });
+
+  onClose(function() {
+    controls.reset();
+  });
+
+  // Get ready to show controls when the mouse is pressed
+  listen(window, window, "mousedown", function(event) {
+    fxIcon.watchMove();
+  });
+
+  // Stop watching for movement and clean up controls if necessary
+  listen(window, window, "mouseup", function(event) {
+    fxIcon.unWatchMove();
+    controls.reset();
+  });
+
+  //// 9: Mouseover event sink
 
   let mouseSink = createNode("box");
-  masterStack.insertBefore(mouseSink, fxIcon);
+  masterStack.insertBefore(mouseSink, controlStack);
 
   // Capture mouse events so nodes under the mouse don't mouseover immediately
   mouseSink.capture = function() {
@@ -3628,7 +3706,7 @@ function addDashboard(window) {
   // Restore normal events to the main browser
   onClose(mouseSink.reset);
 
-  //// 8: Random debug/help links
+  //// 10: Random debug/help links
 
   let linkSet = createNode("hbox");
   linkSet.setAttribute("bottom", "0");
@@ -3688,10 +3766,14 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Get references to the packaged images
-  ["default16",
+  ["back24",
+   "default16",
    "done16",
    "edit16",
    "firefox22",
+   "forward24",
+   "reload24",
+   "stop24",
    "zoomIn16",
   ].forEach(function(fileName) {
     images[fileName] = addon.getResourceURI("images/" + fileName + ".png").spec;
