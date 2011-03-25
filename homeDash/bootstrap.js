@@ -245,7 +245,6 @@ function addDashboard(window) {
     stack.appendChild(browser);
 
     browser.style.boxShadow = shadows.global;
-    browser.style.overflow = "hidden";
 
     // Put a screen over the browser to accept clicks
     let screen = createNode("box");
@@ -374,12 +373,8 @@ function addDashboard(window) {
       if (lastEntry != null)
         history.addEntry(lastEntry, true);
 
-      // XXX Set overflow before then unset after to force scrollbars to appear
-      targetBrowser.style.overflow = "auto";
-
       // Swap the docshells then fix up various properties
       targetBrowser.swapDocShells(browser);
-      targetBrowser.style.overflow = "";
       targetBrowser.webNavigation.sessionHistory = history;
       targetBrowser.attachFormFill();
       gBrowser.setTabTitle(targetTab);
