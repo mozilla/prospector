@@ -101,7 +101,7 @@ function removeChrome(window) {
  */
 function addDashboard(window) {
   let {clearInterval, document, gBrowser, setInterval} = window;
-  let {addDragListener, addImage, addMoveLimitListener, async, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
+  let {addDragListener, addImage, addMoveLimitListener, async, change, createNode, createThumbnail, maxBoxObject, sixthWidth} = makeWindowHelpers(window);
 
   // Track what to do when the dashboard goes away
   let onClose = makeTrigger();
@@ -3555,6 +3555,15 @@ function addDashboard(window) {
     top: 0,
   });
 
+  // Show a locked icon for identified sites
+  let lockedIcon = addImage(controlStack, {
+    collapsed: true,
+    left: 10,
+    opacity: .5,
+    src: images.locked16,
+    top: 6,
+  });
+
   // Just go back to the default opacity when closing the dashboard
   fxIcon.reset = function() {
     fxIcon.style.opacity = dashboard.open ? "1" : ".3";
@@ -3613,6 +3622,24 @@ function addDashboard(window) {
     // Do a "next tab" for down or right scrolls
     showPage(detail < 0, false);
   }, false);
+
+  // Detect when the identity mode changes
+  change(window.gIdentityHandler, "setMode", function(orig) {
+    return function(mode) {
+      // Decide if the locked icon should be shown or not
+      let collapsed = true;
+      switch (mode) {
+        case window.gIdentityHandler.IDENTITY_MODE_DOMAIN_VERIFIED:
+        case window.gIdentityHandler.IDENTITY_MODE_IDENTIFIED:
+          collapsed = false;
+          break;
+      }
+      lockedIcon.collapsed = collapsed;
+
+      // Do the original work even if not visible
+      return orig.call(window.gIdentityHandler, mode);
+    };
+  });
 
   //// 8: Transient Controls
 
@@ -3825,6 +3852,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
    "edit16",
    "firefox22",
    "forward24",
+   "locked16",
    "reload24",
    "stop24",
    "undoClose24",
