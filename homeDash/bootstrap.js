@@ -1094,7 +1094,6 @@ function addDashboard(window) {
 
   // Clear out current state when closing
   onClose(function() {
-    input.firstEmptyOpen = true;
     input.firstSuggestion = "";
     input.lastQuery = null;
     input.lastRawQuery = "";
@@ -1116,13 +1115,8 @@ function addDashboard(window) {
           input.toggleEngine(searchPreview2.engineIcon);
 
         // For power users, allow getting the current tab's location when empty
-        if (input.value == "") {
-          // Ignore the very first opening
-          if (input.firstEmptyOpen)
-            input.firstEmptyOpen = false;
-          else
-            input.value = gBrowser.selectedBrowser.currentURI.spec;
-        }
+        if (input.value == "")
+          input.value = gBrowser.selectedBrowser.currentURI.spec;
 
         break;
 
