@@ -717,6 +717,10 @@ function addDashboard(window) {
 
     // Watch for clicks to do special things when switching
     listeners.push(listen(window, window, "click", function(event) {
+      // Don't aggressively handle clicks if controls are handling
+      if (controls.shown)
+        return;
+
       // Close the current tab on right-click
       if (event.button == 2)
         showPage(event.shiftKey, true);
@@ -3643,9 +3647,25 @@ function addDashboard(window) {
    ["forward", 0, 1, function() gBrowser.selectedBrowser.goForward()],
    ["reload", 0, 2, function() gBrowser.selectedBrowser.reload()],
    ["stop", 0, 3, function() gBrowser.selectedBrowser.stop()],
-   ["closeTab", 1, 0, function(event) showPage(event.shiftKey, true)],
+   ["closeTab", 1, 0, function(event) showPage(event.shiftKey, true),
+    function(closeTabButton) {
+      closeTabButton.dontDismiss = true;
+      closeTabButton.scrollAmount = 0;
+
+      // Allow scrolling through tabs when pointing at the icon
+      closeTabButton.addEventListener("MozMousePixelScroll", function({detail}) {
+        // Keep how much has been scrolled and switch after a threshold
+        closeTabButton.scrollAmount += detail;
+        if (Math.abs(closeTabButton.scrollAmount) < 45)
+          return;
+        closeTabButton.scrollAmount = 0;
+
+        // Do a "next tab" for down or right scrolls
+        showPage(detail < 0, false);
+      }, false);
+    }],
    ["undoClose", 1, 1, function() window.undoCloseTab()],
-  ].forEach(function([name, row, col, onMouseUp]) {
+  ].forEach(function([name, row, col, onMouseUp, doExtra]) {
     let button = addImage(controls, {
       background: "rgb(244, 244, 244)",
       borderRadius: "3px",
@@ -3664,6 +3684,10 @@ function addDashboard(window) {
     }, false);
 
     button.addEventListener("mouseup", onMouseUp, false);
+
+    // Do some extra stuff for this button if necessary
+    if (typeof doExtra == "function")
+      doExtra(button);
   });
 
   onClose(function() {
@@ -3686,6 +3710,10 @@ function addDashboard(window) {
   // Stop watching for movement and clean up controls if necessary
   listen(window, window, "mouseup", function(event) {
     fxIcon.unWatchMove();
+
+    // Don't aggressively reset for certain targets
+    if (event.originalTarget.dontDismiss)
+      return;
     controls.reset();
   });
 
