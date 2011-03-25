@@ -240,7 +240,6 @@ function addDashboard(window) {
     let browser = createNode("browser");
     browser.setAttribute("autocompletepopup", gBrowser.getAttribute("autocompletepopup"));
     browser.setAttribute("contextmenu", gBrowser.getAttribute("contentcontextmenu"));
-    browser.setAttribute("disablehistory", "true");
     browser.setAttribute("tooltip", gBrowser.getAttribute("contenttooltip"));
     browser.setAttribute("type", "content");
     stack.appendChild(browser);
@@ -355,9 +354,25 @@ function addDashboard(window) {
       openPage.registerOpenPage(previewURI);
       targetBrowser.registeredOpenURI = previewURI;
 
-      // Just take the old history to re-set after swapping
-      // TODO: Add the preview as an entry (disablehistory prevents us for now)
-      let history = targetBrowser.sessionHistory;
+      // Save the last history entry from the preview if it has loaded
+      let history = browser.sessionHistory.QueryInterface(Ci.nsISHistoryInternal);
+      let lastEntry;
+      if (history.count > 0) {
+        lastEntry = history.getEntryAtIndex(history.index, false);
+        history.PurgeHistory(history.count);
+      }
+
+      // Copy over the history from the target browser if it's not empty
+      let origHistory = targetBrowser.sessionHistory;
+      for (let i = 0; i <= origHistory.index; i++) {
+        let origEntry = origHistory.getEntryAtIndex(i, false);
+        if (origEntry.URI.spec != "about:blank")
+          history.addEntry(origEntry, true);
+      }
+
+      // Add the last entry from the preview; in-progress preview will add itself
+      if (lastEntry != null)
+        history.addEntry(lastEntry, true);
 
       // XXX Set overflow before then unset after to force scrollbars to appear
       targetBrowser.style.overflow = "auto";
