@@ -2332,6 +2332,9 @@ function addDashboard(window) {
   // Track that this tab is about to be removed
   tabs.prepRemove = function(tab) {
     tabs.toRemove.push(tab);
+
+    // Remove focus from the page so that events are always delivered
+    tab.linkedBrowser.blur();
   };
 
   // Actually remove the tabs that were prepped to remove
