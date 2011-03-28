@@ -3658,18 +3658,68 @@ function addDashboard(window) {
   controls.setAttribute("left", "24");
   controlStack.appendChild(controls);
 
+  let miniTabs = createNode("hbox");
+  miniTabs.setAttribute("top", "-20");
+  controls.appendChild(miniTabs);
+
+  // Show all the tabs as icons
+  miniTabs.addAll = function() {
+    let selected = gBrowser.selectedTab;
+    let sortedTabs = organizeTabsByRelation(gBrowser.visibleTabs, selected);
+    sortedTabs.forEach(function(tab) {
+      let miniTab = addImage(miniTabs, {
+        background: "rgb(244, 244, 244)",
+        height: "18px",
+        padding: "1px",
+        pointerEvents: "auto",
+        src: tab && getTabIcon(tab),
+        width: "18px",
+      });
+
+      miniTab.addEventListener("mouseup", function() {
+        gBrowser.selectedTab = tab;
+        controls.reset();
+        statusLine.reset();
+      }, false);
+
+      miniTab.addEventListener("mouseover", function() {
+        if (gBrowser.selectedTab == tab) {
+          statusLine.set("return");
+          return;
+        }
+
+        statusLine.set("switch", tab.getAttribute("label"));
+        tabPreview.swap(tab);
+      }, false);
+
+      miniTab.addEventListener("mouseout", function() {
+        statusLine.reset();
+        tabPreview.reset();
+      }, false);
+    });
+  };
+
+  // Remove all tab icons
+  miniTabs.removeAll = function() {
+    let node;
+    while ((node = miniTabs.lastChild) != null)
+      miniTabs.removeChild(node);
+  };
+
   // Show the temporary browser controls
   controls.activate = function() {
     // Hide any popups and menus that might be open
     if (controls.openPopup != null)
       controls.openPopup.hidePopup();
 
+    miniTabs.addAll();
     controls.show();
   };
 
   // Hide and clean up state from showing controls
   controls.reset = function() {
     controls.hide();
+    miniTabs.removeAll();
 
     // Move the Firefox icon and controls back to the default position
     controlStack.setAttribute("left", "0");
