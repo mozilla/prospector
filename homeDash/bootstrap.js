@@ -3749,6 +3749,8 @@ function addDashboard(window) {
       }, false);
     }],
    ["undoClose", 1, 1, function() window.undoCloseTab()],
+   ["fullScreenEnter", 2, 0, function() window.fullScreen = true],
+   ["fullScreenExit", 2, 1, function() window.fullScreen = false],
   ].forEach(function([name, row, col, onMouseUp, doExtra]) {
     let button = addImage(controls, {
       background: "rgb(244, 244, 244)",
@@ -3912,6 +3914,8 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
    "edit16",
    "firefox22",
    "forward24",
+   "fullScreenEnter24",
+   "fullScreenExit24",
    "locked16",
    "reload24",
    "stop24",
