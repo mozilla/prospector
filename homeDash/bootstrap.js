@@ -2509,7 +2509,10 @@ function addDashboard(window) {
 
           // Don't show a preview of the current tab
           if (gBrowser.selectedTab == tab) {
-            statusLine.set("return", {keys: cmd("escape")});
+            statusLine.set("return", {
+              keys: cmd("escape"),
+              text: tab.getAttribute("label"),
+            });
             return;
           }
 
@@ -2683,7 +2686,10 @@ function addDashboard(window) {
 
         // Don't show a preview of the current tab
         if (gBrowser.selectedTab == tab) {
-          statusLine.set("return", {keys: cmd("escape")});
+          statusLine.set("return", {
+            keys: cmd("escape"),
+            text: tab.getAttribute("label"),
+          });
           return;
         }
 
@@ -3684,7 +3690,7 @@ function addDashboard(window) {
 
       miniTab.addEventListener("mouseover", function() {
         if (gBrowser.selectedTab == tab) {
-          statusLine.set("return");
+          statusLine.set("return", tab.getAttribute("label"));
           return;
         }
 
