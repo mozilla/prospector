@@ -3563,6 +3563,8 @@ function addDashboard(window) {
   controlStack.setAttribute("top", "0");
   masterStack.appendChild(controlStack);
 
+  controlStack.style.pointerEvents = "none";
+
   let fxIcon = addImage(controlStack, {
     left: 0,
     opacity: .3,
