@@ -129,7 +129,7 @@ function addDashboard(window) {
 
   //// Add master stack containing all 7 layers of the dashboard
 
-  let masterStack = createNode("stack");
+  let masterStack = createNode("stack", true);
   masterStack.style.overflow = "hidden";
 
   // Prevent handling of mouse events if we get a modal dialog that blurs us
@@ -203,6 +203,9 @@ function addDashboard(window) {
   // Don't allow clicking the current tab behind the stack when open
   onOpen(function(reason) {
     masterStack.style.pointerEvents = "auto";
+
+    // Immediately show if temporarily hidden if somehow we're opened
+    masterStack.show();
 
     // Allow pointing at things that trigger modal dialogs
     masterStack.avoidModalLoss();
@@ -3759,6 +3762,18 @@ function addDashboard(window) {
    ["undoClose", 1, 1, function() window.undoCloseTab()],
    ["fullScreenEnter", 2, 0, function() window.fullScreen = true],
    ["fullScreenExit", 2, 1, function() window.fullScreen = false],
+   ["tempHide", 0, 0, function() {
+      // Temporarily hide everything in Home Dash including the Firefox icon
+      masterStack.hide();
+      masterStack.show(5000);
+      dashboard.open = false;
+    }, function(tempHideButton) {
+      // Specially place and size the hide icon onto the Firefox icon
+      tempHideButton.setAttribute("left", "-8");
+      tempHideButton.setAttribute("top", "-30");
+      tempHideButton.style.height = "8px";
+      tempHideButton.style.width = "8px";
+    }],
   ].forEach(function([name, row, col, onMouseUp, doExtra]) {
     let button = addImage(controls, {
       background: "rgb(244, 244, 244)",
@@ -3927,6 +3942,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
    "locked16",
    "reload24",
    "stop24",
+   "tempHide24",
    "undoClose24",
    "zoomIn16",
   ].forEach(function(fileName) {
