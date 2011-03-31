@@ -3713,12 +3713,12 @@ function addDashboard(window) {
 
   // Show the temporary browser controls
   controls.activate = function() {
+    miniTabs.addAll();
+    controls.show();
+
     // Hide any popups and menus that might be open
     if (controls.openPopup != null)
       controls.openPopup.hidePopup();
-
-    miniTabs.addAll();
-    controls.show();
   };
 
   // Hide and clean up state from showing controls
@@ -3786,7 +3786,12 @@ function addDashboard(window) {
       statusLine.reset();
     }, false);
 
-    button.addEventListener("mouseup", onMouseUp, false);
+    // Close the dashboard unless we want to explicitly keep it open
+    button.addEventListener("mouseup", function(event) {
+      if (!button.dontDismiss)
+        dashboard.open = false;
+      onMouseUp(event);
+    }, false);
 
     // Do some extra stuff for this button if necessary
     if (typeof doExtra == "function")
@@ -3808,21 +3813,18 @@ function addDashboard(window) {
     controlStack.setAttribute("top", Math.max(0, clientY - 22));
   });
 
-  // Stop watching for movement and clean up controls if necessary
-  listen(window, window, "mouseup", function(event) {
-    // Don't aggressively reset for certain targets
-    if (event.originalTarget.dontDismiss)
-      return;
-    controls.reset();
-  });
-
   // Track what popup or context menu is currently open
   listen(window, window, "popupshowing", function(event) {
     controls.openPopup = event.target;
   });
 
+  // Clean up controls when the context menu is closed
   listen(window, window, "popuphiding", function(event) {
     controls.openPopup = null;
+
+    // Move the controls back to the corner if it's not active
+    if (!controls.shown)
+      controls.reset();
   });
 
   //// 9: Mouseover event sink
