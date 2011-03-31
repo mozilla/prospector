@@ -3608,8 +3608,18 @@ function addDashboard(window) {
   // Make sure the icon looks right
   onClose(fxIcon.reset);
 
+  // Support easy closing of tabs by right-clicking the Firefox icon
+  fxIcon.addEventListener("mousedown", function({button, shiftKey}) {
+    if (button != 2)
+      return;
+    showPage(shiftKey, true);
+  }, false);
+
   // Allow toggling the dashboard by clicking
-  fxIcon.addEventListener("mouseup", function(event) {
+  fxIcon.addEventListener("mouseup", function({button}) {
+    // We might be closing pages, so don't toggle
+    if (button == 2 && dashboard.open)
+      return;
     dashboard.toggle();
   }, false);
 
@@ -3804,6 +3814,10 @@ function addDashboard(window) {
 
   // Get ready to show controls when the mouse is pressed
   listen(window, window, "mousedown", function(event) {
+    // Only move the icon when browsing
+    if (dashboard.open)
+      return;
+
     // Move the controls close to where the user right-clicked
     let {button, clientX, clientY} = event;
     if (button != 2)
