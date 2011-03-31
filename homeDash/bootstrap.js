@@ -3032,13 +3032,22 @@ function addDashboard(window) {
     tabs.updateThumbnail(tab);
   });
 
-  //// 5: Status line
+  //// 5: Mobile dashboard
+
+  let mobileStack = createNode("stack");
+  mobileStack.setAttribute("left", "0");
+  mobileStack.setAttribute("top", "0");
+  masterStack.appendChild(mobileStack);
+
+  mobileStack.style.pointerEvents = "none";
+
+  //// 5.1: Status line
 
   let statusBox = createNode("box");
   statusBox.setAttribute("left", "0");
   statusBox.setAttribute("right", "0");
   statusBox.setAttribute("top", "0");
-  masterStack.appendChild(statusBox);
+  mobileStack.appendChild(statusBox);
 
   statusBox.style.overflow = "hidden";
   statusBox.style.pointerEvents = "none";
@@ -3282,12 +3291,12 @@ function addDashboard(window) {
     unload(function() window.XULBrowserWindow.setOverLink = orig, window);
   }
 
-  //// 6: Notification area
+  //// 5.2: Notification area
 
   let notifications = createNode("vbox");
   notifications.setAttribute("left", "0");
   notifications.setAttribute("top", "22");
-  masterStack.appendChild(notifications);
+  mobileStack.appendChild(notifications);
 
   notifications.style.pointerEvents = "auto";
 
@@ -3571,16 +3580,9 @@ function addDashboard(window) {
     });
   });
 
-  //// 7: Firefox icon
+  //// 5.3: Firefox icon
 
-  let controlStack = createNode("stack");
-  controlStack.setAttribute("left", "0");
-  controlStack.setAttribute("top", "0");
-  masterStack.appendChild(controlStack);
-
-  controlStack.style.pointerEvents = "none";
-
-  let fxIcon = addImage(controlStack, {
+  let fxIcon = addImage(mobileStack, {
     left: 0,
     opacity: .3,
     pointerEvents: "auto",
@@ -3589,7 +3591,7 @@ function addDashboard(window) {
   });
 
   // Show a locked icon for identified sites
-  let lockedIcon = addImage(controlStack, {
+  let lockedIcon = addImage(mobileStack, {
     collapsed: true,
     left: 10,
     opacity: .5,
@@ -3667,12 +3669,12 @@ function addDashboard(window) {
     };
   });
 
-  //// 8: Transient Controls
+  //// 5.4: Transient Controls
 
   let controls = createNode("stack", true);
   controls.setAttribute("top", "44");
   controls.setAttribute("left", "24");
-  controlStack.appendChild(controls);
+  mobileStack.appendChild(controls);
 
   let miniTabs = createNode("hbox");
   miniTabs.setAttribute("top", "-20");
@@ -3737,8 +3739,8 @@ function addDashboard(window) {
     miniTabs.removeAll();
 
     // Move the Firefox icon and controls back to the default position
-    controlStack.setAttribute("left", "0");
-    controlStack.setAttribute("top", "0");
+    mobileStack.setAttribute("left", "0");
+    mobileStack.setAttribute("top", "0");
   };
 
   // Add various buttons as controls
@@ -3823,8 +3825,8 @@ function addDashboard(window) {
     if (button != 2)
       return;
 
-    controlStack.setAttribute("left", Math.max(0, clientX - 22));
-    controlStack.setAttribute("top", Math.max(0, clientY - 22));
+    mobileStack.setAttribute("left", Math.max(0, clientX - 22));
+    mobileStack.setAttribute("top", Math.max(0, clientY - 22));
   });
 
   // Track what popup or context menu is currently open
@@ -3845,10 +3847,10 @@ function addDashboard(window) {
       controls.reset();
   });
 
-  //// 9: Mouseover event sink
+  //// 6: Mouseover event sink
 
   let mouseSink = createNode("box");
-  masterStack.insertBefore(mouseSink, controlStack);
+  masterStack.insertBefore(mouseSink, mobileStack);
 
   // Capture mouse events so nodes under the mouse don't mouseover immediately
   mouseSink.capture = function() {
@@ -3880,7 +3882,7 @@ function addDashboard(window) {
   // Restore normal events to the main browser
   onClose(mouseSink.reset);
 
-  //// 10: Random debug/help links
+  //// 7: Random debug/help links
 
   let linkSet = createNode("hbox");
   linkSet.setAttribute("bottom", "0");
