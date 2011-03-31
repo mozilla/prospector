@@ -3740,10 +3740,21 @@ function addDashboard(window) {
     // Hide any popups and menus that might be open
     if (controls.openPopup != null)
       controls.openPopup.hidePopup();
+
+    // Allow hitting escape to get rid of the controls
+    controls.unEscape = listen(window, window, "keyup", function(event) {
+      if (event.keyCode == event.DOM_VK_ESCAPE)
+        dashboard.open = false;
+    });
   };
 
   // Hide and clean up state from showing controls
   controls.reset = function() {
+    if (controls.unEscape != null) {
+      controls.unEscape();
+      controls.unEscape = null;
+    }
+
     controls.hide();
     miniTabs.removeAll();
 
