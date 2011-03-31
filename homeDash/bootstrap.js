@@ -3041,6 +3041,12 @@ function addDashboard(window) {
 
   mobileStack.style.pointerEvents = "none";
 
+  // Provide a helper to move everything in the control stack around
+  mobileStack.moveTo = function(left, top) {
+    mobileStack.setAttribute("left", Math.max(0, left));
+    mobileStack.setAttribute("top", Math.max(0, top));
+  };
+
   //// 5.1: Status line
 
   let statusBox = createNode("box");
@@ -3725,6 +3731,9 @@ function addDashboard(window) {
 
   // Show the temporary browser controls
   controls.activate = function() {
+    if (controls.shown)
+      return;
+
     miniTabs.addAll();
     controls.show();
 
@@ -3739,8 +3748,7 @@ function addDashboard(window) {
     miniTabs.removeAll();
 
     // Move the Firefox icon and controls back to the default position
-    mobileStack.setAttribute("left", "0");
-    mobileStack.setAttribute("top", "0");
+    mobileStack.moveTo(0, 0);
   };
 
   // Add various buttons as controls
@@ -3815,18 +3823,38 @@ function addDashboard(window) {
   });
 
   // Get ready to show controls when the mouse is pressed
-  listen(window, window, "mousedown", function(event) {
+  listen(window, window, "mousedown", function({button, clientX, clientY}) {
     // Only move the icon when browsing
     if (dashboard.open)
       return;
 
-    // Move the controls close to where the user right-clicked
-    let {button, clientX, clientY} = event;
-    if (button != 2)
-      return;
+    switch (button) {
+      // Detect a long press to show the controls under the pointer
+      case 0:
+        let cleanup = makeTrigger();
+        cleanup(async(function() {
+          mobileStack.moveTo(clientX - 11, clientY - 11);
+          dashboard.open = "control";
+          cleanup.trigger();
+        }, 300));
 
-    mobileStack.setAttribute("left", Math.max(0, clientX - 22));
-    mobileStack.setAttribute("top", Math.max(0, clientY - 22));
+        // Only allow a little bit of movement to consider it a long press
+        cleanup(addMoveLimitListener(10, function() {
+          cleanup.trigger();
+        }));
+
+        // Cancel the long press if no longer pressed down
+        cleanup(listen(window, window, "mouseup", function() {
+          cleanup.trigger();
+        }));
+
+        break;
+
+      // Move the controls close to where the user right-clicked
+      case 2:
+        mobileStack.moveTo(clientX - 22, clientY - 22);
+        break;
+    }
   });
 
   // Track what popup or context menu is currently open
