@@ -3814,12 +3814,16 @@ function addDashboard(window) {
   });
 
   // Track what popup or context menu is currently open
-  listen(window, window, "popupshowing", function(event) {
-    controls.openPopup = event.target;
+  listen(window, window, "popupshowing", function({target}) {
+    if (target.nodeName == "tooltip")
+      return;
+    controls.openPopup = target;
   });
 
   // Clean up controls when the context menu is closed
-  listen(window, window, "popuphiding", function(event) {
+  listen(window, window, "popuphiding", function({target}) {
+    if (target.nodeName == "tooltip")
+      return;
     controls.openPopup = null;
 
     // Move the controls back to the corner if it's not active
