@@ -580,7 +580,7 @@ function addDashboard(window) {
 
   // Helper to toggle the dashboard open/close
   dashboard.toggle = function() {
-    dashboard.open = !dashboard.open;
+    dashboard.open = dashboard.openReason == "control";
   };
 
   // Persist the preview to the tab the user wants
@@ -610,17 +610,28 @@ function addDashboard(window) {
     dashboard.collapsed = false;
     dashboard.focus();
 
-    // Hide all the dashboard data if switching tabs
-    if (reason == "switch") {
-      history.hide();
-      searchBox.hide();
-      sites.hide();
+    // Hide the dashboard data for certain reasons
+    switch (reason) {
+      // Show nothing for the transient controls
+      case "control":
+        controls.activate();
+        tabs.hide();
+        // Fallthrough to hide more
 
-      pagePreview.reset();
-      searchPreview1.reset();
-      searchPreview2.reset();
-      return;
+      // Only show tabs when switching
+      case "switch":
+        history.hide();
+        searchBox.hide();
+        sites.hide();
+
+        pagePreview.reset();
+        searchPreview1.reset();
+        searchPreview2.reset();
+        return;
     }
+
+    // Stop showing controls now that the dashboard is being used
+    controls.reset();
 
     // Just show the search box; others will be shown by search
     searchBox.show();
@@ -1147,8 +1158,9 @@ function addDashboard(window) {
           input.toggleEngine(nextEngineIcon);
         break;
 
-      // Don't do anything if we're switching tabs
+      // Don't do anything if we're switching tabs or showing controls
       case "switch":
+      case "control":
         return;
     }
 
@@ -3374,7 +3386,7 @@ function addDashboard(window) {
       notifications.skipPreview = false;
 
       // Re-show things that might have covered the preview
-      if (dashboard.open) {
+      if (dashboard.open && dashboard.openReason != "control") {
         sites.show();
         tabs.show();
       }
@@ -3593,26 +3605,6 @@ function addDashboard(window) {
   // Remember how much has been scrolled so far
   fxIcon.scrollAmount = 0;
 
-  // Provide a way to detect movement over the icon
-  fxIcon.watchMove = function() {
-    if (fxIcon.unMove != null)
-      return;
-
-    // Show the transient controls when there's movement
-    fxIcon.unMove = listen(window, fxIcon, "mousemove", function() {
-      fxIcon.unWatchMove();
-      controls.activate();
-    });
-  };
-
-  // Stop watching for movement over the icon
-  fxIcon.unWatchMove = function() {
-    if (fxIcon.unMove == null)
-      return;
-    fxIcon.unMove();
-    fxIcon.unMove = null;
-  };
-
   // Make sure the icon looks right
   onClose(fxIcon.reset);
 
@@ -3623,8 +3615,11 @@ function addDashboard(window) {
 
   // Indicate what clicking will do
   fxIcon.addEventListener("mouseover", function() {
+    if (!dashboard.open)
+      dashboard.open = "control";
+
     fxIcon.style.opacity = "1";
-    statusLine.set(dashboard.open ? "homehide" : "homeshow");
+    statusLine.set(dashboard.openReason == "control" ? "homeshow" : "homehide");
   }, false);
 
   fxIcon.addEventListener("mouseout", function() {
@@ -3688,9 +3683,8 @@ function addDashboard(window) {
       });
 
       miniTab.addEventListener("mouseup", function() {
+        dashboard.open = false;
         gBrowser.selectedTab = tab;
-        controls.reset();
-        statusLine.reset();
       }, false);
 
       miniTab.addEventListener("mouseover", function() {
@@ -3805,8 +3799,6 @@ function addDashboard(window) {
 
   // Get ready to show controls when the mouse is pressed
   listen(window, window, "mousedown", function(event) {
-    fxIcon.watchMove();
-
     // Move the controls close to where the user right-clicked
     let {button, clientX, clientY} = event;
     if (button != 2)
@@ -3818,8 +3810,6 @@ function addDashboard(window) {
 
   // Stop watching for movement and clean up controls if necessary
   listen(window, window, "mouseup", function(event) {
-    fxIcon.unWatchMove();
-
     // Don't aggressively reset for certain targets
     if (event.originalTarget.dontDismiss)
       return;
@@ -3911,9 +3901,13 @@ function addDashboard(window) {
 
     label.addEventListener("mouseout", function() {
       pagePreview.reset();
-      sites.show();
       statusLine.reset();
-      tabs.show();
+
+      // Re-show things that might have covered the preview
+      if (dashboard.open && dashboard.openReason != "control") {
+        sites.show();
+        tabs.show();
+      }
     }, false);
   });
 
