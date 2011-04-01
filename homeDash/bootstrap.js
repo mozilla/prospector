@@ -3701,6 +3701,23 @@ function addDashboard(window) {
         width: "18px",
       });
 
+      // Allow closing of the tab on right-click
+      miniTab.addEventListener("mousedown", function({button}) {
+        if (button != 2)
+          return;
+
+        miniTabs.removeChild(miniTab);
+        tabPreview.reset();
+        tabs.prepRemove(tab);
+
+        // Stop one mouseup to prevent the next tab from selecting
+        let unUp = listen(window, window, "mouseup", function(event) {
+          unUp();
+          event.stopPropagation();
+        });
+      }, true);
+
+      // Select the tab when the user clicks/releases on it
       miniTab.addEventListener("mouseup", function() {
         dashboard.open = false;
         gBrowser.selectedTab = tab;
