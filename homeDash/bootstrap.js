@@ -3867,7 +3867,7 @@ function addDashboard(window) {
         mobileStack.moveTo(clientX - 22, clientY - 22);
         break;
     }
-  });
+  }, false);
 
   // Track what popup or context menu is currently open
   listen(window, window, "popupshowing", function({target}) {
