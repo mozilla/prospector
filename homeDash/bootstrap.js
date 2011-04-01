@@ -3835,11 +3835,14 @@ function addDashboard(window) {
   });
 
   // Get ready to show controls when the mouse is pressed
-  listen(window, window, "mousedown", function({button, clientX, clientY}) {
+  listen(window, window, "mousedown", function({button, screenX, screenY}) {
     // Only move the icon when browsing
     if (dashboard.open)
       return;
 
+    // Calculate where the click is relative to the top left corner
+    let clientX = screenX - masterStack.boxObject.screenX;
+    let clientY = screenY - masterStack.boxObject.screenY;
     switch (button) {
       // Detect a long press to show the controls under the pointer
       case 0:
