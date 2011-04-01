@@ -4090,7 +4090,7 @@ function activateHomeDash(activating) {
         resizeTimer = async(function() {
           unload()
           activateHomeDash(true);
-        }, 1500);
+        }, 3000);
       });
     });
   });
