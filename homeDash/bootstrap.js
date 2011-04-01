@@ -911,18 +911,12 @@ function addDashboard(window) {
         return false;
 
       // Dismiss the dashboard if it's open and not switching
-      if (dashboard.open && dashboard.openReason != "switch") {
+      if (dashboard.open) {
         dashboard.open = false;
         return false;
       }
 
-      // Allow closing the window if there's only pinned tabs left
-      if (gBrowser._numPinnedTabs == gBrowser.visibleTabs.length)
-        return true;
-
-      // Remove the current page and allow for multiple closes
-      showPage(false, true);
-      return false;
+      return true;
     };
     unload(function() window.WindowIsClosing = orig, window);
   }
