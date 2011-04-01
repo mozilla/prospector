@@ -820,6 +820,9 @@ function addDashboard(window) {
     showPage.lastPreview = null;
     showPage.mruList = mruList;
     showPage.previewPos = 0;
+
+    // Immediately blur the current tab to make sure plugins don't eat events
+    selected.linkedBrowser.blur();
   };
 
   // Provide a way to stop showing the tab previews and clean up state
