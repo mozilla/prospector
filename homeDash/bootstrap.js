@@ -3131,6 +3131,8 @@ function addDashboard(window) {
 
   // Clear out the status line when closing or resetting
   statusLine.reset = function() {
+    statusLine.lastStatus = null;
+
     // Show the background status instead of nothing
     if (statusLine.backgroundTimer != null) {
       statusLine.value = statusLine.backgroundText;
@@ -3138,7 +3140,6 @@ function addDashboard(window) {
     }
 
     statusLine.collapsed = true;
-    statusLine.lastStatus = null;
     statusLine.value = "";
   };
 
