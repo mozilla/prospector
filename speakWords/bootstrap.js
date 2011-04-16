@@ -20,6 +20,7 @@
  * Contributor(s):
  *   Edward Lee <edilee@mozilla.com>
  *   Erik Vold <erikvvold@gmail.com>
+ *   Greg Parris <greg.parris@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -248,7 +249,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
               "WHERE input NOT NULL " +
               "ORDER BY frecency DESC";
   let cols = ["input", "url", "title"];
-  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
 
   // Break a string into individual words separated by the splitter
   function explode(text, splitter) {
@@ -292,7 +293,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   function addDomains(extraQuery) {
     let query = "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery;
     let cols = ["url"];
-    let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+    let stmt = Svc.History.DBConnection.createAsyncStatement(query);
     Utils.queryAsync(stmt, cols).forEach(function({url}) {
       try {
         allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
@@ -307,7 +308,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 
   // Add bookmark keywords to the list of potential keywords
   let query = "SELECT * FROM moz_keywords";
-  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
   let cols = ["keyword"];
   Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
     allKeywords.push([keyword]);
