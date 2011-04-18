@@ -46,8 +46,7 @@ function computeTopSites() {
   }
   catch(ex) {}
 
-  let db = Svc.History.DBConnection;
-  let stm = Utils.createStatement(db,
+  let stm = Svc.History.DBConnection.createAsyncStatement(
     "SELECT * " +
     "FROM moz_places " +
     "WHERE hidden = 0 " +
@@ -95,8 +94,7 @@ function computeTopSites() {
 // Collect the bookmark keywords for later use
 let bookmarkKeywords = {};
 function collectBookmarkKeywords() {
-  let db = Svc.History.DBConnection;
-  let stm = Utils.createStatement(db,
+  let stm = Svc.History.DBConnection.createAsyncStatement(
     "SELECT (SELECT keyword FROM moz_keywords WHERE id = keyword_id) keyword, " +
            "title, (SELECT url FROM moz_places WHERE id = fk) url " +
     "FROM moz_bookmarks " +
@@ -149,7 +147,7 @@ function processAdaptive() {
               "WHERE input NOT NULL " +
               "ORDER BY ROUND(use_count) DESC, frecency DESC";
   let cols = ["input", "url", "title"];
-  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
 
   // Break a string into individual words separated by the splitter
   function explode(text, splitter) {
@@ -203,7 +201,7 @@ function processAdaptive() {
                        "MAX(visit_count) DESC, " +
                        "MAX(last_visit_date) DESC";
   let cols = ["rev_host"];
-  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
   Utils.queryAsync(stmt, cols).forEach(function({rev_host}) {
     // Remove the trailing dot and make it the right order
     rev_host = rev_host.slice(0, -1);
@@ -231,7 +229,7 @@ function processAdaptive() {
 
   // Add bookmark keywords to the list of potential keywords
   let query = "SELECT * FROM moz_keywords";
-  let stmt = Utils.createStatement(Svc.History.DBConnection, query);
+  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
   let cols = ["keyword"];
   Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
     allKeywords.push([keyword]);

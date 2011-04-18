@@ -69,7 +69,7 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
       numObj = {val: 0};
 
     // Find pages from the current visit
-    let stm = Utils.createStatement(Svc.History.DBConnection,
+    let stm = Svc.History.DBConnection.createAsyncStatement(
       "SELECT *, v.id as nextVisit " +
       "FROM moz_historyvisits v " +
       "JOIN moz_places h ON h.id = v.place_id " +
@@ -99,7 +99,7 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
   results.innerHTML = "";
 
   // Get the last most recently used form history items
-  let stm = Utils.createStatement(Svc.Form.DBConnection,
+  let stm = Svc.Form.DBConnection.createAsyncStatement(
     "SELECT * " +
     "FROM moz_formhistory " +
     "ORDER BY lastUsed DESC " +
@@ -111,7 +111,7 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
     let queryVal = value.replace(/ /g, "+");
 
     // Find the pages that used those form history queries
-    let stm = Utils.createStatement(Svc.History.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection,
+    let stm = Svc.History.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection.createAsyncStatement(
       "SELECT *, v.id as startVisit " +
       "FROM moz_places h " +
       "JOIN moz_historyvisits v ON v.place_id = h.id " +
