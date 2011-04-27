@@ -304,14 +304,9 @@ function addAwesomeBarHD(window) {
     if (active == null) {
       gBrowser.selectedTab.HDinput = "";
       hdInput.value = "";
-      origIdentity.hidden = false;
-      iconBox.hidden = true;
     }
     // Prepare the UI for showing an active category
     else {
-      origIdentity.hidden = true;
-      iconBox.hidden = false;
-
       let {defaultIndex, providers} = active.categoryData;
       let {icon} = providers[defaultIndex];
       if (icon == null)
@@ -332,6 +327,10 @@ function addAwesomeBarHD(window) {
 
       label.style.textDecoration = label == hover ? "underline" : "";
     });
+
+    // Show the original identity box when inactive
+    origIdentity.hidden = doActive;
+    iconBox.hidden = !doActive;
   };
 
   // Pointing away removes the go category highlight
