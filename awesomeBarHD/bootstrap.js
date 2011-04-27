@@ -584,6 +584,10 @@ function addAwesomeBarHD(window) {
     if (event.keyCode != event.DOM_VK_TAB)
       return;
 
+    // Let ctrl-tab do the usual tab switching
+    if (event.ctrlKey)
+      return;
+
     let {active, highlight} = categoryBox;
     if (active != goCategory)
       categoryBox.activate(active);
