@@ -175,7 +175,7 @@ function addAwesomeBarHD(window) {
   categoryBox.activate = function(categoryLabel, index) {
     // Cycle through providers when re-activating the same category
     let {active} = categoryBox;
-    if (active == categoryLabel) {
+    if (active == categoryLabel && index == null) {
       let {defaultIndex, providers} = active.categoryData;
       index = (defaultIndex + 1) % providers.length;
     }
