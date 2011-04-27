@@ -239,6 +239,10 @@ function addAwesomeBarHD(window) {
         }
       });
     }
+
+    // Indicate that search can be activated if nothing else is
+    if (categoryBox.active == goCategory && categoryBox.highlight == null)
+      categoryBox.highlight = searchCategory;
   };
 
   // Figure out if the current input text is activating a category
@@ -321,7 +325,7 @@ function addAwesomeBarHD(window) {
       let color = "#999";
       if (label == active && doActive)
         color = "#090";
-      else if (label == highlight || label == hover)
+      else if (label == highlight && doActive || label == hover)
         color = "#00f";
       label.style.color = color;
 
