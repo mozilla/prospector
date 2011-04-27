@@ -89,6 +89,8 @@ function addAwesomeBarHD(window) {
 
   urlbarStack.setAttribute("flex", 1);
 
+  urlbarStack.style.overflow = "hidden";
+
   unload(function() {
     urlbarStack.parentNode.removeChild(urlbarStack);
   });
@@ -343,6 +345,7 @@ function addAwesomeBarHD(window) {
     // Show the original identity box when inactive
     origIdentity.hidden = doActive;
     iconBox.hidden = !doActive;
+    shortUrl.hidden = doActive;
   };
 
   // Pointing away removes the go category highlight
@@ -640,6 +643,46 @@ function addAwesomeBarHD(window) {
 
       prefetcher.persistTo(targetTab);
       gBrowser.selectedTab = targetTab;
+    };
+  });
+
+  // Show a little bit of the current url
+  let shortUrl = createNode("label");
+  urlbarStack.appendChild(shortUrl);
+
+  shortUrl.setAttribute("left", 1);
+
+  shortUrl.style.color = "rgba(0, 0, 0, .5)";
+  shortUrl.style.cursor = "text";
+  shortUrl.style.margin = 0;
+  shortUrl.style.textShadow = hdInput.style.textShadow;
+
+  shortUrl.addEventListener("click", function() {
+    document.getElementById("Browser:OpenLocation").doCommand();
+  }, false);
+
+  shortUrl.addEventListener("mouseout", function() {
+    shortUrl.style.color = "rgba(0, 0, 0, .5)";
+  }, false);
+
+  shortUrl.addEventListener("mouseover", function() {
+    shortUrl.style.color = "black";
+  }, false);
+
+  // Hook into the page proxy state to get url changes
+  change(window, "SetPageProxyState", function(orig) {
+    return function(state) {
+      let url = gBrowser.selectedBrowser.currentURI.spec;
+      if (url == "about:blank")
+        url = "";
+
+      // Just show most of the domain and that's it
+      let match = url.match(/^[^:]*:\/*[^\/]*/);
+      if (match != null)
+        url = match[0].slice(0, -2) + "\u2026";
+      shortUrl.setAttribute("value", url);
+
+      return orig.call(this, state);
     };
   });
 
