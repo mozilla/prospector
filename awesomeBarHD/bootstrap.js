@@ -633,8 +633,17 @@ function addAwesomeBarHD(window) {
       categoryBox.reset();
 
       // Just load the page into the current tab
-      if (isGo)
-        return orig.call(this, event);
+      if (isGo) {
+        // Open pages into a new tab instead of replacing app tabs
+        let isMouse = event instanceof window.MouseEvent;
+        let proxy = !gBrowser.selectedTab.pinned ? event : {
+          __proto__: event,
+          altKey: true,
+          ctrlKey: isMouse,
+          metaKey: isMouse,
+        };
+        return orig.call(this, proxy);
+      }
 
       // Reuse the current tab if it's empty
       let targetTab = gBrowser.selectedTab;
