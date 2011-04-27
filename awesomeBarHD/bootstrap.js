@@ -525,7 +525,13 @@ function addAwesomeBarHD(window) {
   }
 
   hdInput.addEventListener("blur", function() {
-    categoryBox.updateLook();
+    let url = gBrowser.selectedBrowser.currentURI.spec;
+    if (hdInput.value == url) {
+      hdInput.value = "";
+      categoryBox.processInput();
+    }
+    else
+      categoryBox.updateLook();
   }, false);
 
   hdInput.addEventListener("focus", function() {
