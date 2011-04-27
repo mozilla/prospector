@@ -75,6 +75,14 @@ function addAwesomeBarHD(window) {
   providerIcon.setAttribute("id", "page-proxy-favicon");
   iconBox.appendChild(providerIcon);
 
+  // Show providers at the icon if something is active
+  providerIcon.addEventListener("mouseover", function() {
+    let {active} = categoryBox;
+    if (active == null)
+      return;
+    active.context.openAt(providerIcon);
+  }, false);
+
   // Add stuff around the original urlbar input box
   let urlbarStack = createNode("stack");
   origInput.parentNode.insertBefore(urlbarStack, origInput.nextSibling);
@@ -400,16 +408,9 @@ function addAwesomeBarHD(window) {
       categoryBox.hover = hovering ? label : null;
       categoryBox.updateLook();
 
-      if (!hovering)
-        return;
-
-      if (context.state == "open")
-        return;
-      if (category == "go")
-        return;
-
-      context.updateChecked();
-      context.openPopup(label, "after_start");
+      // Show providers next to the label
+      if (hovering)
+        context.openAt(label);
     }
 
     label.addEventListener("mouseout", onMouse, false);
@@ -422,6 +423,7 @@ function addAwesomeBarHD(window) {
 
     // Prepare a popup to show category providers
     let context = createNode("menupopup");
+    label.context = context;
     document.getElementById("mainPopupSet").appendChild(context);
 
     // Add a menuitem that knows how to switch to the provider
@@ -438,6 +440,17 @@ function addAwesomeBarHD(window) {
 
       return provider;
     });
+
+    // Allow opening the context under a node
+    context.openAt = function(node) {
+      if (context.state == "open")
+        return;
+      if (category == "go")
+        return;
+
+      context.updateChecked();
+      context.openPopup(node, "after_start");
+    };
 
     // Correctly mark which item is the default
     context.updateChecked = function() {
