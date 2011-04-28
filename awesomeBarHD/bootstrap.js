@@ -337,7 +337,8 @@ function addAwesomeBarHD(window) {
     }
 
     // Go through each label and style it appropriately
-    let doActive = gURLBar.hasAttribute("focused") || hdInput.value != "";
+    let focused = gURLBar.hasAttribute("focused");
+    let doActive = focused || hdInput.value != "";
     Array.forEach(categoryBox.childNodes, function(label) {
       let color = "#999";
       if (label == active && doActive)
@@ -348,6 +349,12 @@ function addAwesomeBarHD(window) {
 
       label.style.textDecoration = label == hover ? "underline" : "";
     });
+
+    // Show the next category if focus is in the box
+    if (focused)
+      tabPanel.showNextCategory();
+    else
+      tabPanel.hidePopup();
 
     // Show the original identity box when inactive
     origIdentity.hidden = doActive;
@@ -740,6 +747,148 @@ function addAwesomeBarHD(window) {
       return orig.call(this, state);
     };
   });
+
+  let tabPanel = createNode("panel");
+  document.getElementById("mainPopupSet").appendChild(tabPanel);
+
+  tabPanel.setAttribute("noautofocus", true);
+  tabPanel.setAttribute("noautohide", true);
+
+  tabPanel.style.MozWindowShadow = "none";
+
+  // Open the panel showing what next category to tab to
+  tabPanel.showNextCategory = function() {
+    // Nothing to show if nothing is next
+    let {next} = categoryBox;
+    if (next == null) {
+      tabPanel.hidePopup();
+      return;
+    }
+
+    // Read out various state to specially highlight based on input
+    let {category, defaultIndex, providers} = next.categoryData;
+    let {selectionStart, value} = hdInput;
+    let shortValue = value.slice(0, selectionStart);
+    let {length} = shortValue;
+
+    // Track various parts of the text to split in the panel
+    let splitParts = {
+      preUnder: "search for ",
+      underText: "",
+      postUnder: "",
+    }
+
+    // Figure out if there needs to be a split-word underline
+    if (shortValue == category.slice(0, length)) {
+      splitParts.underText = shortValue;
+      splitParts.postUnder = category.slice(length);
+    }
+    else
+      splitParts.postUnder = category;
+
+    // Slightly change the wording for the search category
+    if (next == searchCategory) {
+      splitParts.preUnder = "";
+      splitParts.postUnder += " the web";
+    }
+
+    // Set the words in the corresponding parts
+    for (let [part, text] in Iterator(splitParts))
+      tabPanel[part].setAttribute("value", text);
+
+    // Update the provider information
+    let {icon, name} = providers[defaultIndex];
+    tabPanel.icon.setAttribute("src", icon);
+    tabPanel.provider.setAttribute("value", name);
+
+    // Show the panel just above the input near the cursor
+    tabPanel.openPopup(hdInput, "before_start", -5, -3);
+  };
+
+  unload(function() {
+    tabPanel.parentNode.removeChild(tabPanel);
+  });
+
+  // Create a local scope for various tabPanel specific nodes
+  {
+    let tabBox = createNode("hbox");
+    tabPanel.appendChild(tabBox);
+
+    tabBox.style.backgroundColor = "rgb(250, 250, 250)";
+    tabBox.style.border = "1px solid rgb(50, 50, 50)";
+    tabBox.style.borderRadius = "5px";
+    tabBox.style.opacity = ".7";
+    tabBox.style.padding = "3px";
+
+    let textPress = createNode("label");
+    tabBox.appendChild(textPress);
+
+    textPress.setAttribute("value", "Press");
+
+    textPress.style.color = "#999";
+    textPress.style.margin = "3px 4px 0 0";
+
+    let textTab = createNode("label");
+    tabBox.appendChild(textTab);
+
+    textTab.setAttribute("value", "tab");
+
+    textTab.style.backgroundImage = "-moz-linear-gradient(top, rgb(240, 240, 240), rgb(220, 220, 220))";
+    textTab.style.borderRadius = "2px";
+    textTab.style.margin = "3px 0 0 0";
+    textTab.style.padding = "0 2px";
+
+    let textTo = createNode("label");
+    tabBox.appendChild(textTo);
+
+    textTo.setAttribute("value", "to ");
+
+    textTo.style.color = "#999";
+    textTo.style.margin = "3px 0 0 4px";
+
+    let preUnder = createNode("label");
+    tabPanel.preUnder = preUnder;
+    tabBox.appendChild(preUnder);
+
+    preUnder.style.color = "#999";
+    preUnder.style.margin = "3px 0 0 0";
+
+    let underText = createNode("label");
+    tabPanel.underText = underText;
+    tabBox.appendChild(underText);
+
+    underText.style.margin = "3px 0 0 0";
+    underText.style.textDecoration = "underline";
+
+    let postUnder = createNode("label");
+    tabPanel.postUnder = postUnder;
+    tabBox.appendChild(postUnder);
+
+    postUnder.style.color = "#999";
+    postUnder.style.margin = "3px 0 0 0";
+
+    let textColon = createNode("label");
+    tabBox.appendChild(textColon);
+
+    textColon.setAttribute("value", ":");
+
+    textColon.style.color = "#999";
+    textColon.style.margin = "3px 6px 0 0";
+
+    let icon = createNode("image");
+    tabPanel.icon = icon;
+    tabBox.appendChild(icon);
+
+    icon.setAttribute("height", 16);
+    icon.setAttribute("width", 16);
+
+    let provider = createNode("label");
+    tabPanel.provider = provider;
+    tabBox.appendChild(provider);
+
+    provider.style.color = "#999";
+    provider.style.margin = "3px 3px 0 6px";
+  }
 
   // Catch various existing browser commands to redirect to the dashboard
   let commandSet = document.getElementById("mainCommandSet");
