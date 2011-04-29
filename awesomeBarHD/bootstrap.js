@@ -205,7 +205,7 @@ function addAwesomeBarHD(window) {
         hdInput.value = query;
       // Use the partially typed short keyword
       else if (selectionStart > 0 && shortQuery == keyword.slice(0, selectionStart))
-        hdInput.value = shortQuery + ": " + query.slice(selectionStart);
+        hdInput.value = keyword;
       // Insert the full keyword
       else
         hdInput.value = keyword + query;
