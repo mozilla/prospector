@@ -231,6 +231,17 @@ function addAwesomeBarHD(window) {
     hdInput.focus();
   };
 
+  // Immediately go to the result page if there's something to search
+  categoryBox.activateAndGo = function(categoryLabel, index) {
+    categoryBox.activate(categoryLabel, index);
+
+    // Only go if it's not just blank
+    let {value} = hdInput;
+    if (value.search(/:\s*\S/) == -1)
+      return;
+    gURLBar.handleCommand();
+  };
+
   // Look through the input to decide what category could be activated
   categoryBox.prepareNext = function() {
     categoryBox.next = null;
@@ -413,7 +424,7 @@ function addAwesomeBarHD(window) {
 
     // For context-less, activate on plain click
     label.addEventListener("click", function() {
-      categoryBox.activate(label);
+      categoryBox.activateAndGo(label);
     }, false);
 
     // Handle the mouse moving in or out of the related labels
@@ -456,7 +467,7 @@ function addAwesomeBarHD(window) {
       context.appendChild(provider);
 
       provider.addEventListener("command", function() {
-        categoryBox.activate(label, index);
+        categoryBox.activateAndGo(label, index);
       }, false);
 
       return provider;
@@ -500,7 +511,7 @@ function addAwesomeBarHD(window) {
       // Assume dismiss of the popup by clicking on the label is to activate
       // Windows sends both popuphiding and click events, so ignore this one
       if (!isWin && categoryBox.hover == label)
-        categoryBox.activate(label);
+        categoryBox.activateAndGo(label);
     }, false);
 
     // Prepare to dismiss for various reasons
