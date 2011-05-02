@@ -670,6 +670,7 @@ function addAwesomeBarHD(window) {
         targetTab = gBrowser.addTab();
 
       prefetcher.persistTo(targetTab);
+      gBrowser.selectedBrowser.focus();
       gBrowser.selectedTab = targetTab;
     };
   });
