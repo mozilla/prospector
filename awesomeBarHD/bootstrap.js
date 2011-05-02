@@ -525,7 +525,7 @@ function addAwesomeBarHD(window) {
   allProviders.forEach(addCategory);
   let goCategory = categoryBox.firstChild;
   let searchCategory = goCategory.nextSibling.nextSibling;
-  categoryBox.removeChild(categoryBox.lastChild);
+  categoryBox.lastChild.setAttribute("value", ".");
 
   // Copy most of the original input field
   let hdInput = origInput.cloneNode(false);
