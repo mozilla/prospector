@@ -961,6 +961,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   // Load in the provider data from preferences
   try {
     allProviders = JSON.parse(prefs.get("providers"));
+
+    // Check for outdated data as a proxy to versions for now
+    if (allProviders[8].providers[0].url == "http://twitter.com/search?q={search+terms}")
+      throw "need to update 1";
   }
   catch(ex) {
     // Restore provider data with hardcoded defaults
