@@ -350,8 +350,6 @@ function addAwesomeBarHD(window) {
       else if (label == hover)
         color = "#00f";
       label.style.color = color;
-
-      label.style.textDecoration = label == hover ? "underline" : "";
     });
 
     // Show the next category if focus is in the box
@@ -411,6 +409,7 @@ function addAwesomeBarHD(window) {
     label.categoryData = categoryData;
 
     label.style.cursor = "pointer";
+    label.style.textDecoration = "underline";
 
     // For context-less, activate on plain click
     label.addEventListener("click", function() {
