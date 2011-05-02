@@ -687,6 +687,7 @@ function addAwesomeBarHD(window) {
   let domainText = createNode("label");
   urlBox.appendChild(domainText);
 
+  domainText.style.color = "black";
   domainText.style.margin = 0;
   domainText.style.pointerEvents = "none";
 
