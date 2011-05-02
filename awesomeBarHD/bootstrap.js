@@ -193,6 +193,10 @@ function addAwesomeBarHD(window) {
       // Keep track of the original text values
       let {selectionEnd, selectionStart, value} = hdInput;
 
+      // Most likely don't want to search the current url, so remove on activate
+      if (value == gBrowser.selectedBrowser.currentURI.spec)
+        value = "";
+
       // Remove any active query terms when activating another
       let query = value;
       if (categoryBox.active != goCategory)
