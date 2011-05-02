@@ -648,10 +648,10 @@ function addAwesomeBarHD(window) {
   change(gURLBar, "handleCommand", function(orig) {
     return function(event) {
       let isGo = categoryBox.active == goCategory;
-      categoryBox.reset();
 
       // Just load the page into the current tab
       if (isGo) {
+        categoryBox.reset();
         // Open pages into a new tab instead of replacing app tabs
         let isMouse = event instanceof window.MouseEvent;
         let proxy = !gBrowser.selectedTab.pinned ? event : {
@@ -665,12 +665,33 @@ function addAwesomeBarHD(window) {
 
       // Reuse the current tab if it's empty
       let targetTab = gBrowser.selectedTab;
-      if (!window.isTabEmpty(targetTab))
+
+      // Prepare a new tab with the current search input
+      if (!window.isTabEmpty(targetTab)) {
         targetTab = gBrowser.addTab();
+        targetTab.HDinput = hdInput.value;
+        categoryBox.reset();
+      }
 
       prefetcher.persistTo(targetTab);
       gBrowser.selectedBrowser.focus();
       gBrowser.selectedTab = targetTab;
+
+      // Remember when this load started to avoid early clearing
+      targetTab.HDloadedAt = Date.now();
+    };
+  });
+
+  // Clear out any previous input when navigating somewhere
+  change(gBrowser, "setTabTitleLoading", function(orig) {
+    return function(tab) {
+      if (tab == gBrowser.selectedTab) {
+        // Only reset if it's been some time since loading
+        let {HDloadedAt} = tab;
+        if (HDloadedAt != null && Date.now() - HDloadedAt > 5000)
+          categoryBox.reset();
+      }
+      return orig.call(this, tab);
     };
   });
 
