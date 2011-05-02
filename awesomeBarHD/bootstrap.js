@@ -345,7 +345,7 @@ function addAwesomeBarHD(window) {
     // Show the original identity box when inactive
     origIdentity.hidden = doActive;
     iconBox.hidden = !doActive;
-    shortUrl.hidden = doActive;
+    urlBox.hidden = doActive;
   };
 
   // Pointing away removes the go category highlight
@@ -655,41 +655,78 @@ function addAwesomeBarHD(window) {
     };
   });
 
-  // Show a little bit of the current url
-  let shortUrl = createNode("label");
-  urlbarStack.appendChild(shortUrl);
+  // Show parts of the url with different prioritites
+  let urlBox = createNode("hbox");
+  urlbarStack.appendChild(urlBox);
 
-  shortUrl.setAttribute("left", 1);
+  urlBox.setAttribute("left", 1);
 
-  shortUrl.style.color = "rgba(0, 0, 0, .5)";
-  shortUrl.style.cursor = "text";
-  shortUrl.style.margin = 0;
-  shortUrl.style.textShadow = hdInput.style.textShadow;
+  urlBox.style.backgroundColor = "white";
+  urlBox.style.boxShadow = "5px 0 5px white";
+  urlBox.style.color = "#aaa";
+  urlBox.style.cursor = "text";
 
-  shortUrl.addEventListener("click", function() {
+  urlBox.addEventListener("click", function() {
     document.getElementById("Browser:OpenLocation").doCommand();
   }, false);
 
-  shortUrl.addEventListener("mouseout", function() {
-    shortUrl.style.color = "rgba(0, 0, 0, .5)";
+  urlBox.addEventListener("mouseout", function() {
+    urlBox.style.color = "#aaa";
   }, false);
 
-  shortUrl.addEventListener("mouseover", function() {
-    shortUrl.style.color = "black";
+  urlBox.addEventListener("mouseover", function() {
+    urlBox.style.color = "black";
   }, false);
+
+  let preDomain = createNode("label");
+  urlBox.appendChild(preDomain);
+
+  preDomain.style.margin = 0;
+  preDomain.style.pointerEvents = "none";
+
+  let domainText = createNode("label");
+  urlBox.appendChild(domainText);
+
+  domainText.style.margin = 0;
+  domainText.style.pointerEvents = "none";
+
+  let postDomain = createNode("label");
+  urlBox.appendChild(postDomain);
+
+  postDomain.setAttribute("crop", "end");
+
+  postDomain.style.margin = 0;
+  postDomain.style.pointerEvents = "none";
 
   // Hook into the page proxy state to get url changes
   change(window, "SetPageProxyState", function(orig) {
     return function(state) {
+      // Break the url down into differently-styled parts
       let url = gBrowser.selectedBrowser.currentURI.spec;
+      let urlParts;
       if (url == "about:blank")
-        url = "";
+        urlParts = ["", "", ""];
+      else {
+        let match = url.match(/^([^:]*:\/*)([^\/]*)(.*)$/);
+        urlParts = match == null ? ["", "", url] : match.slice(1);
+      }
 
-      // Just show most of the domain and that's it
-      let match = url.match(/^[^:]*:\/*[^\/]*/);
-      if (match != null)
-        url = match[0].slice(0, -2) + "\u2026";
-      shortUrl.setAttribute("value", url);
+      preDomain.setAttribute("value", urlParts[0]);
+      domainText.setAttribute("value", urlParts[1]);
+      postDomain.setAttribute("value", urlParts[2]);
+
+      // Let the identity box resize to determine how much we can show
+      async(function() {
+        // Clear out any previous fixed width to let max-width work
+        postDomain.style.width = "";
+
+        // Set the max-width to crop the text
+        let width = goCategory.boxObject.x - postDomain.boxObject.x;
+        postDomain.style.maxWidth = Math.max(15, width - 5) + "px";
+
+        // Explicitly set the label width so the containing box shrinks
+        postDomain.style.width = postDomain.boxObject.width + 1 + "px";
+      });
 
       return orig.call(this, state);
     };
