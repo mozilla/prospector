@@ -228,10 +228,10 @@ function addAwesomeBarHD(window) {
   };
 
   // Look through the input to decide what category could be activated
-  categoryBox.maybeHighlight = function() {
-    categoryBox.highlight = null;
+  categoryBox.prepareNext = function() {
+    categoryBox.next = null;
 
-    // See if there's any potential categories to highlight
+    // See if there's any potential category to complete with tab
     let {selectionStart, value} = hdInput;
     let shortValue = value.slice(0, selectionStart);
     let {length} = shortValue;
@@ -244,15 +244,21 @@ function addAwesomeBarHD(window) {
         if (keyword == "")
           return;
         if (shortValue == keyword.slice(0, length)) {
-          categoryBox.highlight = label;
+          categoryBox.next = label;
           return true;
         }
       });
     }
 
-    // Indicate that search can be activated if nothing else is
-    if (categoryBox.active == goCategory && categoryBox.highlight == null)
-      categoryBox.highlight = searchCategory;
+    // Prepare a next category if we didn't find one from the input
+    let {active, next} = categoryBox;
+    if (active == next || next == null)
+      categoryBox.next = active.nextSibling.nextSibling;
+
+    // Prepare a previous category unless already at the beginning
+    categoryBox.prev = null
+    if (active != goCategory)
+      categoryBox.prev = active.previousSibling.previousSibling;
   };
 
   // Figure out if the current input text is activating a category
@@ -280,7 +286,7 @@ function addAwesomeBarHD(window) {
     }
 
     // Update the UI now that we've figured out various states
-    categoryBox.maybeHighlight();
+    categoryBox.prepareNext();
     categoryBox.updateLook();
 
     // Convert the input into a url for the location bar
@@ -306,15 +312,16 @@ function addAwesomeBarHD(window) {
   // Clear out various state of the current input
   categoryBox.reset = function() {
     categoryBox.active = null;
-    categoryBox.highlight = null;
+    categoryBox.next = null;
     categoryBox.hover = null;
+    categoryBox.prev = null;
     categoryBox.updateLook();
   };
 
   // Differently color certain categories depending on state
   categoryBox.updateLook = function() {
     // Restore some UI like the identity box
-    let {active, highlight, hover} = categoryBox;
+    let {active, hover} = categoryBox;
     if (active == null) {
       gBrowser.selectedTab.HDinput = "";
       hdInput.value = "";
@@ -335,7 +342,7 @@ function addAwesomeBarHD(window) {
       let color = "#999";
       if (label == active && doActive)
         color = "#090";
-      else if (label == highlight && doActive || label == hover)
+      else if (label == hover)
         color = "#00f";
       label.style.color = color;
 
@@ -352,9 +359,7 @@ function addAwesomeBarHD(window) {
   categoryBox.addEventListener("mouseout", function(event) {
     if (event.target != categoryBox)
       return;
-    if (gURLBar.hasAttribute("focused"))
-      return;
-    categoryBox.highlight = null;
+    categoryBox.hover = null;
     categoryBox.updateLook();
   }, false);
 
@@ -364,7 +369,7 @@ function addAwesomeBarHD(window) {
       return;
     if (gURLBar.hasAttribute("focused"))
       return;
-    categoryBox.highlight = goCategory;
+    categoryBox.hover = goCategory;
     categoryBox.updateLook();
   }, false);
 
@@ -409,7 +414,10 @@ function addAwesomeBarHD(window) {
 
       let hovering = type == "mouseover";
       categoryBox.hover = hovering ? label : null;
-      categoryBox.updateLook();
+
+      // Keep the original look of the hover if the menu is open
+      if (context.state != "open")
+        categoryBox.updateLook();
 
       // Show providers next to the label
       if (hovering)
@@ -485,11 +493,8 @@ function addAwesomeBarHD(window) {
         categoryBox.activate(label);
     }, false);
 
-    // Keep the category highlighted and prepare to dismiss
+    // Prepare to dismiss for various reasons
     context.addEventListener("popupshowing", function() {
-      categoryBox.highlight = label;
-      categoryBox.updateLook();
-
       // Automatically hide the popup when pointing away
       unOver = listen(window, window, "mouseover", function(event) {
         // Allow pointing at the category label
@@ -578,12 +583,12 @@ function addAwesomeBarHD(window) {
     }
   }, false);
 
-  // Update what gets highlighted when moving the cursor
+  // Update what category is next when moving the cursor
   hdInput.addEventListener("keyup", function(event) {
     switch (event.keyCode) {
       case event.DOM_VK_LEFT:
       case event.DOM_VK_RIGHT:
-        categoryBox.maybeHighlight();
+        categoryBox.prepareNext();
         categoryBox.updateLook();
         break;
     }
@@ -604,11 +609,14 @@ function addAwesomeBarHD(window) {
     if (event.ctrlKey)
       return;
 
-    let {active, highlight} = categoryBox;
-    if (active != goCategory)
-      categoryBox.activate(active);
-    else if (highlight != null)
-      categoryBox.activate(highlight);
+    // Allow moving forwards or backwards through categories
+    let {next, prev} = categoryBox;
+    if (event.shiftKey) {
+      if (prev != null)
+        categoryBox.activate(prev);
+    }
+    else if (next != null)
+      categoryBox.activate(next);
 
     event.preventDefault();
     event.stopPropagation();
