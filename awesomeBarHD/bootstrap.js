@@ -741,6 +741,7 @@ function addAwesomeBarHD(window) {
 
   let preDomain = createNode("label");
   urlBox.appendChild(preDomain);
+  preDomain.setAttribute("collapsed", true);
 
   preDomain.style.margin = 0;
   preDomain.style.pointerEvents = "none";
