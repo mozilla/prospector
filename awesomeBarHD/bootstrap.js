@@ -553,6 +553,10 @@ function addAwesomeBarHD(window) {
   let searchCategory = goCategory.nextSibling.nextSibling;
   categoryBox.lastChild.setAttribute("value", ".");
 
+  // For now hide the go category
+  goCategory.setAttribute("collapsed", true);
+  goCategory.nextSibling.setAttribute("collapsed", true);
+
   // Copy most of the original input field
   let hdInput = origInput.cloneNode(false);
   urlbarStack.appendChild(hdInput);
