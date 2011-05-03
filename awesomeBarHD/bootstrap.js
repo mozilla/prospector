@@ -913,6 +913,9 @@ function addAwesomeBarHD(window) {
     tabPanel.underText = underText;
     tabBox.appendChild(underText);
 
+    underText.style.backgroundColor = "rgb(240, 240, 240)";
+    underText.style.color = "#090";
+    underText.style.fontWeight = "bold";
     underText.style.margin = "3px 0 0 0";
     underText.style.textDecoration = "underline";
 
