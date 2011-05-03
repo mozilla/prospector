@@ -355,12 +355,18 @@ function addAwesomeBarHD(window) {
     let focused = gURLBar.hasAttribute("focused");
     let doActive = focused || hdInput.value != "";
     Array.forEach(categoryBox.childNodes, function(label) {
+      let {categoryData, style} = label;
+
       let color = "#999";
+      let line = false;
       if (label == active && doActive)
         color = "#090";
-      else if (label == hover)
+      else if (focused || label == hover) {
         color = "#00f";
-      label.style.color = color;
+        line = true;
+      }
+      style.color = color;
+      style.textDecoration = line && categoryData != null ? "underline" : "";
     });
 
     // Show the next category if focus is in the box
@@ -420,7 +426,6 @@ function addAwesomeBarHD(window) {
     label.categoryData = categoryData;
 
     label.style.cursor = "pointer";
-    label.style.textDecoration = "underline";
 
     // For context-less, activate on plain click
     label.addEventListener("click", function() {
