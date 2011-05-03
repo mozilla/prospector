@@ -740,7 +740,9 @@ function addAwesomeBarHD(window) {
     urlBox.style.color = "#aaa";
   }, false);
 
-  urlBox.addEventListener("mouseover", function() {
+  urlBox.addEventListener("mouseover", function({target}) {
+    if (target == urlBox)
+      return;
     urlBox.style.color = "black";
   }, false);
 
