@@ -727,7 +727,12 @@ function addAwesomeBarHD(window) {
   urlBox.style.color = "#aaa";
   urlBox.style.cursor = "text";
 
-  urlBox.addEventListener("click", function() {
+  // Do slightly different behavior if the user clicked white space or text
+  urlBox.addEventListener("mouseup", function({target}) {
+    if (target == urlBox) {
+      hdInput.focus();
+      return;
+    }
     document.getElementById("Browser:OpenLocation").doCommand();
   }, false);
 
@@ -743,23 +748,23 @@ function addAwesomeBarHD(window) {
   urlBox.appendChild(preDomain);
   preDomain.setAttribute("collapsed", true);
 
+  preDomain.style.cursor = "text";
   preDomain.style.margin = 0;
-  preDomain.style.pointerEvents = "none";
 
   let domainText = createNode("label");
   urlBox.appendChild(domainText);
 
   domainText.style.color = "black";
+  domainText.style.cursor = "text";
   domainText.style.margin = 0;
-  domainText.style.pointerEvents = "none";
 
   let postDomain = createNode("label");
   urlBox.appendChild(postDomain);
 
   postDomain.setAttribute("crop", "end");
 
+  postDomain.style.cursor = "text";
   postDomain.style.margin = 0;
-  postDomain.style.pointerEvents = "none";
 
   // Hook into the page proxy state to get url changes
   change(window, "SetPageProxyState", function(orig) {
