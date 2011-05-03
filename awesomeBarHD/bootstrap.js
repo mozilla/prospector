@@ -771,17 +771,18 @@ function addAwesomeBarHD(window) {
     return function(state) {
       // Break the url down into differently-styled parts
       let url = gBrowser.selectedBrowser.currentURI.spec;
-      let urlParts;
-      if (url == "about:blank")
-        urlParts = ["", "", ""];
-      else {
-        let match = url.match(/^([^:]*:\/*)([^\/]*)(.*)$/);
-        urlParts = match == null ? ["", "", url] : match.slice(1);
+      if (url == "about:blank") {
+        urlBox.collapsed = true;
+        return;
       }
+
+      let match = url.match(/^([^:]*:\/*)([^\/]*)(.*)$/);
+      let urlParts = match == null ? ["", "", url] : match.slice(1);
 
       preDomain.setAttribute("value", urlParts[0]);
       domainText.setAttribute("value", urlParts[1]);
       postDomain.setAttribute("value", urlParts[2]);
+      urlBox.collapsed = false;
 
       // Let the identity box resize to determine how much we can show
       async(function() {
