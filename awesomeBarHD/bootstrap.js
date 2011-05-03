@@ -720,6 +720,7 @@ function addAwesomeBarHD(window) {
   urlbarStack.appendChild(urlBox);
 
   urlBox.setAttribute("left", 1);
+  urlBox.setAttribute("right", 0);
 
   urlBox.style.backgroundColor = "white";
   urlBox.style.boxShadow = "5px 0 5px white";
@@ -778,6 +779,9 @@ function addAwesomeBarHD(window) {
 
       // Let the identity box resize to determine how much we can show
       async(function() {
+        // For now, just use the full width without dynamically sizing
+        return;
+
         // Clear out any previous fixed width to let max-width work
         postDomain.style.width = "";
 
