@@ -271,12 +271,14 @@ function addAwesomeBarHD(window) {
     // Prepare a next category if we didn't find one from the input
     let {active, next} = categoryBox;
     if (active == next || next == null)
-      categoryBox.next = active.nextSibling.nextSibling;
+      categoryBox.next = active.nextSibling.nextSibling || goCategory;
 
     // Prepare a previous category unless already at the beginning
     categoryBox.prev = null
     if (active != goCategory)
       categoryBox.prev = active.previousSibling.previousSibling;
+    else
+      categoryBox.prev = categoryBox.lastChild.previousSibling;
   };
 
   // Figure out if the current input text is activating a category
@@ -848,7 +850,7 @@ function addAwesomeBarHD(window) {
   tabPanel.showNextCategory = function() {
     // Nothing to show if nothing is next
     let {next} = categoryBox;
-    if (next == null) {
+    if (next == null || next == goCategory) {
       tabPanel.hidePopup();
       return;
     }
