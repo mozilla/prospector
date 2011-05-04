@@ -76,12 +76,15 @@ function addAwesomeBarHD(window) {
   iconBox.appendChild(providerIcon);
 
   // Show providers at the icon if something is active
-  providerIcon.addEventListener("mouseover", function() {
+  providerIcon.handleMouse = function() {
     let {active} = categoryBox;
     if (active == null)
       return;
     active.context.openAt(providerIcon);
-  }, false);
+  };
+
+  providerIcon.addEventListener("click", providerIcon.handleMouse, false);
+  providerIcon.addEventListener("mouseover", providerIcon.handleMouse, false);
 
   // Add stuff around the original urlbar input box
   let urlbarStack = createNode("stack");
