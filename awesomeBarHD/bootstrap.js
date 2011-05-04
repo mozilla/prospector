@@ -846,14 +846,33 @@ function addAwesomeBarHD(window) {
 
   tabPanel.style.MozWindowShadow = "none";
 
+  // Change display when shift is pressed
+  tabPanel.onKey = function(event) {
+    if (event.keyCode != event.DOM_VK_SHIFT)
+      return;
+
+    // Update internal state and update the panel
+    tabPanel.shifted = event.shiftKey;
+    if (tabPanel.state == "open")
+      tabPanel.showNextCategory();
+  };
+
   // Open the panel showing what next category to tab to
   tabPanel.showNextCategory = function() {
+    // Show the previous category if going backwards
+    let {shifted, textTab} = tabPanel;
+    let {next, prev} = categoryBox;
+    if (shifted)
+      next = prev;
+
     // Nothing to show if nothing is next
-    let {next} = categoryBox;
     if (next == null || next == goCategory) {
       tabPanel.hidePopup();
       return;
     }
+
+    // Set the appropriate key to press
+    textTab.setAttribute("value", (shifted ? "shift-" : "") + "tab");
 
     // Read out various state to specially highlight based on input
     let {category, defaultIndex, providers} = next.categoryData;
@@ -895,6 +914,10 @@ function addAwesomeBarHD(window) {
     tabPanel.openPopup(iconBox, "before_start");
   };
 
+  // Maybe update the panel if the shift key is held
+  hdInput.addEventListener("keydown", tabPanel.onKey, true);
+  hdInput.addEventListener("keyup", tabPanel.onKey, true);
+
   unload(function() {
     tabPanel.parentNode.removeChild(tabPanel);
   });
@@ -920,9 +943,8 @@ function addAwesomeBarHD(window) {
     textPress.style.margin = "0 3px 0 0";
 
     let textTab = createNode("label");
+    tabPanel.textTab = textTab;
     tabBox.appendChild(textTab);
-
-    textTab.setAttribute("value", "tab");
 
     textTab.style.backgroundImage = "-moz-linear-gradient(top, rgb(240, 240, 240), rgb(220, 220, 220))";
     textTab.style.borderRadius = "2px";
