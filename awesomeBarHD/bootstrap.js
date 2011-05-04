@@ -890,7 +890,7 @@ function addAwesomeBarHD(window) {
     tabPanel.provider.setAttribute("value", name);
 
     // Show the panel just above the input near the cursor
-    tabPanel.openPopup(hdInput, "before_start", -5, -3);
+    tabPanel.openPopup(iconBox, "before_start");
   };
 
   unload(function() {
@@ -902,11 +902,12 @@ function addAwesomeBarHD(window) {
     let tabBox = createNode("hbox");
     tabPanel.appendChild(tabBox);
 
-    tabBox.style.backgroundColor = "rgb(250, 250, 250)";
+    tabBox.setAttribute("align", "center");
+
+    tabBox.style.backgroundColor = "white";
     tabBox.style.border = "1px solid rgb(50, 50, 50)";
     tabBox.style.borderRadius = "5px";
-    tabBox.style.opacity = ".7";
-    tabBox.style.padding = "3px";
+    tabBox.style.padding = "2px";
 
     let textPress = createNode("label");
     tabBox.appendChild(textPress);
@@ -914,7 +915,7 @@ function addAwesomeBarHD(window) {
     textPress.setAttribute("value", "Press");
 
     textPress.style.color = "#999";
-    textPress.style.margin = "3px 4px 0 0";
+    textPress.style.margin = "0 3px 0 0";
 
     let textTab = createNode("label");
     tabBox.appendChild(textTab);
@@ -923,7 +924,7 @@ function addAwesomeBarHD(window) {
 
     textTab.style.backgroundImage = "-moz-linear-gradient(top, rgb(240, 240, 240), rgb(220, 220, 220))";
     textTab.style.borderRadius = "2px";
-    textTab.style.margin = "3px 0 0 0";
+    textTab.style.margin = "0";
     textTab.style.padding = "0 2px";
 
     let textTo = createNode("label");
@@ -932,23 +933,22 @@ function addAwesomeBarHD(window) {
     textTo.setAttribute("value", "to ");
 
     textTo.style.color = "#999";
-    textTo.style.margin = "3px 0 0 4px";
+    textTo.style.margin = "0 0 0 3px";
 
     let preUnder = createNode("label");
     tabPanel.preUnder = preUnder;
     tabBox.appendChild(preUnder);
 
     preUnder.style.color = "#999";
-    preUnder.style.margin = "3px 0 0 0";
+    preUnder.style.margin = "0";
 
     let underText = createNode("label");
     tabPanel.underText = underText;
     tabBox.appendChild(underText);
 
-    underText.style.backgroundColor = "rgb(240, 240, 240)";
-    underText.style.color = "#090";
+    underText.style.color = "#0c0";
     underText.style.fontWeight = "bold";
-    underText.style.margin = "3px 0 0 0";
+    underText.style.margin = "0";
     underText.style.textDecoration = "underline";
 
     let postUnder = createNode("label");
@@ -956,7 +956,7 @@ function addAwesomeBarHD(window) {
     tabBox.appendChild(postUnder);
 
     postUnder.style.color = "#999";
-    postUnder.style.margin = "3px 0 0 0";
+    postUnder.style.margin = "0";
 
     let textColon = createNode("label");
     tabBox.appendChild(textColon);
@@ -964,21 +964,40 @@ function addAwesomeBarHD(window) {
     textColon.setAttribute("value", ":");
 
     textColon.style.color = "#999";
-    textColon.style.margin = "3px 6px 0 0";
+    textColon.style.margin = "0 3px 0 0";
 
     let icon = createNode("image");
     tabPanel.icon = icon;
     tabBox.appendChild(icon);
 
-    icon.setAttribute("height", 16);
-    icon.setAttribute("width", 16);
+    icon.setAttribute("height", 12);
+    icon.setAttribute("width", 12);
+
+    icon.style.filter = "url(#HDdesaturate)";
 
     let provider = createNode("label");
     tabPanel.provider = provider;
     tabBox.appendChild(provider);
 
     provider.style.color = "#999";
-    provider.style.margin = "3px 3px 0 6px";
+    provider.style.margin = "0 0 0 3px";
+
+    let svgNode = document.getElementById("browser-bottombox").nextSibling;
+    const SVG = "http://www.w3.org/2000/svg";
+
+    let filter = document.createElementNS(SVG, "filter");
+    svgNode.appendChild(filter);
+
+    filter.id = "HDdesaturate";
+
+    let matrix = document.createElementNS(SVG, "feColorMatrix");
+    filter.appendChild(matrix);
+
+    matrix.setAttribute("values", "0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0");
+
+    unload(function() {
+      filter.parentNode.removeChild(filter);
+    });
   }
 
   // Catch various existing browser commands to redirect to the dashboard
