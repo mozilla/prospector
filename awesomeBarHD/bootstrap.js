@@ -427,10 +427,10 @@ function addAwesomeBarHD(window) {
 
     label.style.cursor = "pointer";
 
-    // For context-less, activate on plain click
-    label.addEventListener("click", function() {
-      categoryBox.activateAndGo(label);
-    }, false);
+    // Show or reshow the menu when clicking the label
+    function onClick() {
+      context.openAt(label);
+    }
 
     // Open the context menu when moving over the related labels
     let hoverTimer;
@@ -464,12 +464,14 @@ function addAwesomeBarHD(window) {
         categoryBox.updateLook();
     }
 
+    label.addEventListener("click", onClick, false);
     label.addEventListener("mousemove", onMove, false);
     label.addEventListener("mouseout", onMouse, false);
     label.addEventListener("mouseover", onMouse, false);
 
     // Add a comma after each category
     let comma = addLabel(", ");
+    comma.addEventListener("click", onClick, false);
     comma.addEventListener("mousemove", onMove, false);
     comma.addEventListener("mouseout", onMouse, false);
     comma.addEventListener("mouseover", onMouse, false);
@@ -530,9 +532,8 @@ function addAwesomeBarHD(window) {
       categoryBox.updateLook();
 
       // Assume dismiss of the popup by clicking on the label is to activate
-      // Windows sends both popuphiding and click events, so ignore this one
-      if (!isWin && categoryBox.hover == label)
-        categoryBox.activateAndGo(label);
+      if (categoryBox.hover == label)
+        categoryBox.activateAndGo(label, categoryData.defaultIndex);
     }, false);
 
     // Prepare to dismiss for various reasons
