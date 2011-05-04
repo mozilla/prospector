@@ -432,29 +432,45 @@ function addAwesomeBarHD(window) {
       categoryBox.activateAndGo(label);
     }, false);
 
+    // Open the context menu when moving over the related labels
+    let hoverTimer;
+    function onMove() {
+      // Already have a timer active, so nothing to do
+      if (hoverTimer != null)
+        return;
+
+      // Start a timer to delay showing the menu
+      hoverTimer = async(function() {
+        hoverTimer = null;
+
+        // Only show the menu if this label is still being pointed at
+        if (categoryBox.hover != label)
+          return;
+        context.openAt(label);
+      }, 100);
+    }
+
     // Handle the mouse moving in or out of the related labels
     function onMouse({type, relatedTarget}) {
       // Ignore events between the two related labels
       if (relatedTarget == label || relatedTarget == comma)
         return;
 
-      let hovering = type == "mouseover";
-      categoryBox.hover = hovering ? label : null;
+      // Keep track of what is currently being hovered
+      categoryBox.hover = type == "mouseover" ? label : null;
 
       // Keep the original look of the hover if the menu is open
       if (context.state != "open")
         categoryBox.updateLook();
-
-      // Show providers next to the label
-      if (hovering)
-        context.openAt(label);
     }
 
+    label.addEventListener("mousemove", onMove, false);
     label.addEventListener("mouseout", onMouse, false);
     label.addEventListener("mouseover", onMouse, false);
 
     // Add a comma after each category
     let comma = addLabel(", ");
+    comma.addEventListener("mousemove", onMove, false);
     comma.addEventListener("mouseout", onMouse, false);
     comma.addEventListener("mouseover", onMouse, false);
 
