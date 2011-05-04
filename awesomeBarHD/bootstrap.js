@@ -635,9 +635,17 @@ function addAwesomeBarHD(window) {
     }
   }, false);
 
-  // Update what category is next when moving the cursor
+  // Specially handle some navigation keys
   hdInput.addEventListener("keyup", function(event) {
     switch (event.keyCode) {
+      // Fill in autocomplete values when selecting them
+      case event.DOM_VK_DOWN:
+      case event.DOM_VK_UP:
+        if (categoryBox.active == goCategory)
+          hdInput.value = origInput.value;
+        break;
+
+      // Update what category is next when moving the cursor
       case event.DOM_VK_LEFT:
       case event.DOM_VK_RIGHT:
         categoryBox.prepareNext();
