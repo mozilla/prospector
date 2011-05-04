@@ -501,6 +501,8 @@ function addAwesomeBarHD(window) {
 
     // Allow opening the context under a node
     context.openAt = function(node) {
+      if (isInactive())
+        return;
       if (context.state == "open")
         return;
       if (category == "go")
@@ -1019,6 +1021,11 @@ function addAwesomeBarHD(window) {
   unload(function() {
     origIdentity.hidden = false;
   });
+
+  // Check for inactiveness
+  function isInactive() {
+    return gURLBar.mozMatchesSelector(":-moz-window-inactive");
+  }
 
   // Prepare the category box for first action!
   categoryBox.reset();
