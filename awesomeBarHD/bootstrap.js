@@ -737,10 +737,9 @@ function addAwesomeBarHD(window) {
   // Hook into the user selecting a result
   change(gURLBar, "handleCommand", function(orig) {
     return function(event) {
-      let isGo = categoryBox.active == goCategory;
-
       // Just load the page into the current tab
-      if (isGo) {
+      let {active} = categoryBox;
+      if (active == goCategory) {
         categoryBox.reset();
         // Open pages into a new tab instead of replacing app tabs
         let isMouse = event instanceof window.MouseEvent;
@@ -766,6 +765,9 @@ function addAwesomeBarHD(window) {
       prefetcher.persistTo(targetTab);
       gBrowser.selectedBrowser.focus();
       gBrowser.selectedTab = targetTab;
+
+      // Show the other providers as a hint to switch
+      async(function() active.context.openAt(providerIcon), 100);
 
       // Remember when this load started to avoid early clearing
       targetTab.HDloadedAt = Date.now();
