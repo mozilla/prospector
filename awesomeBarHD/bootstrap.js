@@ -236,7 +236,33 @@ function addAwesomeBarHD(window) {
 
   // Immediately go to the result page if there's something to search
   categoryBox.activateAndGo = function(categoryLabel, index) {
+    // Remember if there's completely no input
+    let empty = hdInput.value == "";
     categoryBox.activate(categoryLabel, index);
+
+    // Animate in the now filled-in category towards the left
+    if (empty) {
+      let maxOffset = categoryLabel.boxObject.x - urlbarStack.boxObject.x;
+      let maxSteps = 10;
+      let step = 0;
+
+      // Hide the category box and animate in the text
+      categoryBox.collapsed = true;
+      let animate = function() {
+        // Restore the original look
+        if (step == maxSteps) {
+          categoryBox.collapsed = false;
+          hdInput.removeAttribute("left");
+          return;
+        }
+
+        // Figure out where to position the text
+        let frac = step++ / maxSteps;
+        hdInput.setAttribute("left", maxOffset * (1 - Math.pow(frac, 3)));
+        async(animate, 40);
+      };
+      animate();
+    }
 
     // Only go if it's not just blank
     let {value} = hdInput;
