@@ -382,9 +382,13 @@ function addAwesomeBarHD(window) {
         providerIcon.setAttribute("src", icon);
     }
 
+    // Check if the input looks like a url
+    let {value} = hdInput;
+    let likeUrl = value.indexOf(" ") == -1 && value.indexOf("/") != -1;
+
     // Go through each label and style it appropriately
     let focused = gURLBar.hasAttribute("focused");
-    let doActive = focused || hdInput.value != "";
+    let doActive = focused || value != "";
     Array.forEach(categoryBox.childNodes, function(label) {
       let {categoryData, style} = label;
 
@@ -400,8 +404,11 @@ function addAwesomeBarHD(window) {
       style.textDecoration = line && categoryData != null ? "underline" : "";
     });
 
+    // Don't show categories for potentially long urls
+    categoryBox.hidden = likeUrl;
+
     // Show the next category if focus is in the box
-    if (focused)
+    if (focused && !likeUrl)
       tabPanel.showNextCategory();
     else
       tabPanel.hidePopup();
@@ -669,8 +676,10 @@ function addAwesomeBarHD(window) {
       // Fill in autocomplete values when selecting them
       case event.DOM_VK_DOWN:
       case event.DOM_VK_UP:
-        if (categoryBox.active == goCategory)
+        if (categoryBox.active == goCategory) {
           hdInput.value = origInput.value;
+          categoryBox.updateLook();
+        }
         break;
 
       // Update what category is next when moving the cursor
