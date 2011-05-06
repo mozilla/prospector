@@ -660,6 +660,9 @@ function addAwesomeBarHD(window) {
     if (event.keyCode != event.DOM_VK_ESCAPE)
       return;
 
+    // Keep the focus in the input box instead of blurring
+    event.preventDefault();
+
     // Return focus to the browser if already empty
     if (hdInput.value == "")
       gBrowser.selectedBrowser.focus();
@@ -728,7 +731,7 @@ function addAwesomeBarHD(window) {
   // Redirect focus from the original input to the new one
   listen(window, origInput, "focus", function(event) {
     origInput.blur();
-    hdInput.focus();
+    document.getElementById("Browser:OpenLocation").doCommand();
   }, false);
 
   // Hook into the user selecting a result
