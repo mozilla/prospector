@@ -183,6 +183,7 @@ function addAwesomeBarHD(window) {
 
   categoryBox.style.cursor = "text";
   categoryBox.style.overflow = "hidden";
+  categoryBox.style.pointerEvents = "none";
 
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryLabel, index) {
@@ -452,6 +453,7 @@ function addAwesomeBarHD(window) {
 
     label.setAttribute("value", text);
     label.style.margin = 0;
+    label.style.pointerEvents = "auto";
 
     return label;
   }
@@ -616,7 +618,7 @@ function addAwesomeBarHD(window) {
 
   // Copy most of the original input field
   let hdInput = origInput.cloneNode(false);
-  urlbarStack.appendChild(hdInput);
+  urlbarStack.insertBefore(hdInput, categoryBox);
 
   // Hide the original input
   change(origInput.style, "maxWidth", 0);
@@ -625,8 +627,6 @@ function addAwesomeBarHD(window) {
   hdInput.removeAttribute("onblur");
   hdInput.removeAttribute("onfocus");
   hdInput.removeAttribute("placeholder");
-
-  hdInput.style.pointerEvents = "none";
 
   // Use white shadows to cover up the category text
   let (shadow = []) {
