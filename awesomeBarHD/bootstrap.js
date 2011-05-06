@@ -45,6 +45,9 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 // Keep a reference to the top level providers data
 let allProviders;
 
+// Keep track of how often what part of the interface is used
+let usage;
+
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
   Cu.import("resource://services-sync/ext/Preferences.js");
@@ -187,6 +190,8 @@ function addAwesomeBarHD(window) {
 
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryLabel, index) {
+    usage.activate++;
+
     // Cycle through providers when re-activating the same category
     let {active} = categoryBox;
     if (active == categoryLabel && index == null) {
@@ -212,8 +217,10 @@ function addAwesomeBarHD(window) {
       if (keyword == "")
         hdInput.value = query;
       // Use the partially typed short keyword
-      else if (selectionStart > 0 && shortQuery == keyword.slice(0, selectionStart))
+      else if (selectionStart > 0 && shortQuery == keyword.slice(0, selectionStart)) {
+        usage.tabComplete++;
         hdInput.value = keyword + query.slice(selectionStart);
+      }
       // Insert the full keyword
       else
         hdInput.value = keyword + query;
@@ -237,12 +244,16 @@ function addAwesomeBarHD(window) {
 
   // Immediately go to the result page if there's something to search
   categoryBox.activateAndGo = function(categoryLabel, index) {
+    usage.activateAndGo++;
+
     // Remember if there's completely no input
     let empty = hdInput.value == "";
     categoryBox.activate(categoryLabel, index);
 
     // Animate in the now filled-in category towards the left
     if (empty) {
+      usage.emptyClick++;
+
       let maxOffset = categoryLabel.boxObject.x - urlbarStack.boxObject.x;
       let maxSteps = 10;
       let step = 0;
@@ -269,6 +280,11 @@ function addAwesomeBarHD(window) {
     let {value} = hdInput;
     if (value.search(/:\s*\S/) == -1)
       return;
+
+    usage.activateAndWent++;
+    if (!empty)
+      usage.providerSwitch++;
+
     gURLBar.handleCommand();
   };
 
@@ -530,6 +546,7 @@ function addAwesomeBarHD(window) {
       context.appendChild(provider);
 
       provider.addEventListener("command", function() {
+        usage.clickProvider++;
         categoryBox.activateAndGo(label, index);
       }, false);
 
@@ -574,8 +591,10 @@ function addAwesomeBarHD(window) {
       categoryBox.updateLook();
 
       // Assume dismiss of the popup by clicking on the label is to activate
-      if (categoryBox.hover == label)
+      if (categoryBox.hover == label) {
+        usage.clickCategory++;
         categoryBox.activateAndGo(label, categoryData.defaultIndex);
+      }
     }, false);
 
     // Prepare to dismiss for various reasons
@@ -712,11 +731,15 @@ function addAwesomeBarHD(window) {
     // Allow moving forwards or backwards through categories
     let {next, prev} = categoryBox;
     if (event.shiftKey) {
-      if (prev != null)
+      if (prev != null) {
+        usage.tabPrev++;
         categoryBox.activate(prev);
+      }
     }
-    else if (next != null)
+    else if (next != null) {
+      usage.tabNext++;
       categoryBox.activate(next);
+    }
 
     event.preventDefault();
     event.stopPropagation();
@@ -1167,6 +1190,30 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     });
   }
 
+  // Load in previous usage data
+  try {
+    usage = JSON.parse(prefs.get("usage"));
+  }
+  catch(ex) {
+    usage = {};
+  }
+
+  // Make sure we have some initial values if necessary
+  ["activate",
+   "activateAndGo",
+   "activateAndWent",
+   "clickCategory",
+   "clickProvider",
+   "emptyClick",
+   "providerSwitch",
+   "tabComplete",
+   "tabNext",
+   "tabPrev",
+  ].forEach(function(name) {
+    if (usage[name] == null)
+      usage[name] = 0;
+  });
+
   // Combine location and search!
   watchWindows(addAwesomeBarHD);
 })
@@ -1182,6 +1229,7 @@ function shutdown(data, reason) {
 
   // Persist data across restarts and disables
   prefs.set("providers", JSON.stringify(allProviders));
+  prefs.set("usage", JSON.stringify(usage));
 }
 
 /**
