@@ -251,9 +251,7 @@ function addAwesomeBarHD(window) {
     categoryBox.activate(categoryLabel, index);
 
     // Animate in the now filled-in category towards the left
-    if (empty) {
-      usage.emptyClick++;
-
+    if (empty && usage.emptyClick++ < 3) {
       let maxOffset = categoryLabel.boxObject.x - urlbarStack.boxObject.x;
       let maxSteps = 10;
       let step = 0;
@@ -790,7 +788,8 @@ function addAwesomeBarHD(window) {
       gBrowser.selectedTab = targetTab;
 
       // Show the other providers as a hint to switch
-      async(function() active.context.openAt(providerIcon), 100);
+      if (usage.providerSwitch < 3)
+        async(function() active.context.openAt(providerIcon), 100);
 
       // Remember when this load started to avoid early clearing
       targetTab.HDloadedAt = Date.now();
@@ -957,6 +956,22 @@ function addAwesomeBarHD(window) {
     }
     else
       splitParts.postUnder = category;
+
+    // Figure out if the tab panel should be shown or not
+    let dontShow = false;
+    if (splitParts.underText == "") {
+      if (shifted)
+        dontShow = usage.tabPrev >= 3;
+      else
+        dontShow = usage.tabNext >= 3;
+    }
+    else if (usage.tabComplete >= 3)
+      dontShow = true;
+
+    if (dontShow) {
+      tabPanel.hidePopup();
+      return;
+    }
 
     // Slightly change the wording for the search category
     if (next == searchCategory) {
