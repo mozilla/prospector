@@ -675,6 +675,10 @@ function addAwesomeBarHD(window) {
     }
     else
       categoryBox.updateLook();
+
+    // Make sure revert various state to get the right page proxy state
+    gBrowser.userTypedValue = null;
+    window.URLBarSetURI();
   }, false);
 
   hdInput.addEventListener("click", function() {
