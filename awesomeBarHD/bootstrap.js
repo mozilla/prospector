@@ -286,6 +286,20 @@ function addAwesomeBarHD(window) {
     gURLBar.handleCommand();
   };
 
+  // Select the keyword if the cursor is in the keyword
+  categoryBox.checkSelection = function() {
+    if (categoryBox.active == goCategory)
+      return;
+
+    // Move the selection boundaries if they're inside the keyword
+    let {selectionEnd, selectionStart, value} = hdInput;
+    let queryStart = value.match(/^[^:]*:\s*/)[0].length;
+    if (selectionStart <= queryStart)
+      hdInput.selectionStart = 0;
+    if (selectionEnd < queryStart)
+      hdInput.selectionEnd = queryStart;
+  };
+
   // Look through the input to decide what category could be activated
   categoryBox.prepareNext = function() {
     categoryBox.next = null;
@@ -663,6 +677,10 @@ function addAwesomeBarHD(window) {
       categoryBox.updateLook();
   }, false);
 
+  hdInput.addEventListener("click", function() {
+    categoryBox.checkSelection();
+  }, false);
+
   hdInput.addEventListener("focus", function() {
     gURLBar.setAttribute("focused", true);
     categoryBox.processInput();
@@ -688,6 +706,37 @@ function addAwesomeBarHD(window) {
       hdInput.value = "";
       categoryBox.processInput();
     }
+  }, false);
+
+  // Detect cursor movements to auto-select the keyword
+  hdInput.addEventListener("keypress", function(event) {
+    let {active} = categoryBox;
+    if (active == goCategory)
+      return;
+
+    // Only care about the various keys can cause the cursor to move
+    switch (event.keyCode) {
+      case event.DOM_VK_END:
+      case event.DOM_VK_DOWN:
+      case event.DOM_VK_HOME:
+      case event.DOM_VK_LEFT:
+      case event.DOM_VK_RIGHT:
+      case event.DOM_VK_UP:
+        break;
+
+      default:
+        return;
+    }
+
+    // Don't re-select if there's a selection of the keyword already
+    let {selectionEnd, selectionStart, value} = hdInput;
+    let queryStart = value.match(/^[^:]*:\s*/)[0].length;
+    if (selectionEnd == queryStart && selectionStart != queryStart)
+      return;
+
+    // Must not be selecting or cursor is at the query, so select, but wait for
+    // the cursor to actually move before detecting the selection
+    async(function() categoryBox.checkSelection());
   }, false);
 
   // Specially handle some navigation keys
