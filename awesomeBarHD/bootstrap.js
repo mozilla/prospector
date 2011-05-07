@@ -433,8 +433,13 @@ function addAwesomeBarHD(window) {
       style.textDecoration = line && categoryData != null ? "underline" : "";
     });
 
-    // Don't show categories for potentially long urls
-    categoryBox.hidden = likeUrl;
+    // Hide the url parts if it's about:blank or active
+    let isBlank = gBrowser.selectedBrowser.currentURI.spec == "about:blank";
+    let hideUrl = isBlank || doActive;
+    urlBox.hidden = hideUrl;
+
+    // Hide categories for long url inputs or when showing url parts
+    categoryBox.hidden = likeUrl || !hideUrl;
 
     // Show the next category if focus is in the box
     if (focused && !likeUrl)
@@ -445,7 +450,6 @@ function addAwesomeBarHD(window) {
     // Show the original identity box when inactive
     origIdentity.hidden = doActive;
     iconBox.hidden = !doActive;
-    urlBox.hidden = doActive;
   };
 
   // Pointing away removes the go category highlight
@@ -658,14 +662,6 @@ function addAwesomeBarHD(window) {
   hdInput.removeAttribute("onblur");
   hdInput.removeAttribute("onfocus");
   hdInput.removeAttribute("placeholder");
-
-  // Use white shadows to cover up the category text
-  let (shadow = []) {
-    for (let i = -10; i <= 30; i += 5)
-      for (let j = -6; j <= 3; j += 3)
-        shadow.push(i + "px " + j + "px 5px white");
-    hdInput.style.textShadow = shadow.join(", ");
-  }
 
   hdInput.addEventListener("blur", function() {
     let url = gBrowser.selectedBrowser.currentURI.spec;
@@ -907,8 +903,6 @@ function addAwesomeBarHD(window) {
   urlBox.setAttribute("left", 1);
   urlBox.setAttribute("right", 0);
 
-  urlBox.style.backgroundColor = "white";
-  urlBox.style.boxShadow = "5px 0 5px white";
   urlBox.style.color = "#aaa";
   urlBox.style.cursor = "text";
 
@@ -956,6 +950,8 @@ function addAwesomeBarHD(window) {
   // Hook into the page proxy state to get url changes
   change(window, "SetPageProxyState", function(orig) {
     return function(state) {
+      categoryBox.updateLook();
+
       // Strip off wyciwyg and passwords
       let uri = gBrowser.selectedBrowser.currentURI;
       try {
@@ -965,10 +961,8 @@ function addAwesomeBarHD(window) {
 
       // Break the url down into differently-styled parts
       let url = window.losslessDecodeURI(uri);
-      if (url == "about:blank") {
-        urlBox.collapsed = true;
+      if (url == "about:blank")
         return;
-      }
 
       let match = url.match(/^([^:]*:\/*)([^\/]*)(.*)$/);
       let urlParts = match == null ? ["", "", url] : match.slice(1);
@@ -976,7 +970,6 @@ function addAwesomeBarHD(window) {
       preDomain.setAttribute("value", urlParts[0]);
       domainText.setAttribute("value", urlParts[1]);
       postDomain.setAttribute("value", urlParts[2]);
-      urlBox.collapsed = false;
 
       // Let the identity box resize to determine how much we can show
       async(function() {
