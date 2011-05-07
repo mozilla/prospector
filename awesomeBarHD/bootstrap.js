@@ -918,8 +918,15 @@ function addAwesomeBarHD(window) {
   // Hook into the page proxy state to get url changes
   change(window, "SetPageProxyState", function(orig) {
     return function(state) {
+      // Strip off wyciwyg and passwords
+      let uri = gBrowser.selectedBrowser.currentURI;
+      try {
+        uri = window.XULBrowserWindow._uriFixup.createExposableURI(uri);
+      }
+      catch(ex) {}
+
       // Break the url down into differently-styled parts
-      let url = gBrowser.selectedBrowser.currentURI.spec;
+      let url = uri.spec;
       if (url == "about:blank") {
         urlBox.collapsed = true;
         return;
