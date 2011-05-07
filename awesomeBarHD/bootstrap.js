@@ -770,6 +770,44 @@ function addAwesomeBarHD(window) {
     categoryBox.processInput();
   });
 
+  // Allow switching providers with modified up/down
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    let {active} = categoryBox;
+    if (active == goCategory)
+      return;
+
+    // Only look for modified key presses
+    if (!(event.altKey || event.ctrlKey || event.metaKey))
+      return;
+
+    // Figure out what provider to select next
+    let index;
+    let {categoryData} = active;
+    let {defaultIndex, providers} = categoryData;
+    switch (event.keyCode) {
+      case event.DOM_VK_DOWN:
+        if (defaultIndex != providers.length - 1)
+          index = defaultIndex + 1;
+        break;
+
+      case event.DOM_VK_UP:
+        if (defaultIndex != 0)
+          index = defaultIndex - 1;
+        break;
+
+      default:
+        return;
+    }
+
+    // Don't allow the cursor to move or controller from filling
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Activate the provider if it's not already at the edges
+    if (index != null)
+      categoryBox.activate(active, index);
+  });
+
   // Allow tab completion to activate
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     if (event.keyCode != event.DOM_VK_TAB)
