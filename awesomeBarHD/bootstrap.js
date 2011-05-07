@@ -926,7 +926,7 @@ function addAwesomeBarHD(window) {
       catch(ex) {}
 
       // Break the url down into differently-styled parts
-      let url = uri.spec;
+      let url = window.losslessDecodeURI(uri);
       if (url == "about:blank") {
         urlBox.collapsed = true;
         return;
