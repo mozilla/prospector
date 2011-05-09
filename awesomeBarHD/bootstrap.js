@@ -200,7 +200,7 @@ function addAwesomeBarHD(window) {
     // Remove any active query terms when activating another
     let query = value;
     if (categoryBox.active != goCategory)
-      query = query.replace(/^[^:]+:\s*/, "");
+      query = query.replace(/^[^:]*:\s*/, "");
 
     // Remove the short keyword from the query on tab complete
     let {keyword} = categoryLabel.categoryData;
