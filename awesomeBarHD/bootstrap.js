@@ -192,10 +192,8 @@ function addAwesomeBarHD(window) {
   categoryBox.activate = function(categoryLabel, index) {
     usage.activate++;
 
-    // Keep track of the original text values
-    let {selectionEnd, selectionStart, value} = hdInput;
-
     // Most likely don't want to search the current url, so remove on activate
+    let {selectionStart, value} = hdInput;
     if (value == gBrowser.selectedBrowser.currentURI.spec)
       value = "";
 
@@ -204,25 +202,21 @@ function addAwesomeBarHD(window) {
     if (categoryBox.active != goCategory)
       query = query.replace(/^[^:]+:\s*/, "");
 
-    // Update the text with the active keyword
+    // Remove the short keyword from the query on tab complete
     let {keyword} = categoryLabel.categoryData;
+    let shortKeyword = keyword.slice(0, selectionStart);
     let shortQuery = query.slice(0, selectionStart);
-    if (keyword == "")
-      hdInput.value = query;
-    // Use the partially typed short keyword
-    else if (selectionStart > 0 && shortQuery == keyword.slice(0, selectionStart)) {
+    if (shortKeyword != "" && shortQuery == shortKeyword) {
       usage.tabComplete++;
-      hdInput.value = keyword + query.slice(selectionStart);
+      query = query.slice(selectionStart);
     }
-    // Insert the full keyword
-    else
-      hdInput.value = keyword + query;
 
-    // Move the cursor to its original position
-    let newLen = hdInput.value.length;
-    let origLen = value.length;
-    hdInput.selectionStart = newLen + selectionStart - origLen;
-    hdInput.selectionEnd = newLen + selectionEnd - origLen;
+    // Update the text with the active keyword
+    hdInput.value = keyword + query;
+
+    // Highlight the completed keyword if there's a query
+    let {length} = keyword;
+    hdInput.setSelectionRange(query == "" ? length : 0, length);
 
     // Switch to a particular provider if necessary
     if (index != null)
