@@ -1200,8 +1200,15 @@ function addAwesomeBarHD(window) {
     provider.style.color = "#999";
     provider.style.margin = "0 0 0 3px";
 
-    let svgNode = document.getElementById("browser-bottombox").nextSibling;
+    let bottomBox = document.getElementById("browser-bottombox");
+    let svgNode = bottomBox.nextSibling;
     const SVG = "http://www.w3.org/2000/svg";
+
+    // Linux doesn't have a svg container, so create one.. permanently
+    if (svgNode == null) {
+      svgNode = document.createElementNS(SVG, "svg");
+      bottomBox.parentNode.appendChild(svgNode);
+    }
 
     let filter = document.createElementNS(SVG, "filter");
     svgNode.appendChild(filter);
