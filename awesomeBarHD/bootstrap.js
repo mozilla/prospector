@@ -192,45 +192,37 @@ function addAwesomeBarHD(window) {
   categoryBox.activate = function(categoryLabel, index) {
     usage.activate++;
 
-    // Cycle through providers when re-activating the same category
-    let {active} = categoryBox;
-    if (active == categoryLabel && index == null) {
-      let {defaultIndex, providers} = active.categoryData;
-      index = (defaultIndex + 1) % providers.length;
+    // Keep track of the original text values
+    let {selectionEnd, selectionStart, value} = hdInput;
+
+    // Most likely don't want to search the current url, so remove on activate
+    if (value == gBrowser.selectedBrowser.currentURI.spec)
+      value = "";
+
+    // Remove any active query terms when activating another
+    let query = value;
+    if (categoryBox.active != goCategory)
+      query = query.replace(/^[^:]+:\s*/, "");
+
+    // Update the text with the active keyword
+    let {keyword} = categoryLabel.categoryData;
+    let shortQuery = query.slice(0, selectionStart);
+    if (keyword == "")
+      hdInput.value = query;
+    // Use the partially typed short keyword
+    else if (selectionStart > 0 && shortQuery == keyword.slice(0, selectionStart)) {
+      usage.tabComplete++;
+      hdInput.value = keyword + query.slice(selectionStart);
     }
-    else {
-      // Keep track of the original text values
-      let {selectionEnd, selectionStart, value} = hdInput;
+    // Insert the full keyword
+    else
+      hdInput.value = keyword + query;
 
-      // Most likely don't want to search the current url, so remove on activate
-      if (value == gBrowser.selectedBrowser.currentURI.spec)
-        value = "";
-
-      // Remove any active query terms when activating another
-      let query = value;
-      if (categoryBox.active != goCategory)
-        query = query.replace(/^[^:]+:\s*/, "");
-
-      // Update the text with the active keyword
-      let {keyword} = categoryLabel.categoryData;
-      let shortQuery = query.slice(0, selectionStart);
-      if (keyword == "")
-        hdInput.value = query;
-      // Use the partially typed short keyword
-      else if (selectionStart > 0 && shortQuery == keyword.slice(0, selectionStart)) {
-        usage.tabComplete++;
-        hdInput.value = keyword + query.slice(selectionStart);
-      }
-      // Insert the full keyword
-      else
-        hdInput.value = keyword + query;
-
-      // Move the cursor to its original position
-      let newLen = hdInput.value.length;
-      let origLen = value.length;
-      hdInput.selectionStart = newLen + selectionStart - origLen;
-      hdInput.selectionEnd = newLen + selectionEnd - origLen;
-    }
+    // Move the cursor to its original position
+    let newLen = hdInput.value.length;
+    let origLen = value.length;
+    hdInput.selectionStart = newLen + selectionStart - origLen;
+    hdInput.selectionEnd = newLen + selectionEnd - origLen;
 
     // Switch to a particular provider if necessary
     if (index != null)
@@ -609,7 +601,7 @@ function addAwesomeBarHD(window) {
       // Assume dismiss of the popup by clicking on the label is to activate
       if (categoryBox.hover == label) {
         usage.clickCategory++;
-        categoryBox.activateAndGo(label, categoryData.defaultIndex);
+        categoryBox.activateAndGo(label);
       }
     }, false);
 
