@@ -1020,7 +1020,6 @@ function addAwesomeBarHD(window) {
   document.getElementById("mainPopupSet").appendChild(tabPanel);
 
   tabPanel.setAttribute("noautofocus", true);
-  tabPanel.setAttribute("noautohide", true);
 
   tabPanel.style.MozWindowShadow = "none";
 
@@ -1111,6 +1110,12 @@ function addAwesomeBarHD(window) {
   // Maybe update the panel if the shift key is held
   hdInput.addEventListener("keydown", tabPanel.onKey, true);
   hdInput.addEventListener("keyup", tabPanel.onKey, true);
+
+  // Dynamically set noautohide to avoid bug 545265
+  tabPanel.addEventListener("popupshowing", function runOnce() {
+    tabPanel.removeEventListener("popupshowing", runOnce, false);
+    tabPanel.setAttribute("noautohide", true);
+  }, false);
 
   unload(function() {
     tabPanel.parentNode.removeChild(tabPanel);
