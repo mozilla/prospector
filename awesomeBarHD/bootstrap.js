@@ -110,6 +110,44 @@ function addAwesomeBarHD(window) {
   prefetcher.setAttribute("type", "content");
   gBrowser.appendChild(prefetcher);
 
+  // Generate the url for the category and provider and prefetch if necessary
+  prefetcher.load = function(category, index) {
+    // Use the default index/provider if we don't have one
+    let {defaultIndex, providers} = category.categoryData;
+    if (index == null)
+      index = defaultIndex;
+
+    // Determine the space character to replace in the query
+    const termRegex = /{search(.)terms}/;
+    let {url} = providers[index];
+    let spaceChar = url.match(termRegex)[1];
+
+    // Strip off the keyword based on the current active category
+    let {value} = hdInput;
+    if (categoryBox.active != goCategory)
+      value = value.replace(/^[^:]*:\s*/, "")
+
+    // Fill in the search term with the current query
+    url = url.replace(termRegex, value.replace(/ /g, spaceChar));
+
+    // Prefetch the search results if not going to a page
+    if (category != goCategory) {
+      // Only prefetch if we have something new
+      if (prefetcher.lastUrl != url) {
+        prefetcher.loadURI(url);
+        prefetcher.lastUrl = url;
+      }
+    }
+
+    return url;
+  };
+
+  // Only prefetch if currently prefetching
+  prefetcher.loadIfSearching = function(category, index) {
+    if (categoryBox.active != goCategory)
+      prefetcher.load(category, index);
+  };
+
   // Save the prefetched page to a tab in the browser
   prefetcher.persistTo = function(targetTab) {
     let targetBrowser = targetTab.linkedBrowser;
@@ -166,6 +204,9 @@ function addAwesomeBarHD(window) {
     gBrowser.mTabListeners[selectedIndex] = tabListener;
     filter.addProgressListener(tabListener, Ci.nsIWebProgress.NOTIFY_ALL);
     targetBrowser.webProgress.addProgressListener(filter, Ci.nsIWebProgress.NOTIFY_ALL);
+
+    // Forget what was prefetched as it's now gone
+    prefetcher.lastUrl = null;
   };
 
   unload(function() {
@@ -326,7 +367,6 @@ function addAwesomeBarHD(window) {
   categoryBox.processInput = function() {
     // Figure out what's the active category based on the input
     let {value} = hdInput;
-    let inputQuery = value;
     let inputParts = value.match(/^([^:]*):\s*(.*?)$/);
     categoryBox.active = goCategory;
     if (inputParts != null) {
@@ -340,7 +380,6 @@ function addAwesomeBarHD(window) {
           return;
         if (inputKeyword == keyword.slice(0, inputKeyword.length)) {
           categoryBox.active = label;
-          inputQuery = inputParts[2];
           return true;
         }
       });
@@ -350,18 +389,9 @@ function addAwesomeBarHD(window) {
     categoryBox.prepareNext();
     categoryBox.updateLook();
 
-    // Convert the input into a url for the location bar
+    // Convert the input into a url for the location bar and prefetch
     let {active} = categoryBox;
-    let {defaultIndex, providers} = active.categoryData;
-    let url = providers[defaultIndex].url;
-    const termRegex = /{search(.)terms}/;
-    let spaceChar = url.match(termRegex)[1];
-    url = url.replace(termRegex, inputQuery.replace(/ /g, spaceChar));
-    gURLBar.value = url;
-
-    // Prefetch the search results if not going to a page
-    if (active != goCategory)
-      prefetcher.loadURI(url)
+    gURLBar.value = prefetcher.load(active);
 
     // Only show results for going to a history page
     gURLBar.popup.collapsed = active != goCategory;
@@ -552,6 +582,11 @@ function addAwesomeBarHD(window) {
         categoryBox.activateAndGo(label, index);
       }, false);
 
+      // Prefetch in-case the provider is selected
+      provider.addEventListener("mouseover", function() {
+        prefetcher.loadIfSearching(label, index);
+      }, false);
+
       return provider;
     });
 
@@ -589,14 +624,15 @@ function addAwesomeBarHD(window) {
     let unOver;
     context.addEventListener("popuphiding", function() {
       unOver();
-      categoryBox.processInput();
-      categoryBox.updateLook();
 
       // Assume dismiss of the popup by clicking on the label is to activate
       if (categoryBox.hover == label) {
         usage.clickCategory++;
         categoryBox.activateAndGo(label);
       }
+      // Make sure the original input is prefetched
+      else
+        categoryBox.processInput();
     }, false);
 
     // Prepare to dismiss for various reasons
@@ -622,6 +658,9 @@ function addAwesomeBarHD(window) {
         // Must have pointed away allowed items, so dismiss
         context.hidePopup();
       });
+
+      // Prefetch in preparation of a click on the label to dismiss
+      prefetcher.loadIfSearching(label);
     }, false);
 
     return label;
