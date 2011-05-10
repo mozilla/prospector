@@ -1212,6 +1212,7 @@ function addAwesomeBarHD(window) {
     // Linux doesn't have a svg container, so create one.. permanently
     if (svgNode == null) {
       svgNode = document.createElementNS(SVG, "svg");
+      svgNode.setAttribute("height", 0);
       bottomBox.parentNode.appendChild(svgNode);
     }
 
