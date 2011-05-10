@@ -578,7 +578,7 @@ function addAwesomeBarHD(window) {
     let comma = createNode("label");
     categoryBox.appendChild(comma);
 
-    comma.setAttribute("value", ", ");
+    comma.separator = true;
 
     comma.style.margin = 0;
     comma.style.pointerEvents = "auto";
@@ -648,6 +648,41 @@ function addAwesomeBarHD(window) {
 
     // Hide one of the switch commands depending on if icons are shown
     switchTo(categoryData.showIcon);
+
+    // Allow the whole category to be hidden from the UI
+    let hideCategory = createNode("menuitem");
+    context.appendChild(hideCategory);
+
+    hideCategory.setAttribute("label", "Hide this category");
+
+    hideCategory.addEventListener("command", function() {
+      hideShowCategory(true);
+    }, false);
+
+    // Allow the whole category to be restored from the UI
+    let showCategory = createNode("menuitem");
+    context.appendChild(showCategory);
+
+    showCategory.setAttribute("label", "Show this category");
+
+    showCategory.addEventListener("command", function() {
+      hideShowCategory(false);
+    }, false);
+
+    // Save the state and update the UI to hide or show the category
+    function hideShowCategory(hide) {
+      categoryData.hidden = hide;
+
+      categoryNode.hidden = hide;
+      comma.hidden = hide;
+      hideCategory.hidden = hide;
+      showCategory.hidden = !hide;
+
+      fixSeparators();
+    }
+
+    // Hide the category if necessary
+    hideShowCategory(categoryData.hidden);
 
     // Allow opening the context under a node
     context.openAt = function(node) {
@@ -730,6 +765,22 @@ function addAwesomeBarHD(window) {
   let goCategory = categoryBox.firstChild;
   let searchCategory = goCategory.nextSibling.nextSibling;
   categoryBox.lastChild.setAttribute("value", ".");
+
+  // Make sure every separator is a comma except the last visible one
+  function fixSeparators() {
+    let lastSeparator;
+    Array.forEach(categoryBox.childNodes, function(node) {
+      if (node.hidden || !node.separator)
+        return;
+      node.setAttribute("value", ", ");
+      lastSeparator = node;
+    });
+
+    // If we have a visible last separator, make it a period
+    if (lastSeparator != null)
+      lastSeparator.setAttribute("value", ".");
+  }
+  fixSeparators();
 
   // For now hide the go category
   goCategory.setAttribute("collapsed", true);
@@ -1369,6 +1420,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     // Make sure we initialize to icons or text
     if (allProviders[0].showIcon == null)
       throw "need to update 2";
+
+    // Make sure we initialize to hidden categories or not
+    if (allProviders[0].hidden == null)
+      throw "need to update 3";
   }
   catch(ex) {
     // Restore provider data with hardcoded defaults
@@ -1382,6 +1437,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
         allProviders.push({
           category: category,
           defaultIndex: 0,
+          hidden: false,
           keyword: category == "go" ? "" : category + ": ",
           providers: providers,
           showIcon: false,
