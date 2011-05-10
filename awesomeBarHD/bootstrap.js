@@ -230,7 +230,7 @@ function addAwesomeBarHD(window) {
   categoryBox.style.pointerEvents = "none";
 
   // Activate a category with an optional provider index
-  categoryBox.activate = function(categoryLabel, index) {
+  categoryBox.activate = function(categoryNode, index) {
     usage.activate++;
 
     // Most likely don't want to search the current url, so remove on activate
@@ -244,7 +244,7 @@ function addAwesomeBarHD(window) {
       query = query.replace(/^[^:]*:\s*/, "");
 
     // Remove the short keyword from the query on tab complete
-    let {keyword} = categoryLabel.categoryData;
+    let {keyword} = categoryNode.categoryData;
     let shortKeyword = keyword.slice(0, selectionStart);
     let shortQuery = query.slice(0, selectionStart);
     if (shortKeyword != "" && shortQuery == shortKeyword) {
@@ -261,7 +261,7 @@ function addAwesomeBarHD(window) {
 
     // Switch to a particular provider if necessary
     if (index != null)
-      categoryLabel.categoryData.defaultIndex = index;
+      categoryNode.setIndex(index);
 
     // Update the autocomplete results now that we've activated
     categoryBox.processInput();
@@ -270,16 +270,16 @@ function addAwesomeBarHD(window) {
   };
 
   // Immediately go to the result page if there's something to search
-  categoryBox.activateAndGo = function(categoryLabel, index) {
+  categoryBox.activateAndGo = function(categoryNode, index) {
     usage.activateAndGo++;
 
     // Remember if there's completely no input
     let empty = hdInput.value == "";
-    categoryBox.activate(categoryLabel, index);
+    categoryBox.activate(categoryNode, index);
 
     // Animate in the now filled-in category towards the left
     if (empty && usage.emptyClick++ < 3) {
-      let maxOffset = categoryLabel.boxObject.x - urlbarStack.boxObject.x;
+      let maxOffset = categoryNode.boxObject.x - urlbarStack.boxObject.x;
       let maxSteps = 10;
       let step = 0;
 
@@ -494,30 +494,47 @@ function addAwesomeBarHD(window) {
     hdInput.select();
   }, false);
 
-  // Helper to add a category or comma
-  function addLabel(text) {
-    let label = createNode("label");
-    categoryBox.appendChild(label);
-
-    label.setAttribute("value", text);
-    label.style.margin = 0;
-    label.style.pointerEvents = "auto";
-
-    return label;
-  }
-
   // Create a category label
   function addCategory(categoryData) {
     let {category, keyword, providers, text} = categoryData;
 
-    let label = addLabel(text);
-    label.categoryData = categoryData;
+    let categoryNode = createNode("hbox");
+    categoryBox.appendChild(categoryNode);
 
-    label.style.cursor = "pointer";
+    categoryNode.style.cursor = "pointer";
+    categoryNode.style.marginRight = "-1px";
+    categoryNode.style.pointerEvents = "auto";
+
+    categoryNode.categoryData = categoryData;
+
+    let image = createNode("image");
+    categoryNode.appendChild(image);
+
+    image.setAttribute("src", providers[categoryData.defaultIndex].icon);
+
+    image.style.pointerEvents = "none";
+
+    let label = createNode("label");
+    categoryNode.appendChild(label);
+
+    label.setAttribute("value", text);
+
+    label.style.margin = 0;
+    label.style.pointerEvents = "none";
+
+    // Allow changing the default index and updating the UI for it
+    categoryNode.setIndex = function(index) {
+      if (categoryData.defaultIndex == index)
+        return;
+
+      let {icon} = providers[index];
+      categoryData.defaultIndex = index;
+      image.setAttribute("src", icon);
+    };
 
     // Show or reshow the menu when clicking the label
     function onClick() {
-      context.openAt(label);
+      context.openAt(categoryNode);
     }
 
     // Open the context menu when moving over the related labels
@@ -532,33 +549,40 @@ function addAwesomeBarHD(window) {
         hoverTimer = null;
 
         // Only show the menu if this label is still being pointed at
-        if (categoryBox.hover != label)
+        if (categoryBox.hover != categoryNode)
           return;
-        context.openAt(label);
+        context.openAt(categoryNode);
       }, 100);
     }
 
     // Handle the mouse moving in or out of the related labels
     function onMouse({type, relatedTarget}) {
       // Ignore events between the two related labels
-      if (relatedTarget == label || relatedTarget == comma)
+      if (relatedTarget == categoryNode || relatedTarget == comma)
         return;
 
       // Keep track of what is currently being hovered
-      categoryBox.hover = type == "mouseover" ? label : null;
+      categoryBox.hover = type == "mouseover" ? categoryNode : null;
 
       // Keep the original look of the hover if the menu is open
       if (context.state != "open")
         categoryBox.updateLook();
     }
 
-    label.addEventListener("click", onClick, false);
-    label.addEventListener("mousemove", onMove, false);
-    label.addEventListener("mouseout", onMouse, false);
-    label.addEventListener("mouseover", onMouse, false);
+    categoryNode.addEventListener("click", onClick, false);
+    categoryNode.addEventListener("mousemove", onMove, false);
+    categoryNode.addEventListener("mouseout", onMouse, false);
+    categoryNode.addEventListener("mouseover", onMouse, false);
 
     // Add a comma after each category
-    let comma = addLabel(", ");
+    let comma = createNode("label");
+    categoryBox.appendChild(comma);
+
+    comma.setAttribute("value", ", ");
+
+    comma.style.margin = 0;
+    comma.style.pointerEvents = "auto";
+
     comma.addEventListener("click", onClick, false);
     comma.addEventListener("mousemove", onMove, false);
     comma.addEventListener("mouseout", onMouse, false);
@@ -566,7 +590,7 @@ function addAwesomeBarHD(window) {
 
     // Prepare a popup to show category providers
     let context = createNode("menupopup");
-    label.context = context;
+    categoryNode.context = context;
     document.getElementById("mainPopupSet").appendChild(context);
 
     // Add a menuitem that knows how to switch to the provider
@@ -579,16 +603,51 @@ function addAwesomeBarHD(window) {
 
       provider.addEventListener("command", function() {
         usage.clickProvider++;
-        categoryBox.activateAndGo(label, index);
+        categoryBox.activateAndGo(categoryNode, index);
       }, false);
 
       // Prefetch in-case the provider is selected
       provider.addEventListener("mouseover", function() {
-        prefetcher.loadIfSearching(label, index);
+        prefetcher.loadIfSearching(categoryNode, index);
       }, false);
 
       return provider;
     });
+
+    context.appendChild(createNode("menuseparator"));
+
+    // Allow switching from text to icons
+    let switchToIcon = createNode("menuitem");
+    context.appendChild(switchToIcon);
+
+    switchToIcon.setAttribute("label", "Show an icon instead of '" + text + "'");
+
+    switchToIcon.addEventListener("command", function() {
+      switchTo(true);
+    }, false);
+
+    // Allow switching from icons to text
+    let switchToText = createNode("menuitem");
+    context.appendChild(switchToText);
+
+    switchToText.setAttribute("label", "Show '" + text + "' instead of an icon");
+
+    switchToText.addEventListener("command", function() {
+      switchTo(false);
+    }, false);
+
+    // Save the state and update the UI to show icons or text
+    function switchTo(icon) {
+      categoryData.showIcon = icon;
+
+      switchToIcon.hidden = icon;
+      switchToText.hidden = !icon;
+      image.hidden = !icon;
+      label.hidden = icon;
+    }
+
+    // Hide one of the switch commands depending on if icons are shown
+    switchTo(categoryData.showIcon);
 
     // Allow opening the context under a node
     context.openAt = function(node) {
@@ -626,9 +685,9 @@ function addAwesomeBarHD(window) {
       unOver();
 
       // Assume dismiss of the popup by clicking on the label is to activate
-      if (categoryBox.hover == label) {
+      if (categoryBox.hover == categoryNode) {
         usage.clickCategory++;
-        categoryBox.activateAndGo(label);
+        categoryBox.activateAndGo(categoryNode);
       }
       // Make sure the original input is prefetched
       else
@@ -641,7 +700,7 @@ function addAwesomeBarHD(window) {
       unOver = listen(window, window, "mouseover", function(event) {
         // Allow pointing at the category label
         switch (event.originalTarget) {
-          case label:
+          case categoryNode:
           case comma:
             return;
         }
@@ -660,10 +719,10 @@ function addAwesomeBarHD(window) {
       });
 
       // Prefetch in preparation of a click on the label to dismiss
-      prefetcher.loadIfSearching(label);
+      prefetcher.loadIfSearching(categoryNode);
     }, false);
 
-    return label;
+    return categoryNode;
   }
 
   // Add each category to the UI and remember some special categories
@@ -1306,6 +1365,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     // Check for outdated data as a proxy to versions for now
     if (allProviders[8].providers[0].url == "http://twitter.com/search?q={search+terms}")
       throw "need to update 1";
+
+    // Make sure we initialize to icons or text
+    if (allProviders[0].showIcon == null)
+      throw "need to update 2";
   }
   catch(ex) {
     // Restore provider data with hardcoded defaults
@@ -1321,6 +1384,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
           defaultIndex: 0,
           keyword: category == "go" ? "" : category + ": ",
           providers: providers,
+          showIcon: false,
           text: category == "go" ? "Go to a website" : category == "search" ? "search the web" : category,
         });
       }
