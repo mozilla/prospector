@@ -8,7 +8,7 @@
     <iconURL>http://mozillalabs.com/wp-content/themes/labs_project/img/prospector-header.png</iconURL>
     <id>awesomeBar.HD@prospector.labs.mozilla</id>
     <name>Mozilla Labs: Prospector - AwesomeBar HD</name>
-    <version>8</version>
+    <version>9</version>
 
     <bootstrap>true</bootstrap>
     <type>2</type>
