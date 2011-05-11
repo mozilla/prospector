@@ -694,7 +694,7 @@ function addAwesomeBarHD(window) {
         return;
 
       context.updateChecked();
-      context.openPopup(node, "after_start");
+      context.openPopup(node, "after_start", isMac ? -21 : 0);
     };
 
     // Correctly mark which item is the default
