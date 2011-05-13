@@ -1016,7 +1016,7 @@ function addAwesomeBarHD(window) {
       gBrowser.selectedTab = targetTab;
 
       // Show the other providers as a hint to switch
-      if (usage.providerSwitch < 3)
+      if (usage.providerSwitch < 1 && usage.activate < 30)
         async(function() active.context.openAt(providerIcon), 100);
 
       // Remember when this load started to avoid early clearing
@@ -1195,7 +1195,7 @@ function addAwesomeBarHD(window) {
     let dontShow = false;
     if (splitParts.underText == "") {
       if (shifted)
-        dontShow = usage.tabPrev >= 3;
+        dontShow = usage.tabPrev >= 3 || usage.tabNext >= 9;
       else
         dontShow = usage.tabNext >= 3;
     }
