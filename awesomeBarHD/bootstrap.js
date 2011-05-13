@@ -244,12 +244,13 @@ function addAwesomeBarHD(window) {
       query = query.replace(/^[^:]*:\s*/, "");
 
     // Remove the short keyword from the query on tab complete
-    let {keyword} = categoryNode.categoryData;
+    let {category, keyword} = categoryNode.categoryData;
     let shortKeyword = keyword.slice(0, selectionStart);
     let shortQuery = query.slice(0, selectionStart);
     if (shortKeyword != "" && shortQuery == shortKeyword) {
       usage.tabComplete++;
       query = query.slice(selectionStart);
+      sendEvent("complete", category);
     }
 
     // Update the text with the active keyword
@@ -527,9 +528,10 @@ function addAwesomeBarHD(window) {
       if (categoryData.defaultIndex == index)
         return;
 
-      let {icon} = providers[index];
+      let {icon, name} = providers[index];
       categoryData.defaultIndex = index;
       image.setAttribute("src", icon);
+      sendEvent("set " + category, name);
     };
 
     // Show or reshow the menu when clicking the label
@@ -624,6 +626,7 @@ function addAwesomeBarHD(window) {
 
     switchToIcon.addEventListener("command", function() {
       switchTo(true);
+      sendEvent("icon", category);
     }, false);
 
     // Allow switching from icons to text
@@ -634,6 +637,7 @@ function addAwesomeBarHD(window) {
 
     switchToText.addEventListener("command", function() {
       switchTo(false);
+      sendEvent("text", category);
     }, false);
 
     // Save the state and update the UI to show icons or text
@@ -657,6 +661,7 @@ function addAwesomeBarHD(window) {
 
     hideCategory.addEventListener("command", function() {
       hideShowCategory(true);
+      sendEvent("hide", category);
     }, false);
 
     // Allow the whole category to be restored from the UI
@@ -667,6 +672,7 @@ function addAwesomeBarHD(window) {
 
     showCategory.addEventListener("command", function() {
       hideShowCategory(false);
+      sendEvent("show", category);
     }, false);
 
     // Save the state and update the UI to hide or show the category
@@ -1015,6 +1021,9 @@ function addAwesomeBarHD(window) {
 
       // Remember when this load started to avoid early clearing
       targetTab.HDloadedAt = Date.now();
+
+      let {category, defaultIndex, providers} = active.categoryData;
+      sendEvent("search", category + " " + providers[defaultIndex].name);
     };
   });
 
@@ -1395,6 +1404,17 @@ function addAwesomeBarHD(window) {
     return gURLBar.mozMatchesSelector(":-moz-window-inactive");
   }
 
+  // Allow sending of events for Test Pilot
+  function sendEvent(type, data) {
+    let evt = document.createEvent("Events");
+    evt.initEvent("ABHD", true, false);
+    gBrowser.ABHDevent = {
+      data: data,
+      type: type,
+    };
+    gBrowser.dispatchEvent(evt);
+  }
+
   // Prepare the category box for first action!
   categoryBox.reset();
 }
@@ -1451,6 +1471,40 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
         name: name,
         url: url,
       });
+    });
+
+    // Specially configure the new data for testpilot
+    let showIcon = false;
+    let onlySearch = false;
+    switch (prefs.get("testpilot")) {
+      // Show all as text
+      case 0:
+        break;
+
+      // Show all as icons
+      case 1:
+        showIcon = true;
+        break;
+
+      // Show just search as text
+      case 2:
+        onlySearch = true;
+        break;
+
+      // Show just search as icon
+      case 3:
+        showIcon = true;
+        onlySearch = true;
+        break;
+    }
+
+    // Apply the configuration
+    allProviders.forEach(function(categoryData) {
+      // Set hidden to true if we need to hide all but search
+      categoryData.hidden = onlySearch && categoryData.category != "search";
+
+      // Set the desired icon or text state
+      categoryData.showIcon = showIcon;
     });
   }
 
