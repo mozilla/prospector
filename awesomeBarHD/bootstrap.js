@@ -66,7 +66,7 @@ function addAwesomeBarHD(window) {
   // Add an icon to indicate the active category
   let iconBox = createNode("box");
   iconBox.setAttribute("align", "center");
-  iconBox.setAttribute("hidden", true);
+  iconBox.setAttribute("collapsed", true);
   iconBox.setAttribute("id", "identity-box");
   origIdentity.parentNode.insertBefore(iconBox, origIdentity.nextSibling);
 
@@ -452,10 +452,10 @@ function addAwesomeBarHD(window) {
     // Hide the url parts if it's about:blank or active
     let isBlank = gBrowser.selectedBrowser.currentURI.spec == "about:blank";
     let hideUrl = isBlank || doActive;
-    urlBox.hidden = hideUrl;
+    urlBox.collapsed = hideUrl;
 
     // Hide categories for long url inputs or when showing url parts
-    categoryBox.hidden = likeUrl || !hideUrl;
+    categoryBox.collapsed = likeUrl || !hideUrl;
 
     // Show the next category if focus is in the box
     if (focused && !likeUrl)
@@ -464,8 +464,8 @@ function addAwesomeBarHD(window) {
       tabPanel.hidePopup();
 
     // Show the original identity box when inactive
-    origIdentity.hidden = doActive;
-    iconBox.hidden = !doActive;
+    origIdentity.collapsed = doActive;
+    iconBox.collapsed = !doActive;
   };
 
   // Pointing away removes the go category highlight
@@ -640,10 +640,10 @@ function addAwesomeBarHD(window) {
     function switchTo(icon) {
       categoryData.showIcon = icon;
 
-      switchToIcon.hidden = icon;
-      switchToText.hidden = !icon;
-      image.hidden = !icon;
-      label.hidden = icon;
+      switchToIcon.collapsed = icon;
+      switchToText.collapsed = !icon;
+      image.collapsed = !icon;
+      label.collapsed = icon;
     }
 
     // Hide one of the switch commands depending on if icons are shown
@@ -671,12 +671,12 @@ function addAwesomeBarHD(window) {
 
     // Save the state and update the UI to hide or show the category
     function hideShowCategory(hide) {
-      categoryData.hidden = hide;
+      categoryData.collapsed = hide;
 
-      categoryNode.hidden = hide;
-      comma.hidden = hide;
-      hideCategory.hidden = hide;
-      showCategory.hidden = !hide;
+      categoryNode.collapsed = hide;
+      comma.collapsed = hide;
+      hideCategory.collapsed = hide;
+      showCategory.collapsed = !hide;
 
       fixSeparators();
     }
@@ -770,7 +770,7 @@ function addAwesomeBarHD(window) {
   function fixSeparators() {
     let lastSeparator;
     Array.forEach(categoryBox.childNodes, function(node) {
-      if (node.hidden || !node.separator)
+      if (node.collapsed || !node.separator)
         return;
       node.setAttribute("value", ", ");
       lastSeparator = node;
@@ -1387,7 +1387,7 @@ function addAwesomeBarHD(window) {
 
   // Make sure the identity box is visible
   unload(function() {
-    origIdentity.hidden = false;
+    origIdentity.collapsed = false;
   });
 
   // Check for inactiveness
