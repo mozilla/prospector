@@ -677,7 +677,7 @@ function addAwesomeBarHD(window) {
 
     // Save the state and update the UI to hide or show the category
     function hideShowCategory(hide) {
-      categoryData.collapsed = hide;
+      categoryData.hidden = hide;
 
       categoryNode.collapsed = hide;
       comma.collapsed = hide;
