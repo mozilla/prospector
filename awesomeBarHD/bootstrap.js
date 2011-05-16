@@ -1364,8 +1364,12 @@ function addAwesomeBarHD(window) {
         // For power users, allow getting the current tab's location when empty
         if (hdInput.value == "") {
           let url = gBrowser.selectedBrowser.currentURI.spec;
-          if (url != "about:blank")
+
+          // Fill in the url and make sure to hide categories
+          if (url != "about:blank") {
             hdInput.value = url;
+            categoryBox.processInput();
+          }
         }
 
         hdInput.focus();
