@@ -909,7 +909,16 @@ function addAwesomeBarHD(window) {
 
   // Detect tab switches to restore previous input
   listen(window, gBrowser.tabContainer, "TabSelect", function() {
-    hdInput.value = gBrowser.selectedTab.HDinput || "";
+    // Treat stale inputs as empty
+    let {HDinput, HDinputtedAt} = gBrowser.selectedTab;
+    if (HDinputtedAt != null && Date.now() - HDinputtedAt > 180000) {
+      HDinput = "";
+
+      // Pretend the location bar wasn't focused to begin with
+      gBrowser.selectedBrowser._urlbarFocused = false;
+    }
+
+    hdInput.value = HDinput || "";
     categoryBox.processInput();
   });
 
