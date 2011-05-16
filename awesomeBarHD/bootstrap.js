@@ -1438,6 +1438,9 @@ function addAwesomeBarHD(window) {
 
   // Prepare the category box for first action!
   categoryBox.reset();
+
+  // Trigger the UI to initialize for the current tab (for showing the url)
+  window.URLBarSetURI();
 }
 
 /**
