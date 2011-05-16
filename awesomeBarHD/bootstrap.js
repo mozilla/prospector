@@ -45,6 +45,9 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 // Keep a reference to the top level providers data
 let allProviders;
 
+// Keep a reference to the add-on object for various uses like disabling
+let gAddon;
+
 // Keep track of how often what part of the interface is used
 let usage;
 
@@ -1399,6 +1402,18 @@ function addAwesomeBarHD(window) {
     origIdentity.collapsed = false;
   });
 
+  // Disable the add-on when customizing
+  listen(window, window, "beforecustomization", function() {
+    // NB: Disabling will unload listeners, so manually add and remove below
+    gAddon.userDisabled = true;
+
+    // Listen for one customization finish to re-enable the addon
+    window.addEventListener("aftercustomization", function reenable() {
+      window.removeEventListener("aftercustomization", reenable, false);
+      gAddon.userDisabled = false;
+    }, false);
+  });
+
   // Check for inactiveness
   function isInactive() {
     return gURLBar.mozMatchesSelector(":-moz-window-inactive");
@@ -1423,6 +1438,8 @@ function addAwesomeBarHD(window) {
  * Handle the add-on being activated on install/enable
  */
 function startup({id}) AddonManager.getAddonByID(id, function(addon) {
+  gAddon = addon;
+
   // Load various javascript includes for helper functions
   ["helper", "providers", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
