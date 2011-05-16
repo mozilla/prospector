@@ -127,11 +127,13 @@ function addAwesomeBarHD(window) {
 
     // Strip off the keyword based on the current active category
     let {value} = hdInput;
-    if (categoryBox.active != goCategory)
-      value = value.replace(/^[^:]*:\s*/, "")
+    if (categoryBox.active != goCategory) {
+      value = encodeURIComponent(value.replace(/^[^:]*:\s*/, ""));
+      value = value.replace(/%20/g, spaceChar);
+    }
 
     // Fill in the search term with the current query
-    url = url.replace(termRegex, value.replace(/ /g, spaceChar));
+    url = url.replace(termRegex, value);
 
     // Prefetch the search results if not going to a page
     if (category != goCategory) {
