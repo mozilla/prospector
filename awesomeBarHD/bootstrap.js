@@ -1038,7 +1038,7 @@ function addAwesomeBarHD(window) {
       if (tab == gBrowser.selectedTab) {
         // Only reset if it's been some time since loading
         let {HDloadedAt} = tab;
-        if (HDloadedAt != null && Date.now() - HDloadedAt > 5000)
+        if (HDloadedAt != null && Date.now() - HDloadedAt > 10000)
           categoryBox.reset();
       }
       return orig.call(this, tab);
