@@ -404,6 +404,7 @@ function addAwesomeBarHD(window) {
 
     // Save the input value to restore later if necessary
     gBrowser.selectedTab.HDinput = value;
+    gBrowser.selectedTab.HDinputtedAt = Date.now();
   };
 
   // Clear out various state of the current input
@@ -1037,8 +1038,11 @@ function addAwesomeBarHD(window) {
     return function(tab) {
       if (tab == gBrowser.selectedTab) {
         // Only reset if it's been some time since loading
-        let {HDloadedAt} = tab;
+        let {HDinputtedAt, HDloadedAt} = tab;
         if (HDloadedAt != null && Date.now() - HDloadedAt > 10000)
+          categoryBox.reset();
+        // Clear out whatever was typed after it's been there for a bit
+        else if (HDinputtedAt != null && Date.now() - HDinputtedAt > 10000)
           categoryBox.reset();
       }
       return orig.call(this, tab);
