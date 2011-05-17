@@ -1069,11 +1069,22 @@ function addAwesomeBarHD(window) {
   urlBox.style.cursor = "text";
 
   // Do slightly different behavior if the user clicked white space or text
-  urlBox.addEventListener("mouseup", function({target}) {
-    if (target == urlBox) {
+  urlBox.addEventListener("mouseup", function(event) {
+    if (event.target == urlBox) {
       hdInput.focus();
       return;
     }
+
+    // Allow clicking the domain text to open a new tab/window
+    if (domainText.style.textDecoration != "") {
+      let domain = gBrowser.selectedBrowser.currentURI.prePath;
+      window.openUILinkIn(domain, window.whereToOpenLink(event, false, true), {
+        relatedToCurrent: true,
+      });
+      return;
+    }
+
+    // Fill in the location for clicking on the url
     document.getElementById("Browser:OpenLocation").doCommand();
   }, false);
 
@@ -1091,23 +1102,37 @@ function addAwesomeBarHD(window) {
   urlBox.appendChild(preDomain);
   preDomain.setAttribute("collapsed", true);
 
-  preDomain.style.cursor = "text";
-  preDomain.style.margin = 0;
-
   let domainText = createNode("label");
   urlBox.appendChild(domainText);
 
   domainText.style.color = "black";
-  domainText.style.cursor = "text";
-  domainText.style.margin = 0;
 
   let postDomain = createNode("label");
   urlBox.appendChild(postDomain);
 
   postDomain.setAttribute("crop", "end");
 
-  postDomain.style.cursor = "text";
-  postDomain.style.margin = 0;
+  // Make the url look clickable when a modifier key is pressed
+  [preDomain, domainText, postDomain].forEach(function(label) {
+    label.style.margin = 0;
+
+    label.addEventListener("mousemove", function(event) {
+      let cursor = "text";
+      let text = "";
+      let {altKey, ctrlKey, metaKey, shiftKey} = event;
+      if (altKey || ctrlKey || metaKey || shiftKey) {
+        cursor = "pointer";
+        text = "underline";
+      }
+
+      domainText.style.textDecoration = text;
+      label.style.cursor = cursor;
+    }, false);
+
+    label.addEventListener("mouseout", function() {
+      domainText.style.textDecoration = "";
+    }, false);
+  });
 
   // Hook into the page proxy state to get url changes
   change(window, "SetPageProxyState", function(orig) {
