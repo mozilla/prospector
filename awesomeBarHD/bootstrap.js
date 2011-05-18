@@ -681,6 +681,8 @@ function addAwesomeBarHD(window) {
       switchToText.collapsed = !icon;
       image.collapsed = !icon;
       label.collapsed = icon;
+
+      fixSeparators();
     }
 
     // Hide one of the switch commands depending on if icons are shown
@@ -811,7 +813,11 @@ function addAwesomeBarHD(window) {
     Array.forEach(categoryBox.childNodes, function(node) {
       if (node.collapsed || !node.separator)
         return;
-      node.setAttribute("value", ", ");
+
+      // Put a comma after a text category, otherwise just a space
+      let {showIcon} = node.previousSibling.categoryData;
+      node.setAttribute("value", showIcon ? " " : ", ");
+
       lastSeparator = node;
     });
 
