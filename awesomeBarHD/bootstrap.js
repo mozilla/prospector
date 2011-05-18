@@ -1114,6 +1114,10 @@ function addAwesomeBarHD(window) {
       window.openUILinkIn(domain, window.whereToOpenLink(event, false, true), {
         relatedToCurrent: true,
       });
+
+      let {altKey, ctrlKey, metaKey, shiftKey} = event;
+      sendEvent("domain click", (altKey ? "a" : "") + (ctrlKey ? "c" : "") +
+                                (metaKey ? "m" : "") + (shiftKey ? "s" : ""));
       return;
     }
 
