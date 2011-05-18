@@ -1115,14 +1115,32 @@ function addAwesomeBarHD(window) {
     document.getElementById("Browser:OpenLocation").doCommand();
   }, false);
 
+  // Immediately reset style when moving away
   urlBox.addEventListener("mouseout", function() {
+    urlBox.hovering = false;
     urlBox.style.color = "#aaa";
+    urlBox.style.opacity = 1;
   }, false);
 
+  // Delay changing the style in-case the mouse happens to pass by
   urlBox.addEventListener("mouseover", function({target}) {
-    if (target == urlBox)
-      return;
-    urlBox.style.color = "black";
+    urlBox.hovering = true;
+
+    // Wait a bit and check if the mouse hasn't left before styling
+    async(function() {
+      if (!urlBox.hovering)
+        return;
+
+      // Must not be pointing at the url text, so fade for clearing
+      if (target == urlBox) {
+        urlBox.style.opacity = .4;
+        return;
+      }
+
+      // Darken the url text when hovering
+      urlBox.style.color = "black";
+      urlBox.style.opacity = 1;
+    }, 100);
   }, false);
 
   let preDomain = createNode("label");
