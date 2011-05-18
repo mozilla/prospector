@@ -104,6 +104,15 @@ function addAwesomeBarHD(window) {
     urlbarStack.parentNode.removeChild(urlbarStack);
   });
 
+  // Create a dummy label that is invisible but has width to size text
+  let textSizer = createNode("label");
+  urlbarStack.appendChild(textSizer);
+
+  textSizer.setAttribute("left", 0);
+
+  textSizer.style.margin = 0;
+  textSizer.style.opacity = 0;
+
   // Create a browser to prefetch search results
   let prefetcher = createNode("browser");
   prefetcher.setAttribute("autocompletepopup", gBrowser.getAttribute("autocompletepopup"));
@@ -438,6 +447,10 @@ function addAwesomeBarHD(window) {
     let {value} = hdInput;
     let likeUrl = value.indexOf(" ") == -1 && value.indexOf("/") != -1;
 
+    // Calculate the width of the input text plus some padding
+    textSizer.setAttribute("value", value);
+    let inputWidth = textSizer.boxObject.width + 5;
+
     // Go through each label and style it appropriately
     let focused = gURLBar.hasAttribute("focused");
     let doActive = focused || value != "";
@@ -473,6 +486,20 @@ function addAwesomeBarHD(window) {
     // Show the original identity box when inactive
     origIdentity.collapsed = doActive;
     iconBox.collapsed = !doActive;
+
+    // Figure out if we should blank out the categories and separators
+    if (!categoryBox.collapsed) {
+      Array.forEach(categoryBox.childNodes, function(label) {
+        if (label.categoryData == null)
+          return;
+
+        // Make it transparent if its left side would cover text
+        let fromLeft = label.boxObject.x - categoryBox.boxObject.x;
+        let opacity = fromLeft < inputWidth ? 0 : 1;
+        label.style.opacity = opacity;
+        label.nextSibling.style.opacity = opacity;
+      });
+    }
   };
 
   // Pointing away removes the go category highlight
