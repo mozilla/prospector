@@ -261,7 +261,7 @@ function prepareLessChrome(window) {
   listen(window, window, "popupshowing", function({target}) {
     // Ignore some kinds of popups
     if (target.nodeName.search(/(page|select|tooltip|window)$/i) == 0 ||
-        target.id.search(/(PopupAutoComplete)$/i) == 0) {
+        target.id.search(/(autoscroller|PopupAutoComplete)$/i) == 0) {
       return;
     }
 
