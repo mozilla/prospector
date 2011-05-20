@@ -58,6 +58,13 @@ function prepareLessChrome(window) {
   // Make sure the current tab didn't cause chrome to hide
   document.documentElement.removeAttribute("disablechrome");
 
+  // Make sure the Firefox app menu is clickable even when maximized
+  let appMenu = document.getElementById("appmenu-button");
+  if (appMenu != null) {
+    appMenu.style.position = "relative";
+    appMenu.style.zIndex = 1;
+  }
+
   // Figure out how much to shift the main browser
   let TabsBar = document.getElementById("TabsToolbar");
   gBrowser.style.marginTop = TabsBar.boxObject.y + TabsBar.boxObject.height -
@@ -69,6 +76,11 @@ function prepareLessChrome(window) {
 
   // Reset the UI to what it looked like before activating
   unload(function() {
+    if (appMenu != null) {
+      appMenu.style.position = "";
+      appMenu.style.zIndex = "";
+    }
+
     gBrowser.style.marginTop = "";
     gNavToolbox.style.height = "";
     gNavToolbox.style.marginBottom = "";
