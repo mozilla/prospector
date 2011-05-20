@@ -66,9 +66,10 @@ function prepareLessChrome(window) {
   }
 
   // Figure out how much to shift the main browser
+  let MainBrowser = document.getElementById("browser");
   let TabsBar = document.getElementById("TabsToolbar");
-  gBrowser.style.marginTop = TabsBar.boxObject.y + TabsBar.boxObject.height -
-                               gBrowser.parentNode.boxObject.y + "px";
+  MainBrowser.style.marginTop = TabsBar.boxObject.y + TabsBar.boxObject.height -
+    gBrowser.parentNode.boxObject.y + "px";
 
   // Hide toolbars by changing the height and keep it above content
   gNavToolbox.style.overflow = "hidden";
@@ -81,7 +82,7 @@ function prepareLessChrome(window) {
       appMenu.style.zIndex = "";
     }
 
-    gBrowser.style.marginTop = "";
+    MainBrowser.style.marginTop = "";
     gNavToolbox.style.height = "";
     gNavToolbox.style.marginBottom = "";
     gNavToolbox.style.overflow = "";
