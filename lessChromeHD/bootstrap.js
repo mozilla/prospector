@@ -116,7 +116,7 @@ function prepareLessChrome(window) {
   // Hide the chrome by animating away the non-tabs toolbar area
   function hide() {
     // Don't bother hiding if already hidden or showing nothing
-    if (hidden || keepOpen || showingNothing())
+    if (hidden || keepOpen || popupOpen || showingNothing())
       return;
 
     // Stop any previous animations before starting another
