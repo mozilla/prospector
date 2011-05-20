@@ -178,7 +178,7 @@ function prepareLessChrome(window) {
 
     // Only hide if the mouse moves far down enough
     if (clientY > gNavToolbox.boxObject.height + 30)
-      hide();
+      delayHide(1000);
   });
 
   // Show some context when switching tabs
@@ -194,10 +194,7 @@ function prepareLessChrome(window) {
       show();
 
       // Wait a few seconds before hiding the url/security context
-      delayedHide = async(function() {
-        hide();
-        delayedHide = null;
-      }, 3000);
+      delayHide(3000);
     });
   });
 
@@ -290,6 +287,27 @@ function prepareLessChrome(window) {
 
     shifter();
     shifter = null;
+  }
+
+  // Allow hiding after a little wait
+  function delayHide(wait) {
+    // Let a duplicate delay finish
+    if (delayedHide != null) {
+      if (delayedHide.wait == wait)
+        return;
+
+      // Otherwise cancel the other one for a new timer
+      delayedHide();
+    }
+
+    // Hide then clear the timer
+    delayedHide = async(function() {
+      hide();
+      delayedHide = null;
+    }, wait);
+
+    // Remember what kind of delayed wait this is
+    delayedHide.wait = wait;
   }
 
   // Check if the current tab is blank
