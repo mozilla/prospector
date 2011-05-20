@@ -215,9 +215,13 @@ function prepareLessChrome(window) {
   });
 
   // Allow toggling the chrome when clicking the tabs area
-  listen(window, TabsBar, "click", function({button}) {
+  listen(window, TabsBar, "click", function({button, originalTarget}) {
     // Make sure to ignore movement after potentially hiding
     ignoreMouse = true;
+
+    // Ignore this click if it's on certain elements
+    if (originalTarget.className.search(/^scrollbutton-(down|up)$/) == 0)
+      skipClick = true;
 
     // Only handle primary clicks and ignore one click if necessary
     if (button != 0 || skipClick) {
