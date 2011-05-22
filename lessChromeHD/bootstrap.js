@@ -66,6 +66,13 @@ function prepareLessChrome(window) {
     appMenu.style.zIndex = 1;
   }
 
+  // Similarly make sure the min/max/close buttons are clickable
+  let titleBoxes = document.getElementById("titlebar-buttonbox");
+  if (titleBoxes != null) {
+    titleBoxes.style.position = "relative";
+    titleBoxes.style.zIndex = 1;
+  }
+
   // Copy the active lightweight theme if there's one set
   let MainWindow = document.getElementById("main-window");
   function updateTheme() {
@@ -98,6 +105,11 @@ function prepareLessChrome(window) {
     if (appMenu != null) {
       appMenu.style.position = "";
       appMenu.style.zIndex = "";
+    }
+
+    if (titleBoxes != null) {
+      titleBoxes.style.position = "";
+      titleBoxes.style.zIndex = "";
     }
 
     MainBrowser.style.marginTop = "";
