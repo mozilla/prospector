@@ -43,6 +43,9 @@ Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://services-sync/ext/Observers.js");
 
+// Keep a reference to the add-on object for various uses like disabling
+let gAddon;
+
 // Fix up the current window state and get ready to hide chrome
 function prepareLessChrome(window) {
   let {async, change} = makeWindowHelpers(window);
@@ -292,6 +295,18 @@ function prepareLessChrome(window) {
     show();
   });
 
+  // Disable the add-on when customizing
+  listen(window, window, "beforecustomization", function() {
+    // NB: Disabling will unload listeners, so manually add and remove below
+    gAddon.userDisabled = true;
+
+    // Listen for one customization finish to re-enable the addon
+    window.addEventListener("aftercustomization", function reenable() {
+      window.removeEventListener("aftercustomization", reenable, false);
+      gAddon.userDisabled = false;
+    }, false);
+  });
+
   // Any mouse scrolls hide the chrome
   listen(window, window, "DOMMouseScroll", function() {
     // Allow scrolling on tabs area to hide without reshowing
@@ -377,6 +392,8 @@ function prepareLessChrome(window) {
  * Handle the add-on being activated on install/enable
  */
 function startup({id}) AddonManager.getAddonByID(id, function(addon) {
+  gAddon = addon;
+
   // Load various javascript includes for helper functions
   ["helper", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
