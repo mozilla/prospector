@@ -250,6 +250,14 @@ function prepareLessChrome(window) {
     hide();
   });
 
+  // Detect movement out of the browser area (including to the empty tab area)
+  listen(window, window, "mouseout", function({relatedTarget}) {
+    if (relatedTarget != null)
+      return;
+
+    show();
+  });
+
   // Remember when the popup hides to allow events to resume
   listen(window, window, "popuphiding", function() {
     popupOpen = false;
