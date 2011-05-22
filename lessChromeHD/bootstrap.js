@@ -41,6 +41,7 @@ const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://services-sync/ext/Observers.js");
 
 // Fix up the current window state and get ready to hide chrome
 function prepareLessChrome(window) {
@@ -64,6 +65,23 @@ function prepareLessChrome(window) {
     appMenu.style.position = "relative";
     appMenu.style.zIndex = 1;
   }
+
+  // Copy the active lightweight theme if there's one set
+  let MainWindow = document.getElementById("main-window");
+  function updateTheme() {
+    let {style} = gNavToolbox;
+    style.backgroundImage = MainWindow.style.backgroundImage;
+    style.backgroundPosition = "right -" + gNavToolbox.boxObject.y + "px";
+  }
+  updateTheme();
+
+  // Watch for theme changes to update the image and cleanup as necessary
+  Observers.add("lightweight-theme-changed", updateTheme);
+  unload(function() {
+    Observers.remove("lightweight-theme-changed", updateTheme);
+    gNavToolbox.style.backgroundImage = "";
+    gNavToolbox.style.backgroundPosition = "";
+  });
 
   // Figure out how much to shift the main browser
   let MainBrowser = document.getElementById("browser");
