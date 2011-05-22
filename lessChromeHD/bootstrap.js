@@ -93,8 +93,23 @@ function prepareLessChrome(window) {
   // Figure out how much to shift the main browser
   let MainBrowser = document.getElementById("browser");
   let TabsBar = document.getElementById("TabsToolbar");
-  MainBrowser.style.marginTop = TabsBar.boxObject.y + TabsBar.boxObject.height -
-    gBrowser.parentNode.boxObject.y + "px";
+  function updateOffset() {
+    // Reset the toolbox to its normal height
+    gNavToolbox.style.height = "";
+
+    // Do a negative offset of the difference of full height and tabs height
+    MainBrowser.style.marginTop = TabsBar.boxObject.height -
+      gNavToolbox.boxObject.height + "px";
+  }
+  updateOffset();
+
+  // Watch for changes to the chrome that might require resizing the browser
+  change(gBrowser, "updateWindowResizers", function(orig) {
+    return function() {
+      updateOffset();
+      return orig.call(this);
+    };
+  });
 
   // Hide toolbars by changing the height and keep it above content
   gNavToolbox.style.boxShadow = "3px 3px 3px rgba(0, 0, 0, 0.3)";
