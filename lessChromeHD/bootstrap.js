@@ -97,6 +97,7 @@ function prepareLessChrome(window) {
     gBrowser.parentNode.boxObject.y + "px";
 
   // Hide toolbars by changing the height and keep it above content
+  gNavToolbox.style.boxShadow = "3px 3px 3px rgba(0, 0, 0, 0.3)";
   gNavToolbox.style.opacity = .9;
   gNavToolbox.style.overflow = "hidden";
   gNavToolbox.style.position = "relative";
@@ -114,6 +115,7 @@ function prepareLessChrome(window) {
     }
 
     MainBrowser.style.marginTop = "";
+    gNavToolbox.style.boxShadow = "";
     gNavToolbox.style.height = "";
     gNavToolbox.style.marginBottom = "";
     gNavToolbox.style.opacity = "";
