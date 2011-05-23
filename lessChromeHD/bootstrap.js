@@ -264,6 +264,22 @@ function prepareLessChrome(window) {
     show();
   });
 
+  // Show the urlbar on password field focus
+  listen(window, gBrowser, "focus", function({target}){
+    if (target.tagName == "INPUT" && target.type == "password") {
+      keepOpen = true;
+      show();
+    }
+  });
+
+  // Hide the urlbar again on password field blur.
+  listen(window, gBrowser, "blur", function({target}){
+    if (target.tagName == "INPUT" && target.type == "password") {
+      keepOpen = false;
+      hide();
+    }
+  });
+
   // Allow toggling the chrome when clicking the tabs area
   listen(window, TabsBar, "click", function({button, originalTarget}) {
     // Make sure to ignore movement after potentially hiding
