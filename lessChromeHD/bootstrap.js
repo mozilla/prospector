@@ -357,6 +357,32 @@ function prepareLessChrome(window) {
     show();
   });
 
+  // Detect progress changes for the current tab to show chrome
+  let progress = {
+    // If the location changes domains, show the chrome
+    onLocationChange: function() {
+      // Try reading out the host if possible
+      let {currentURI} = gBrowser.selectedBrowser;
+      let host;
+      try {
+        host = currentURI.host;
+      }
+      // Fallback to the full spec if necessary
+      catch(ex) {
+        host = currentURI.spec;
+      }
+
+      // Nothing to do if it didn't change
+      if (host == progress.lastHost)
+        return;
+
+      show();
+      progress.lastHost = host;
+    },
+  };
+  gBrowser.addProgressListener(progress);
+  unload(function() gBrowser.removeProgressListener(progress));
+
   // Keep references to various timers and provide helpers to cancel them
   let delayedHide;
   function cancelDelayed() {
