@@ -201,12 +201,28 @@ function prepareLessChrome(window) {
     }))();
   }
 
+  // Hide the urlbar again on password field blur
+  listen(window, gBrowser, "blur", function({target}){
+    if (target.tagName == "INPUT" && target.type == "password") {
+      keepOpen = false;
+      hide();
+    }
+  });
+
   // Clicking the page content dismisses the chrome
   listen(window, gBrowser, "click", function({button}) {
     if (button != 0)
       return;
 
     hide();
+  });
+
+  // Show the urlbar on password field focus
+  listen(window, gBrowser, "focus", function({target}){
+    if (target.tagName == "INPUT" && target.type == "password") {
+      keepOpen = true;
+      show();
+    }
   });
 
   // Typing in the page content dismisses the chrome
