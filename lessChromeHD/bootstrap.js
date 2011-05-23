@@ -211,7 +211,7 @@ function prepareLessChrome(window) {
   });
 
   // Typing in the page content dismisses the chrome
-  listen(window, gBrowser, "keypress", function() {
+  listen(window, gBrowser, "keydown", function() {
     hide();
   });
 
