@@ -315,11 +315,26 @@ function prepareLessChrome(window) {
   });
 
   // Detect movement out of the browser area (including to the empty tab area)
+  let asyncOut;
   listen(window, window, "mouseout", function({relatedTarget}) {
     if (relatedTarget != null)
       return;
 
-    show();
+    // Show on a very short delay to detect mouseover of a different context
+    asyncOut = async(function() {
+      show();
+      asyncOut = null;
+    });
+  });
+
+  // Cancel the delayed show if we immediately get a mouseover
+  listen(window, window, "mouseover", function() {
+    if (asyncOut == null)
+      return;
+
+    // The mouse must have moved from one security context to another
+    asyncOut();
+    asyncOut = null;
   });
 
   // Remember when the popup hides to allow events to resume
