@@ -41,7 +41,6 @@ const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
-Cu.import("resource://services-sync/ext/Observers.js");
 
 // Keep a reference to the add-on object for various uses like disabling
 let gAddon;
@@ -86,9 +85,9 @@ function prepareLessChrome(window) {
   updateTheme();
 
   // Watch for theme changes to update the image and cleanup as necessary
-  Observers.add("lightweight-theme-changed", updateTheme);
+  Services.obs.addObserver(updateTheme, "lightweight-theme-changed", false);
   unload(function() {
-    Observers.remove("lightweight-theme-changed", updateTheme);
+    Services.obs.removeObserver(updateTheme, "lightweight-theme-changed");
     gNavToolbox.style.backgroundImage = "";
     gNavToolbox.style.backgroundPosition = "";
   });
