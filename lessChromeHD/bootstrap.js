@@ -374,6 +374,10 @@ function prepareLessChrome(window) {
     if (relatedTarget != null)
       return;
 
+    // Don't create more than one delayed shows here
+    if (asyncOut != null)
+      return;
+
     // Show on a very short delay to detect mouseover of a different context
     asyncOut = async(function() {
       show();
