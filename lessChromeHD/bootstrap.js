@@ -241,6 +241,19 @@ function prepareLessChrome(window) {
     hide();
   });
 
+  // Detect held right-clicks to show the chrome
+  let asyncDown;
+  listen(window, gBrowser, "mousedown", function({button}) {
+    if (button != 2)
+      return;
+
+    // Show on a delay to detect if it was a quick click
+    asyncDown = async(function() {
+      show();
+      asyncDown = null;
+    }, 100);
+  });
+
   // Moving the mouse down into content can hide the chrome
   listen(window, gBrowser, "mousemove", function({clientY}) {
     // Allow clicks to toggle now that it moved away to content
@@ -257,6 +270,21 @@ function prepareLessChrome(window) {
     // Only hide if the mouse moves far down enough
     if (clientY > gNavToolbox.boxObject.height + 30)
       delayHide(1000);
+  });
+
+  // Hide the chrome on releasing a right-click
+  listen(window, gBrowser, "mouseup", function({button}) {
+    if (button != 2)
+      return;
+
+    // Prevent the delayed showing from happening now that the click finished
+    if (asyncDown != null) {
+      asyncDown();
+      asyncDown = null;
+    }
+
+    // Always hide on a finished right-click
+    hide();
   });
 
   // Show some context when switching tabs
@@ -368,11 +396,11 @@ function prepareLessChrome(window) {
     popupOpen = false;
   });
 
-  // Show chrome with the context menu appearing
+  // Show chrome for various popups like popup notifications
   listen(window, window, "popupshowing", function({target}) {
     // Ignore some kinds of popups
     if (target.nodeName.search(/(page|select|tooltip|window)$/i) == 0 ||
-        target.id.search(/(autoscroller|PopupAutoComplete)$/i) == 0) {
+        target.id.search(/(autoscroller|contentAreaContextMenu|PopupAutoComplete)$/i) == 0) {
       return;
     }
 
