@@ -113,9 +113,20 @@ function prepareLessChrome(window) {
     };
   });
 
+  // Set the opacity of potentially hidden toolbars or clear it
+  function updateOpacity(makeTransparent) {
+    let opacity = makeTransparent ? .9 : "";
+
+    // Set the opacity for every toolbar except tabs
+    Array.forEach(gNavToolbox.childNodes, function(node) {
+      if (node != TabsBar)
+        node.style.opacity = opacity;
+    });
+  }
+  updateOpacity(true);
+
   // Hide toolbars by changing the height and keep it above content
   gNavToolbox.style.boxShadow = "3px 3px 3px rgba(0, 0, 0, 0.3)";
-  gNavToolbox.style.opacity = .9;
   gNavToolbox.style.overflow = "hidden";
   gNavToolbox.style.position = "relative";
 
@@ -135,9 +146,9 @@ function prepareLessChrome(window) {
     gNavToolbox.style.boxShadow = "";
     gNavToolbox.style.height = "";
     gNavToolbox.style.marginBottom = "";
-    gNavToolbox.style.opacity = "";
     gNavToolbox.style.overflow = "";
     gNavToolbox.style.position = "";
+    updateOpacity(false);
   });
 
   // Keep track of various states and modifiers of events
