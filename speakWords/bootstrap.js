@@ -225,6 +225,19 @@ function addEnterSelects(window) {
     // Calling handleEnter will cause the selected popup item to be used
     gURLBar.controller.handleEnter(true);
   });
+
+  // Detect deletes of text to avoid accidentally deleting items
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_BACK_SPACE:
+      case event.DOM_VK_DELETE:
+        // The value will be the last search if auto-selected; otherwise the
+        // value will be the manually selected autocomplete entry
+        if (gURLBar.value == lastSearch)
+          event.stopPropagation();
+        break;
+    }
+  });
 }
 
 /**
