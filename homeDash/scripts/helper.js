@@ -276,7 +276,7 @@ function makePageInfo(title, url) {
 
   return {
     fakeTitle: fakeTitle,
-    icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
+    icon: PlacesUtils.favicons.getFaviconImageForPage(URI).spec,
     title: title,
     url: url
   };
@@ -674,7 +674,7 @@ function updateAdaptive(input, pageInfo) {
   // Initialize or use the cached statement
   let stmt = updateAdaptive.stmt;
   if (stmt == null) {
-    stmt = updateAdaptive.stmt = Svc.History.DBConnection.createAsyncStatement(
+    stmt = updateAdaptive.stmt = PlacesUtils.history.DBConnection.createAsyncStatement(
       "INSERT OR REPLACE INTO moz_inputhistory " +
       "SELECT h.id, :input, IFNULL(i.use_count, 0) * .9 + 1 " +
       "FROM moz_places h " +

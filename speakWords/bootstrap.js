@@ -39,6 +39,7 @@
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 const global = this;
 Cu.import("resource://gre/modules/AddonManager.jsm");
+Cu.import("resource://gre/modules/PlacesUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 // Keep a sorted list of keywords to suggest
@@ -234,7 +235,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   Cu.import("resource://services-sync/util.js");
 
   // XXX Force a QI until bug 609139 is fixed
-  Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
+  PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Add suggestions to all windows
   watchWindows(addKeywordSuggestions);
@@ -249,7 +250,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
               "WHERE input NOT NULL " +
               "ORDER BY frecency DESC";
   let cols = ["input", "url", "title"];
-  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
 
   // Break a string into individual words separated by the splitter
   function explode(text, splitter) {
@@ -293,7 +294,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   function addDomains(extraQuery) {
     let query = "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery;
     let cols = ["url"];
-    let stmt = Svc.History.DBConnection.createAsyncStatement(query);
+    let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
     Utils.queryAsync(stmt, cols).forEach(function({url}) {
       try {
         allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
@@ -308,7 +309,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 
   // Add bookmark keywords to the list of potential keywords
   let query = "SELECT * FROM moz_keywords";
-  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
   let cols = ["keyword"];
   Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
     allKeywords.push([keyword]);

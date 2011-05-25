@@ -38,6 +38,7 @@
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/DownloadUtils.jsm");
+Cu.import("resource://gre/modules/PlacesUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 /**
@@ -53,7 +54,7 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
     img.style.height = "16px";
     img.style.paddingRight = "4px";
     img.style.width = "16px";
-    img.src = Svc.Favicon.getFaviconImageForPage(Utils.makeURI(url)).spec;
+    img.src = PlacesUtils.favicons.getFaviconImageForPage(Utils.makeURI(url)).spec;
     a.appendChild(doc.createTextNode(text));
     div.appendChild(doc.createTextNode(extra || ""));
     return div;
@@ -69,7 +70,7 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
       numObj = {val: 0};
 
     // Find pages from the current visit
-    let stm = Svc.History.DBConnection.createAsyncStatement(
+    let stm = PlacesUtils.history.DBConnection.createAsyncStatement(
       "SELECT *, v.id as nextVisit " +
       "FROM moz_historyvisits v " +
       "JOIN moz_places h ON h.id = v.place_id " +
@@ -111,7 +112,7 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
     let queryVal = value.replace(/ /g, "+");
 
     // Find the pages that used those form history queries
-    let stm = Svc.History.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection.createAsyncStatement(
+    let stm = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection.createAsyncStatement(
       "SELECT *, v.id as startVisit " +
       "FROM moz_places h " +
       "JOIN moz_historyvisits v ON v.place_id = h.id " +

@@ -39,6 +39,7 @@ const global = this;
 
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
+Cu.import("resource://gre/modules/PlacesUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
@@ -1671,7 +1672,7 @@ function addDashboard(window) {
   const PAGES_PER_CHUNK = 3000;
 
   // Get all pages by frecency
-  history.allPagesByFrecency = Svc.History.DBConnection.createAsyncStatement(
+  history.allPagesByFrecency = PlacesUtils.history.DBConnection.createAsyncStatement(
     "SELECT title, url " +
     "FROM moz_places " +
     "WHERE AUTOCOMPLETE_MATCH(:query, url, title, '', 0, 0, 0, 0, 2, 0) " +
@@ -4000,7 +4001,7 @@ function addDashboard(window) {
 function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   // XXX Force a QI until bug 609139 is fixed
   Cu.import("resource://services-sync/util.js");
-  Svc.History.QueryInterface(Ci.nsPIPlacesDatabase);
+  PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Get references to the packaged images
   ["back24",

@@ -46,7 +46,7 @@ function computeTopSites() {
   }
   catch(ex) {}
 
-  let stm = Svc.History.DBConnection.createAsyncStatement(
+  let stm = PlacesUtils.history.DBConnection.createAsyncStatement(
     "SELECT * " +
     "FROM moz_places " +
     "WHERE hidden = 0 " +
@@ -94,7 +94,7 @@ function computeTopSites() {
 // Collect the bookmark keywords for later use
 let bookmarkKeywords = {};
 function collectBookmarkKeywords() {
-  let stm = Svc.History.DBConnection.createAsyncStatement(
+  let stm = PlacesUtils.history.DBConnection.createAsyncStatement(
     "SELECT (SELECT keyword FROM moz_keywords WHERE id = keyword_id) keyword, " +
            "title, (SELECT url FROM moz_places WHERE id = fk) url " +
     "FROM moz_bookmarks " +
@@ -126,7 +126,7 @@ function collectBookmarkKeywords() {
     let URI = Services.io.newURI(url, null, null);
     bookmarkKeywords[keyword] = {
       getUrl: getUrl,
-      icon: Svc.Favicon.getFaviconImageForPage(URI).spec,
+      icon: PlacesUtils.favicons.getFaviconImageForPage(URI).spec,
       title: title
     }
   });
@@ -147,7 +147,7 @@ function processAdaptive() {
               "WHERE input NOT NULL " +
               "ORDER BY ROUND(use_count) DESC, frecency DESC";
   let cols = ["input", "url", "title"];
-  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
 
   // Break a string into individual words separated by the splitter
   function explode(text, splitter) {
@@ -201,7 +201,7 @@ function processAdaptive() {
                        "MAX(visit_count) DESC, " +
                        "MAX(last_visit_date) DESC";
   let cols = ["rev_host"];
-  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
   Utils.queryAsync(stmt, cols).forEach(function({rev_host}) {
     // Remove the trailing dot and make it the right order
     rev_host = rev_host.slice(0, -1);
@@ -229,7 +229,7 @@ function processAdaptive() {
 
   // Add bookmark keywords to the list of potential keywords
   let query = "SELECT * FROM moz_keywords";
-  let stmt = Svc.History.DBConnection.createAsyncStatement(query);
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
   let cols = ["keyword"];
   Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
     allKeywords.push([keyword]);
