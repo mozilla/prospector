@@ -204,7 +204,7 @@ function addEnterSelects(window) {
     }
 
     // Ignore special key combinations
-    if (aEvent.shiftKey || aEvent.altKey || aEvent.ctrlKey || aEvent.metaKey)
+    if (aEvent.shiftKey || aEvent.ctrlKey || aEvent.metaKey)
       return;
 
     // Deselect if the selected result isn't for the current search
@@ -223,6 +223,7 @@ function addEnterSelects(window) {
     }
 
     // Calling handleEnter will cause the selected popup item to be used
+    gURLBar.mEnterEvent = aEvent;
     gURLBar.controller.handleEnter(true);
   });
 
