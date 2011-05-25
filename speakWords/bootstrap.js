@@ -234,8 +234,17 @@ function addEnterSelects(window) {
       case event.DOM_VK_DELETE:
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
-        if (gURLBar.value == lastSearch)
-          event.stopPropagation();
+        if (gURLBar.value != lastSearch)
+          return;
+
+        // Hack around to prevent deleting an entry
+        let {mPopupOpen} = popup;
+        popup.mPopupOpen = false;
+
+        // Restore the original popup open value
+        window.setTimeout(function() {
+          popup.mPopupOpen = mPopupOpen;
+        });
         break;
     }
   });
