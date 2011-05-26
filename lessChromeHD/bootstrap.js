@@ -251,7 +251,7 @@ function prepareLessChrome(window) {
     asyncDown = async(function() {
       show();
       asyncDown = null;
-    }, 100);
+    }, 300);
   });
 
   // Moving the mouse down into content can hide the chrome
