@@ -126,7 +126,7 @@ function prepareLessChrome(window) {
   updateOpacity(true);
 
   // Hide toolbars by changing the height and keep it above content
-  gNavToolbox.style.boxShadow = "3px 3px 3px rgba(0, 0, 0, 0.3)";
+  gNavToolbox.style.boxShadow = "0 0 6px rgba(0, 0, 0, 0.5)";
   gNavToolbox.style.overflow = "hidden";
   gNavToolbox.style.position = "relative";
 
