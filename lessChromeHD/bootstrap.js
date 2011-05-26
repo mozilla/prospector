@@ -370,8 +370,12 @@ function prepareLessChrome(window) {
 
   // Detect movement out of the browser area (including to the empty tab area)
   let asyncOut;
-  listen(window, window, "mouseout", function({relatedTarget}) {
+  listen(window, window, "mouseout", function({relatedTarget, screenY}) {
     if (relatedTarget != null)
+      return;
+
+    // Only care about movements towards the top of the browser
+    if (screenY > gBrowser.boxObject.screenY)
       return;
 
     // Don't create more than one delayed shows here
