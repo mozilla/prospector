@@ -44,18 +44,36 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 // Keep a sorted list of keywords to suggest
 let sortedKeywords = [];
-
+//Index of the current suggestion
+let keywordIndex = 0;
+//Maximum suggestions to cycle through
+let maxKeywordMatch=5;
+//last query made
+let lastQuery = "";
+//Should we show suggestion or not 
+let matchNextKeyword = false;
 /**
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
   let queryLen = query.length;
   let sortedLen = sortedKeywords.length;
+  let keywordArray = [];
+	
+  let count = 0;
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
-    if (keyword.slice(0, queryLen) == query)
-      return keyword;
+	
+    if (keyword.slice(0, queryLen) == query) // get top 5 results
+      keywordArray[count++]= keyword;
+	
+	if(count>=maxKeywordMatch)
+	  break;		
   }
+  //If the keyword list is null, add the query itself so as to cycle to only query while pressing tab
+  if(keywordArray.length==0)
+	keywordArray[0]=query;
+  return keywordArray;	//returning the list of suggestions rather than top suggestion
 }
 
 /**
@@ -85,14 +103,22 @@ function addKeywordSuggestions(window) {
 
     // See if we can suggest a keyword if it isn't the current query
     let query = urlBar.textValue.toLowerCase();
-    let keyword = getKeyword(query);
-    if (keyword == null || keyword == query)
+	
+	//If by any chance the last query made does not matches this one , then stop tabbing through suggestions
+	if(lastQuery!=query){
+	  matchNextKeyword=false;
+	  keywordIndex=0;
+	  lastQuery=query;
+	}
+	
+	let keyword = getKeyword(query);	//keyword now is the list of suggestions rather than the top suggestion
+    if (keyword[keywordIndex%(keyword.length)] == null || keyword[keywordIndex%(keyword.length)] == query)
       return;
-
+		
     // Select the end of the suggestion to allow over-typing
-    urlBar.value = keyword;
-    urlBar.selectTextRange(query.length, keyword.length);
-
+	urlBar.value = keyword[keywordIndex%(keyword.length)];
+    urlBar.selectTextRange(query.length, keyword[keywordIndex%(keyword.length)].length);
+	
     // Make sure the search suggestions show up
     Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
   });
@@ -226,25 +252,50 @@ function addEnterSelects(window) {
     gURLBar.mEnterEvent = aEvent;
     gURLBar.controller.handleEnter(true);
   });
-
-  // Detect Tab press and moves the cursor to the end of current test shown in urlBar
+  
+  // Detect Tab press and moves the cursor to the end of current test shown in urlBar 
+  //and next subsequent TAB press cycles through suggestions
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
-      case event.DOM_VK_TAB:  
-	if (gURLBar.value != lastSearch)
-          return;
+	
+	  case event.DOM_VK_TAB:  
+	    
+		//Stop the actual TAB behavior
+		event.stopPropagation();
+		event.preventDefault(); 
 		
-	gURLBar.selectTextRange(lastSearch.length,lastSearch.length);
-	event.stopPropagation();
-	event.preventDefault(); 	
-		
+		//If cycling through suggestions has started or it has to start this time
+		if(gURLBar.selectionStart==gURLBar.value.length || matchNextKeyword){
+		  
+		  keywordIndex++;
+		  //Now keyword remains the same
+		  let keyword = getKeyword(lastQuery);
+		  //getting the next keyword match
+		  gURLBar.value = keyword[keywordIndex%(keyword.length)];
+    	  gURLBar.selectTextRange(lastQuery.length, keyword[keywordIndex%(keyword.length)].length);
+		  Utils.delay(function() gURLBar.controller.startSearch(urlBar.value));
+	    }
+		else{	//If this is the first time pressing tab for current query , 
+				//start the matchNextKeyword but this time only deselect the current keyword
+		  matchNextKeyword=true;
+		  keywordIndex=0;
+		  gURLBar.selectTextRange(gURLBar.value.length,gURLBar.value.length);
+		} 
+				
         break;	
+		default:
+		  //Any other key pressed stops the cycling of suggestions
+		  keywordIndex=0;
+		  matchNextKeyword=false;
+		  return; 
     }
   });
 
+  
   // Detect deletes of text to avoid accidentally deleting items
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
+	
       case event.DOM_VK_BACK_SPACE:
       case event.DOM_VK_DELETE:
         // The value will be the last search if auto-selected; otherwise the
