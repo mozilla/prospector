@@ -218,7 +218,7 @@ function prepareLessChrome(window) {
   // Hide the urlbar again on password field blur
   listen(window, gBrowser, "blur", function({target}){
     if (target.tagName == "INPUT" && target.type == "password") {
-      keepOpen = false;
+      setPassword(false);
       hide();
     }
   });
@@ -234,7 +234,7 @@ function prepareLessChrome(window) {
   // Show the urlbar on password field focus
   listen(window, gBrowser, "focus", function({target}){
     if (target.tagName == "INPUT" && target.type == "password") {
-      keepOpen = true;
+      setPassword(true);
       show();
     }
   });
@@ -512,6 +512,18 @@ function prepareLessChrome(window) {
 
     // Remember what kind of delayed wait this is
     delayedShow.wait = wait;
+  }
+
+  // Remember that we're in a password field and change the UI
+  function setPassword(focused) {
+    keepOpen = focused;
+
+    // Make sure content and potentially the password field isn't covered
+    if (focused)
+      MainBrowser.style.marginTop = "";
+    // Restore the chrome over content feel
+    else
+      updateOffset();
   }
 
   // Check if the current tab is blank
