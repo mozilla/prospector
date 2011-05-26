@@ -153,6 +153,7 @@ function prepareLessChrome(window) {
 
   // Keep track of various states and modifiers of events
   let hidden = false;
+  let ignoreKeys = false;
   let ignoreMouse = false;
   let keepOpen = false;
   let popupOpen = false;
@@ -241,6 +242,9 @@ function prepareLessChrome(window) {
 
   // Typing in the page content dismisses the chrome
   listen(window, gBrowser, "keydown", function() {
+    if (ignoreKeys)
+      return;
+
     hide();
   });
 
@@ -259,6 +263,7 @@ function prepareLessChrome(window) {
     cancelShow();
 
     // Allow clicks to toggle now that it moved away to content
+    ignoreKeys = false;
     skipClick = false;
 
     // Keep ignoring mouse moves unless moving more than slightly away
@@ -330,6 +335,9 @@ function prepareLessChrome(window) {
 
   // Show chrome when the mouse moves over the tabs
   listen(window, TabsBar, "mousemove", function() {
+    // Don't hide chrome with key dismiss when in chrome
+    ignoreKeys = true;
+
     // Don't show after the tabs area was clicked
     if (ignoreMouse)
       return;
