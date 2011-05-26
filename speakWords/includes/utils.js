@@ -46,7 +46,10 @@ function watchWindows(callback) {
   // Wrap the callback in a function that ignores failures
   function watcher(window) {
     try {
-      callback(window);
+      // Now that the window has loaded, only handle browser windows
+      let {documentElement} = window.document;
+      if (documentElement.getAttribute("windowtype") == "navigator:browser")
+        callback(window);
     }
     catch(ex) {}
   }
@@ -54,26 +57,22 @@ function watchWindows(callback) {
   // Wait for the window to finish loading before running the callback
   function runOnLoad(window) {
     // Listen for one load event before checking the window type
-    window.addEventListener("load", function() {
-      window.removeEventListener("load", arguments.callee, false);
-
-      // Now that the window has loaded, only handle browser windows
-      let doc = window.document.documentElement;
-      if (doc.getAttribute("windowtype") == "navigator:browser")
-        watcher(window);
+    window.addEventListener("load", function runOnce() {
+      window.removeEventListener("load", runOnce, false);
+      watcher(window);
     }, false);
   }
 
   // Add functionality to existing windows
-  let browserWindows = Services.wm.getEnumerator("navigator:browser");
-  while (browserWindows.hasMoreElements()) {
-    // Only run the watcher immediately if the browser is completely loaded
-    let browserWindow = browserWindows.getNext();
-    if (browserWindow.document.readyState == "complete")
-      watcher(browserWindow);
+  let windows = Services.wm.getEnumerator(null);
+  while (windows.hasMoreElements()) {
+    // Only run the watcher immediately if the window is completely loaded
+    let window = windows.getNext();
+    if (window.document.readyState == "complete")
+      watcher(window);
     // Wait for the window to load before continuing
     else
-      runOnLoad(browserWindow);
+      runOnLoad(window);
   }
 
   // Watch for new browser windows opening then wait for it to load
