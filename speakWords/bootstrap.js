@@ -227,6 +227,21 @@ function addEnterSelects(window) {
     gURLBar.controller.handleEnter(true);
   });
 
+  // Detect Tab press and moves the cursor to the end of current test shown in urlBar
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_TAB:  
+	if (gURLBar.value != lastSearch)
+          return;
+		
+	gURLBar.selectTextRange(lastSearch.length,lastSearch.length);
+	event.stopPropagation();
+	event.preventDefault(); 	
+		
+        break;	
+    }
+  });
+
   // Detect deletes of text to avoid accidentally deleting items
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
