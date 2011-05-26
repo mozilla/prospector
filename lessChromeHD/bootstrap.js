@@ -437,6 +437,9 @@ function prepareLessChrome(window) {
       if (host == progress.lastHost)
         return;
 
+      // Must have navigated away, so make sure to clear the password state
+      setPassword(false);
+
       show();
       progress.lastHost = host;
     },
