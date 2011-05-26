@@ -290,17 +290,6 @@ function prepareLessChrome(window) {
   listen(window, gBrowser.tabContainer, "TabSelect", function({target}) {
     // Avoid toggling if a tab was clicked to select
     skipClick = true;
-
-    // Immediately show the chrome for context on tab switch
-    show();
-
-    // Force the chrome to stay visible in-case chrome blurred
-    async(function() {
-      show();
-
-      // Wait a few seconds before hiding the url/security context
-      delayHide(3000);
-    });
   });
 
   // Hide the chrome when potentially moving focus to content
@@ -436,12 +425,21 @@ function prepareLessChrome(window) {
       // Nothing to do if it didn't change
       if (host == progress.lastHost)
         return;
+      progress.lastHost = host;
 
       // Must have navigated away, so make sure to clear the password state
       setPassword(false);
 
+      // Immediately show the chrome for context on host switch
       show();
-      progress.lastHost = host;
+
+      // Force the chrome to stay visible in-case chrome blurred
+      async(function() {
+        show();
+
+        // Wait a few seconds before hiding the url/security context
+        delayHide(3000);
+      });
     },
   };
   gBrowser.addProgressListener(progress);
