@@ -161,7 +161,7 @@ function prepareLessChrome(window) {
   // Show the chrome immediately
   function show() {
     // Prevent any pending hides now that we want to show
-    cancelDelayed();
+    cancelHide();
 
     // Nothing to do if already showing
     if (!hidden)
@@ -178,6 +178,9 @@ function prepareLessChrome(window) {
 
   // Hide the chrome by animating away the non-tabs toolbar area
   function hide() {
+    // Prevent any pending shows now that we want to hide
+    cancelShow();
+
     // Don't bother hiding if already hidden or showing nothing
     if (hidden || keepOpen || popupOpen || showingNothing())
       return;
@@ -242,20 +245,19 @@ function prepareLessChrome(window) {
   });
 
   // Detect held right-clicks to show the chrome
-  let asyncDown;
   listen(window, gBrowser, "mousedown", function({button}) {
     if (button != 2)
       return;
 
     // Show on a delay to detect if it was a quick click
-    asyncDown = async(function() {
-      show();
-      asyncDown = null;
-    }, 300);
+    delayShow(300);
   });
 
   // Moving the mouse down into content can hide the chrome
   listen(window, gBrowser, "mousemove", function({clientY}) {
+    // Don't do the delayed show if we're back in content
+    cancelShow();
+
     // Allow clicks to toggle now that it moved away to content
     skipClick = false;
 
@@ -278,10 +280,7 @@ function prepareLessChrome(window) {
       return;
 
     // Prevent the delayed showing from happening now that the click finished
-    if (asyncDown != null) {
-      asyncDown();
-      asyncDown = null;
-    }
+    cancelShow();
 
     // Always hide on a finished right-click
     hide();
@@ -346,7 +345,7 @@ function prepareLessChrome(window) {
     if (ignoreMouse)
       return;
 
-    show();
+    delayShow(500);
   });
 
   // Disable the add-on when customizing
@@ -447,7 +446,7 @@ function prepareLessChrome(window) {
 
   // Keep references to various timers and provide helpers to cancel them
   let delayedHide;
-  function cancelDelayed() {
+  function cancelHide() {
     if (delayedHide == null)
       return;
 
@@ -462,6 +461,15 @@ function prepareLessChrome(window) {
 
     shifter();
     shifter = null;
+  }
+
+  let delayedShow;
+  function cancelShow() {
+    if (delayedShow == null)
+      return;
+
+    delayedShow();
+    delayedShow = null;
   }
 
   // Allow hiding after a little wait
@@ -483,6 +491,27 @@ function prepareLessChrome(window) {
 
     // Remember what kind of delayed wait this is
     delayedHide.wait = wait;
+  }
+
+  // Allow showing after a little wait
+  function delayShow(wait) {
+    // Let a duplicate delay finish
+    if (delayedShow != null) {
+      if (delayedShow.wait == wait)
+        return;
+
+      // Otherwise cancel the other one for a new timer
+      delayedShow();
+    }
+
+    // Show then clear the timer
+    delayedShow = async(function() {
+      show();
+      delayedShow = null;
+    }, wait);
+
+    // Remember what kind of delayed wait this is
+    delayedShow.wait = wait;
   }
 
   // Check if the current tab is blank
