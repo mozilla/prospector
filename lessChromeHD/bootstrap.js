@@ -271,7 +271,7 @@ function prepareLessChrome(window) {
 
     // Only hide if the mouse moves far down enough
     if (clientY > gNavToolbox.boxObject.height + 30)
-      delayHide(1000);
+      delayHide(300);
   });
 
   // Hide the chrome on releasing a right-click
