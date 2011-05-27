@@ -268,8 +268,18 @@ function addEnterSelects(window) {
 		if(gURLBar.selectionStart==gURLBar.value.length || matchNextKeyword){
 		  
 		  keywordIndex++;
-		  //Now keyword remains the same
+		  //If a Delete key or Backspace was pressed last time, the query changes , and thus the lastquery for this approach
+		  if(lastQuery!=gURLBar.value && gURLBar.value.slice(0,lastQuery.length)!=lastQuery){
+		    lastQuery=gURLBar.value;
+			keyworIndex=0;
+		  }
+		  
 		  let keyword = getKeyword(lastQuery);
+		  
+		  //returning if there is no alternate suggestion
+		  if(keyword.length==1)
+		    return;
+			
 		  //getting the next keyword match
 		  gURLBar.value = keyword[keywordIndex%(keyword.length)];
     	  gURLBar.selectTextRange(lastQuery.length, keyword[keywordIndex%(keyword.length)].length);
