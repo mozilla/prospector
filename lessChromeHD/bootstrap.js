@@ -220,8 +220,9 @@ function prepareLessChrome(window) {
   // Hide the urlbar again on password field blur
   listen(window, gBrowser, "blur", function({target}){
     if (target.tagName == "INPUT" && target.type == "password") {
-      setPassword(false);
-      hide();
+      // Wait a short bit after a blur in-case the user was clicking
+      async(function() setPassword(false), 500);
+      delayHide(500);
     }
   });
 
