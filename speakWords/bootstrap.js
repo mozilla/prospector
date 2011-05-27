@@ -272,8 +272,8 @@ function addEnterSelects(window) {
 		  let keyword = getKeyword(lastQuery);
 		  //getting the next keyword match
 		  gURLBar.value = keyword[keywordIndex%(keyword.length)];
-    	  gURLBar.selectTextRange(lastQuery.length, keyword[keywordIndex%(keyword.length)].length);
-		  Utils.delay(function() gURLBar.controller.startSearch(urlBar.value));
+    	          gURLBar.selectTextRange(lastQuery.length, keyword[keywordIndex%(keyword.length)].length);
+		  Utils.delay(function() gURLBar.controller.startSearch(gURLBar.value));
 	    }
 		else{	//If this is the first time pressing tab for current query , 
 				//start the matchNextKeyword but this time only deselect the current keyword
