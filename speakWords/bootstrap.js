@@ -286,6 +286,18 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   let tagSvc = Cc["@mozilla.org/browser/tagging-service;1"].
     getService(Ci.nsITaggingService);
 
+  // Add the domain (without www) for the url
+  function addDomain(url) {
+    try {
+      let domain = url.match(/[\/@](?:www\.)?([^\/@:]+)[\/:]/)[1];
+      domain.split(".").forEach(function(val, index, all) {
+        allKeywords.push([all.slice(index).join(".")]);
+      });
+    }
+    // Must have be some strange format url that we probably don't care about
+    catch(ex) {}
+  }
+
   // Keep a nested array of array of keywords -- 2 arrays per entry
   let allKeywords = [];
   Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
@@ -308,6 +320,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     }
 
     // Add keywords from tags, url (ignoring protocol), title
+    addDomain(url);
     addKeywords(tags);
     addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
     addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
@@ -318,13 +331,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     let query = "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery;
     let cols = ["url"];
     let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
-    Utils.queryAsync(stmt, cols).forEach(function({url}) {
-      try {
-        allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
-      }
-      // Must have be some strange format url that we probably don't care about
-      catch(ex) {}
-    });
+    Utils.queryAsync(stmt, cols).forEach(function({url}) addDomain(url));
   }
   addDomains("AND typed = 1 ORDER BY frecency DESC");
   addDomains("ORDER BY visit_count DESC LIMIT 100");
