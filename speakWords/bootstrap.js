@@ -47,7 +47,7 @@ let sortedKeywords = [];
 //Index of the current suggestion
 let keywordIndex = 0;
 //Maximum suggestions to cycle through
-let maxKeywordMatch=5;
+let maxKeywordMatch=10;
 //last query made
 let lastQuery = "";
 /**
@@ -58,7 +58,8 @@ function getKeyword(query) {
   let sortedLen = sortedKeywords.length;
   let keywordArray = [];
 	
-  let count = 0;
+  let count = 0; 
+  
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
 	
@@ -176,8 +177,8 @@ function addEnterSelects(window) {
 
       // Make sure there's results
       if (popup.noResults)
-        return;
-
+        return;	 
+	  
       // Don't auto-select if we have a url
       if (gURLBar.willHandle)
         return;
@@ -301,10 +302,18 @@ function addEnterSelects(window) {
     switch (event.keyCode) {
 	
       case event.DOM_VK_BACK_SPACE:
+	    
+		//If there is only one alphabet in urlbar , and backspace is pressed then remove the suggestion popup
+		if(gURLBar.value.length==1){
+		  gURLBar.closePopup();
+		  return;
+		}
+	    
       case event.DOM_VK_DELETE:
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
-        if (gURLBar.value != lastSearch)
+        		
+		if (gURLBar.value != lastSearch)
           return;
 
         // Hack around to prevent deleting an entry
@@ -377,9 +386,15 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
       }));
     }
 
-    // Add keywords from tags, url (ignoring protocol), title
-    addKeywords(tags);
-    addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
+	//add possible domain name along with suffixes to the beginning of the url parts
+    try {
+      allKeywords.push([url.match(/[\/@]([^\/@:]+)[\/:]/)[1].replace("www.",''),explode(url, /[\/:.?&#=%+]+/).slice(1)]);
+    }
+    catch(ex) {
+	  addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));	
+	}	
+	// Add keywords from tags, url (ignoring protocol), title    
+	addKeywords(tags);    
     addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
   });
 
@@ -390,7 +405,8 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
     Utils.queryAsync(stmt, cols).forEach(function({url}) {
       try {
-        allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
+	    //Add the main domain name along with suffix to the starting of keyword list
+        allKeywords.push([url.match(/[\/@]([^\/@:]+)[\/:]/)[1].replace("www.",''),explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./)]);
       }
       // Must have be some strange format url that we probably don't care about
       catch(ex) {}
