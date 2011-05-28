@@ -50,8 +50,6 @@ let keywordIndex = 0;
 let maxKeywordMatch=5;
 //last query made
 let lastQuery = "";
-//Should we show suggestion or not 
-let matchNextKeyword = false;
 /**
  * Lookup a keyword to suggest for the provided query
  */
@@ -106,7 +104,6 @@ function addKeywordSuggestions(window) {
 	
 	//If by any chance the last query made does not matches this one , then stop tabbing through suggestions
 	if(lastQuery!=query){
-	  matchNextKeyword=false;
 	  keywordIndex=0;
 	  lastQuery=query;
 	}
@@ -264,8 +261,8 @@ function addEnterSelects(window) {
 		event.stopPropagation();
 		event.preventDefault(); 
 		
-		//If cycling through suggestions has started or it has to start this time
-		if(gURLBar.selectionStart==gURLBar.value.length || matchNextKeyword){
+		//If Ctrl key is pressed then cycle through suggestions 
+		if(event.ctrlKey){
 		  
 		  keywordIndex++;
 		  //If a Delete key or Backspace was pressed last time, the query changes , and thus the lastquery for this approach
@@ -285,9 +282,7 @@ function addEnterSelects(window) {
     	  gURLBar.selectTextRange(lastQuery.length, keyword[keywordIndex%(keyword.length)].length);
 		  Utils.delay(function() gURLBar.controller.startSearch(gURLBar.value));
 	    }
-		else{	//If this is the first time pressing tab for current query , 
-				//start the matchNextKeyword but this time only deselect the current keyword
-		  matchNextKeyword=true;
+		else{	//If just tab is presses then go to the end of current keyword
 		  keywordIndex=0;
 		  gURLBar.selectTextRange(gURLBar.value.length,gURLBar.value.length);
 		} 
@@ -296,7 +291,6 @@ function addEnterSelects(window) {
 		default:
 		  //Any other key pressed stops the cycling of suggestions
 		  keywordIndex=0;
-		  matchNextKeyword=false;
 		  return; 
     }
   });
