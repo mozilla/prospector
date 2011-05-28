@@ -54,17 +54,35 @@ let lastQuery = "";
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
-  let queryLen = query.length;
   let sortedLen = sortedKeywords.length;
-  let keywordArray = [];
-	
+  let keywordArray = [];	
   let count = 0; 
+  
+  //Returning if there is no new word typed to be taken as query
+  if(query[query.length-1]==' ')
+    return [query];
+  
+  let returnQuery=""
+  
+  //If query is a multiple word separated by space , then suggest keyword for the last word only
+  let queryArray=query.trim().split(/\s+/);
+  let queryLen = queryArray[queryArray.length-1].length;
+  
+  for(let i=0;i<queryArray.length-1;i++)
+    returnQuery=returnQuery+" "+queryArray[i];
+  //This string contains the trimmed out version of query after removing the last word	
+  returnQuery=returnQuery.trim();
   
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
 	
-    if (keyword.slice(0, queryLen) == query) // get top 5 results
-      keywordArray[count++]= keyword;
+    if (keyword.slice(0, queryLen) == queryArray[queryArray.length-1]){ // get top 10 results
+	
+	  //remove suffix when it is not the first word
+      if(queryArray.length>1)
+	    keyword=keyword.split(/\./)[0];
+	  keywordArray[count++]= (returnQuery+" "+keyword).trim();
+	}
 	
 	if(count>=maxKeywordMatch)
 	  break;		
