@@ -42,6 +42,9 @@ Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/PlacesUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+// Remember if the keyword or domain was just completed
+let justCompleted = false;
+
 // Keep a sorted list of keywords to suggest
 let sortedKeywords = [];
 
@@ -77,6 +80,8 @@ function addKeywordSuggestions(window) {
 
   // Watch for urlbar value input changes to suggest keywords
   listen(window, urlBar, "input", function(event) {
+    justCompleted = false;
+
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
       deleting = false;
@@ -92,6 +97,7 @@ function addKeywordSuggestions(window) {
     // Select the end of the suggestion to allow over-typing
     urlBar.value = keyword;
     urlBar.selectTextRange(query.length, keyword.length);
+    justCompleted = true;
 
     // Make sure the search suggestions show up
     Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
@@ -155,8 +161,8 @@ function addEnterSelects(window) {
       if (popup.noResults)
         return;
 
-      // Don't auto-select if we have a url
-      if (gURLBar.willHandle)
+      // Unless we just completed a domain, don't auto-select if we have a url
+      if (!justCompleted && gURLBar.willHandle)
         return;
 
       // We passed all the checks, so pretend the user has the first result
