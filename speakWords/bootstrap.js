@@ -271,16 +271,6 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   // Add enter-selects functionality to all windows
   watchWindows(addEnterSelects);
 
-  // Use input history to discover keywords from typed letters
-  let query = "SELECT * " +
-              "FROM moz_inputhistory " +
-              "JOIN moz_places " +
-              "ON id = place_id " +
-              "WHERE input NOT NULL " +
-              "ORDER BY frecency DESC";
-  let cols = ["input", "url", "title"];
-  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
-
   // Break a string into individual words separated by the splitter
   function explode(text, splitter) {
     return (text || "").toLowerCase().split(splitter).filter(function(word) {
@@ -306,6 +296,24 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 
   // Keep a nested array of array of keywords -- 2 arrays per entry
   let allKeywords = [];
+
+  // Add bookmark keywords to the list of potential keywords
+  let query = "SELECT * FROM moz_keywords";
+  let cols = ["keyword"];
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
+  Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
+    allKeywords.push([keyword]);
+  });
+
+  // Use input history to discover keywords from typed letters
+  let query = "SELECT * " +
+              "FROM moz_inputhistory " +
+              "JOIN moz_places " +
+              "ON id = place_id " +
+              "WHERE input NOT NULL " +
+              "ORDER BY frecency DESC";
+  let cols = ["input", "url", "title"];
+  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
   Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
     // Add keywords for word parts that start with the input word
     let word = input.trim().toLowerCase().split(/\s+/)[0];
@@ -342,14 +350,6 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   addDomains("AND typed = 1 ORDER BY frecency DESC");
   addDomains("ORDER BY visit_count DESC LIMIT 100");
   addDomains("ORDER BY last_visit_date DESC LIMIT 100");
-
-  // Add bookmark keywords to the list of potential keywords
-  let query = "SELECT * FROM moz_keywords";
-  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
-  let cols = ["keyword"];
-  Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
-    allKeywords.push([keyword]);
-  });
 
   // Do a breadth first traversal of the keywords
   do {
