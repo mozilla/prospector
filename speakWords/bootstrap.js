@@ -49,11 +49,25 @@ let sortedKeywords = [];
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
-  let queryLen = query.length;
-  let sortedLen = sortedKeywords.length;
+
+  let sortedLen = sortedKeywords.length;  
+  if(query[query.length-1]==' ')
+    return [query];
+  
+  let returnQuery=""
+
+  //If query is a multiple word separated by space, then suggest keyword for the last word only
+  let queryArray=query.trim().split(/\s+/);
+  
+  let queryLen = queryArray[queryArray.length-1].length;
+  
+  for(let i=0;i<queryArray.length-1;i++)
+    returnQuery=returnQuery+" "+queryArray[i]
+  returnQuery=returnQuery.trim();
+  
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
-    if (keyword.slice(0, queryLen) == query)
+    if (keyword.slice(0, queryLen) == queryArray[queryArray.length-1])
       return keyword;
   }
 }
@@ -227,10 +241,28 @@ function addEnterSelects(window) {
     gURLBar.controller.handleEnter(true);
   });
 
+  // Detect Tab press and moves the cursor to the end of current test shown in urlBar 
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_TAB:
+        //Stop the actual TAB behavior
+	event.stopPropagation();
+	event.preventDefault(); 
+	//If just tab is presses then go to the end of current keyword
+	gURLBar.selectTextRange(gURLBar.value.length,gURLBar.value.length);
+	break;	
+    }
+  });
+
   // Detect deletes of text to avoid accidentally deleting items
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
       case event.DOM_VK_BACK_SPACE:
+        //If there is only one alphabet in urlbar , and backspace is pressed then remove the suggestion popup
+	if(gURLBar.value.length==1){
+	  gURLBar.closePopup();
+	  return;
+	}
       case event.DOM_VK_DELETE:
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
