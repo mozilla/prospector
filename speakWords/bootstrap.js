@@ -44,18 +44,53 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 // Keep a sorted list of keywords to suggest
 let sortedKeywords = [];
-
+//Index of the current suggestion
+let keywordIndex = 0;
+//Maximum suggestions to cycle through
+let maxKeywordMatch=10;
+//last query made
+let lastQuery = "";
 /**
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
-  let queryLen = query.length;
   let sortedLen = sortedKeywords.length;
+  let keywordArray = [];	
+  let count = 0; 
+  
+  //Returning if there is no new word typed to be taken as query
+  if(query[query.length-1]==' ')
+    return [query];
+  
+  let returnQuery=""
+  
+  //If query is a multiple word separated by space , then suggest keyword for the last word only
+  let queryArray=query.trim().split(/\s+/);
+  let queryLen = queryArray[queryArray.length-1].length;
+  
+  for(let i=0;i<queryArray.length-1;i++)
+    returnQuery=returnQuery+" "+queryArray[i];
+  //This string contains the trimmed out version of query after removing the last word	
+  returnQuery=returnQuery.trim();
+  
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
-    if (keyword.slice(0, queryLen) == query)
-      return keyword;
+	
+    if (keyword.slice(0, queryLen) == queryArray[queryArray.length-1]){ // get top 10 results
+	
+	  //remove suffix when it is not the first word
+      if(queryArray.length>1)
+	    keyword=keyword.split(/\./)[0];
+	  keywordArray[count++]= (returnQuery+" "+keyword).trim();
+	}
+	
+	if(count>=maxKeywordMatch)
+	  break;		
   }
+  //If the keyword list is null, add the query itself so as to cycle to only query while pressing tab
+  if(keywordArray.length==0)
+	keywordArray[0]=query;
+  return keywordArray;	//returning the list of suggestions rather than top suggestion
 }
 
 /**
@@ -85,14 +120,21 @@ function addKeywordSuggestions(window) {
 
     // See if we can suggest a keyword if it isn't the current query
     let query = urlBar.textValue.toLowerCase();
-    let keyword = getKeyword(query);
-    if (keyword == null || keyword == query)
+	
+	//If by any chance the last query made does not matches this one , then stop tabbing through suggestions
+	if(lastQuery!=query){
+	  keywordIndex=0;
+	  lastQuery=query;
+	}
+	
+	let keyword = getKeyword(query);	//keyword now is the list of suggestions rather than the top suggestion
+    if (keyword[keywordIndex%(keyword.length)] == null || keyword[keywordIndex%(keyword.length)] == query)
       return;
-
+		
     // Select the end of the suggestion to allow over-typing
-    urlBar.value = keyword;
-    urlBar.selectTextRange(query.length, keyword.length);
-
+	urlBar.value = keyword[keywordIndex%(keyword.length)];
+    urlBar.selectTextRange(query.length, keyword[keywordIndex%(keyword.length)].length);
+	
     // Make sure the search suggestions show up
     Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
   });
@@ -153,8 +195,8 @@ function addEnterSelects(window) {
 
       // Make sure there's results
       if (popup.noResults)
-        return;
-
+        return;	 
+	  
       // Don't auto-select if we have a url
       if (gURLBar.willHandle)
         return;
@@ -226,15 +268,70 @@ function addEnterSelects(window) {
     gURLBar.mEnterEvent = aEvent;
     gURLBar.controller.handleEnter(true);
   });
+  
+  // Detect Tab press and moves the cursor to the end of current test shown in urlBar 
+  //and next subsequent TAB press cycles through suggestions
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+	
+	  case event.DOM_VK_TAB:  
+	    
+		//Stop the actual TAB behavior
+		event.stopPropagation();
+		event.preventDefault(); 
+		
+		//If Ctrl key is pressed then cycle through suggestions 
+		if(event.ctrlKey){
+		  
+		  keywordIndex++;
+		  //If a Delete key or Backspace was pressed last time, the query changes , and thus the lastquery for this approach
+		  if(lastQuery!=gURLBar.value && gURLBar.value.slice(0,lastQuery.length)!=lastQuery){
+		    lastQuery=gURLBar.value;
+			keyworIndex=0;
+		  }
+		  
+		  let keyword = getKeyword(lastQuery);
+		  
+		  //returning if there is no alternate suggestion
+		  if(keyword.length==1)
+		    return;
+			
+		  //getting the next keyword match
+		  gURLBar.value = keyword[keywordIndex%(keyword.length)];
+    	  gURLBar.selectTextRange(lastQuery.length, keyword[keywordIndex%(keyword.length)].length);
+		  Utils.delay(function() gURLBar.controller.startSearch(gURLBar.value));
+	    }
+		else{	//If just tab is presses then go to the end of current keyword
+		  keywordIndex=0;
+		  gURLBar.selectTextRange(gURLBar.value.length,gURLBar.value.length);
+		} 
+				
+        break;	
+		default:
+		  //Any other key pressed stops the cycling of suggestions
+		  keywordIndex=0;
+		  return; 
+    }
+  });
 
+  
   // Detect deletes of text to avoid accidentally deleting items
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
+	
       case event.DOM_VK_BACK_SPACE:
+	    
+		//If there is only one alphabet in urlbar , and backspace is pressed then remove the suggestion popup
+		if(gURLBar.value.length==1){
+		  gURLBar.closePopup();
+		  return;
+		}
+	    
       case event.DOM_VK_DELETE:
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
-        if (gURLBar.value != lastSearch)
+        		
+		if (gURLBar.value != lastSearch)
           return;
 
         // Hack around to prevent deleting an entry
@@ -307,9 +404,15 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
       }));
     }
 
-    // Add keywords from tags, url (ignoring protocol), title
-    addKeywords(tags);
-    addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
+	//add possible domain name along with suffixes to the beginning of the url parts
+    try {
+      allKeywords.push([url.match(/[\/@]([^\/@:]+)[\/:]/)[1].replace("www.",''),explode(url, /[\/:.?&#=%+]+/).slice(1)]);
+    }
+    catch(ex) {
+	  addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));	
+	}	
+	// Add keywords from tags, url (ignoring protocol), title    
+	addKeywords(tags);    
     addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
   });
 
@@ -320,7 +423,8 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
     Utils.queryAsync(stmt, cols).forEach(function({url}) {
       try {
-        allKeywords.push(explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./));
+	    //Add the main domain name along with suffix to the starting of keyword list
+        allKeywords.push([url.match(/[\/@]([^\/@:]+)[\/:]/)[1].replace("www.",''),explode(url.match(/[\/@]([^\/@:]+)[\/:]/)[1], /\./)]);
       }
       // Must have be some strange format url that we probably don't care about
       catch(ex) {}
