@@ -114,16 +114,14 @@ function prepareLessChrome(window) {
   });
 
   // Set the opacity of potentially hidden toolbars or clear it
-  function updateOpacity(makeTransparent) {
-    let opacity = makeTransparent ? .9 : "";
-
+  function updateOpacity(opacity) {
     // Set the opacity for every toolbar except tabs
     Array.forEach(gNavToolbox.childNodes, function(node) {
       if (node != TabsBar)
         node.style.opacity = opacity;
     });
   }
-  updateOpacity(true);
+  updateOpacity(BASE_OPACITY);
 
   // Hide toolbars by changing the height and keep it above content
   gNavToolbox.style.boxShadow = "0 0 6px rgba(0, 0, 0, 0.5)";
@@ -148,7 +146,7 @@ function prepareLessChrome(window) {
     gNavToolbox.style.marginBottom = "";
     gNavToolbox.style.overflow = "";
     gNavToolbox.style.position = "";
-    updateOpacity(false);
+    updateOpacity("");
   });
 
   // Keep track of various states and modifiers of events
@@ -173,6 +171,7 @@ function prepareLessChrome(window) {
     hidden = false;
 
     // Show the full height without any filler height
+    updateOpacity(BASE_OPACITY);
     gNavToolbox.style.height = gNavToolbox.scrollHeight + "px";
     gNavToolbox.style.marginBottom = 0;
   }
@@ -202,9 +201,11 @@ function prepareLessChrome(window) {
     (function shiftStep() shifter = async(function() {
       // Start a little slow then speed up
       let step = Math.pow(Math.min(1, (Date.now() - startTime) / 150), 1.5);
+      let comp = 1 - step;
 
       // Shrink the visible height while maintaining the overall height
-      gNavToolbox.style.height = tabs + other * (1 - step) + "px";
+      updateOpacity(BASE_OPACITY * comp);
+      gNavToolbox.style.height = tabs + other * comp + "px";
       gNavToolbox.style.marginBottom = other * step + "px";
 
       // Prepare the next step of the animation
