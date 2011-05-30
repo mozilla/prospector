@@ -311,7 +311,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
               "JOIN moz_places " +
               "ON id = place_id " +
               "WHERE input NOT NULL " +
-              "ORDER BY frecency DESC";
+              "ORDER BY use_count DESC";
   let cols = ["input", "url", "title"];
   let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
   Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
