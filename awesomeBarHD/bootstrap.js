@@ -866,7 +866,14 @@ function addAwesomeBarHD(window) {
     categoryBox.processInput();
   }, false);
 
+  // Watch for inputs to handle from keyboard and from other add-ons
   hdInput.addEventListener("input", function() {
+    // Copy over the new value and selection if it changed
+    let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
+    if (HDlastValue != value) {
+      hdInput.value = value;
+      hdInput.setSelectionRange(selectionStart, selectionEnd);
+    }
     categoryBox.processInput();
   }, false);
 
@@ -953,6 +960,12 @@ function addAwesomeBarHD(window) {
 
     hdInput.value = HDinput || "";
     categoryBox.processInput();
+  });
+
+  // Remember what was just inputted to detect if we need to copy over
+  listen(window, gURLBar.parentNode, "input", function({originalTarget}) {
+    if (originalTarget == hdInput)
+      origInput.HDlastValue = origInput.value = hdInput.value;
   });
 
   // Allow switching providers with modified up/down
