@@ -248,7 +248,7 @@ function addAwesomeBarHD(window) {
     usage.activate++;
 
     // Most likely don't want to search the current url, so remove on activate
-    let {selectionStart, value} = hdInput;
+    let {selectionEnd, selectionStart, value} = hdInput;
     if (value == gBrowser.selectedBrowser.currentURI.spec)
       value = "";
 
@@ -263,7 +263,7 @@ function addAwesomeBarHD(window) {
     let shortQuery = query.slice(0, selectionStart);
     if (shortKeyword != "" && shortQuery == shortKeyword) {
       usage.tabComplete++;
-      query = query.slice(selectionStart);
+      query = query.slice(selectionEnd);
       sendEvent("complete", category);
     }
 
