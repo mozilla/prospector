@@ -260,7 +260,12 @@ function addEnterSelects(window) {
  * Handle the add-on being activated on install/enable
  */
 function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
-  Services.scriptloader.loadSubScript(addon.getResourceURI("includes/utils.js").spec, global);
+  // Load various javascript includes for helper functions
+  ["utils"].forEach(function(fileName) {
+    let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
+    Services.scriptloader.loadSubScript(fileURI.spec, global);
+  });
+
   Cu.import("resource://services-sync/util.js");
 
   // XXX Force a QI until bug 609139 is fixed

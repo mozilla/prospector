@@ -197,8 +197,11 @@ function addFindSuggestions(window) {
  * Handle the add-on being activated on install/enable
  */
 function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
-  Services.scriptloader.loadSubScript(addon.getResourceURI("includes/utils.js").spec, global);
-  Services.scriptloader.loadSubScript(addon.getResourceURI("includes/prefs.js").spec, global);
+  // Load various javascript includes for helper functions
+  ["prefs", "utils"].forEach(function(fileName) {
+    let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
+    Services.scriptloader.loadSubScript(fileURI.spec, global);
+  });
 
   // Always set the default prefs as they disappear on restart
   setDefaultPrefs();

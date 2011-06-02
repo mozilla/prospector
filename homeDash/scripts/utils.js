@@ -145,6 +145,27 @@ getString.init = function(addon, getAlternate) {
 }
 
 /**
+ * Helper that adds event listeners and remembers to remove on unload
+ */
+function listen(window, node, event, func, capture) {
+  // Default to use capture
+  if (capture == null)
+    capture = true;
+
+  node.addEventListener(event, func, capture);
+  function undoListen() {
+    node.removeEventListener(event, func, capture);
+  }
+
+  // Undo the listener on unload and provide a way to undo everything
+  let undoUnload = unload(undoListen, window);
+  return function() {
+    undoListen();
+    undoUnload();
+  };
+}
+
+/**
  * Create a trigger that allows adding callbacks by default then triggering all
  * of them.
  */
@@ -177,56 +198,6 @@ function makeTrigger() {
   };
 
   return addCallback;
-}
-
-/**
- * Apply a callback to each open and new browser windows.
- *
- * @usage watchWindows(callback): Apply a callback to each browser window.
- * @param [function] callback: 1-parameter function that gets a browser window.
- */
-function watchWindows(callback) {
-  // Wrap the callback in a function that ignores failures
-  function watcher(window) {
-    try {
-      // Now that the window has loaded, only handle browser windows
-      let {documentElement} = window.document;
-      if (documentElement.getAttribute("windowtype") == "navigator:browser")
-        callback(window);
-    }
-    catch(ex) {}
-  }
-
-  // Wait for the window to finish loading before running the callback
-  function runOnLoad(window) {
-    // Listen for one load event before checking the window type
-    window.addEventListener("load", function runOnce() {
-      window.removeEventListener("load", runOnce, false);
-      watcher(window);
-    }, false);
-  }
-
-  // Add functionality to existing windows
-  let windows = Services.wm.getEnumerator(null);
-  while (windows.hasMoreElements()) {
-    // Only run the watcher immediately if the window is completely loaded
-    let window = windows.getNext();
-    if (window.document.readyState == "complete")
-      watcher(window);
-    // Wait for the window to load before continuing
-    else
-      runOnLoad(window);
-  }
-
-  // Watch for new browser windows opening then wait for it to load
-  function windowWatcher(subject, topic) {
-    if (topic == "domwindowopened")
-      runOnLoad(subject);
-  }
-  Services.ww.registerNotification(windowWatcher);
-
-  // Make sure to stop watching for windows if we're unloading
-  unload(function() Services.ww.unregisterNotification(windowWatcher));
 }
 
 /**
@@ -289,22 +260,51 @@ function unload(callback, container) {
 }
 
 /**
- * Helper that adds event listeners and remembers to remove on unload
+ * Apply a callback to each open and new browser windows.
+ *
+ * @usage watchWindows(callback): Apply a callback to each browser window.
+ * @param [function] callback: 1-parameter function that gets a browser window.
  */
-function listen(window, node, event, func, capture) {
-  // Default to use capture
-  if (capture == null)
-    capture = true;
-
-  node.addEventListener(event, func, capture);
-  function undoListen() {
-    node.removeEventListener(event, func, capture);
+function watchWindows(callback) {
+  // Wrap the callback in a function that ignores failures
+  function watcher(window) {
+    try {
+      // Now that the window has loaded, only handle browser windows
+      let {documentElement} = window.document;
+      if (documentElement.getAttribute("windowtype") == "navigator:browser")
+        callback(window);
+    }
+    catch(ex) {}
   }
 
-  // Undo the listener on unload and provide a way to undo everything
-  let undoUnload = unload(undoListen, window);
-  return function() {
-    undoListen();
-    undoUnload();
-  };
+  // Wait for the window to finish loading before running the callback
+  function runOnLoad(window) {
+    // Listen for one load event before checking the window type
+    window.addEventListener("load", function runOnce() {
+      window.removeEventListener("load", runOnce, false);
+      watcher(window);
+    }, false);
+  }
+
+  // Add functionality to existing windows
+  let windows = Services.wm.getEnumerator(null);
+  while (windows.hasMoreElements()) {
+    // Only run the watcher immediately if the window is completely loaded
+    let window = windows.getNext();
+    if (window.document.readyState == "complete")
+      watcher(window);
+    // Wait for the window to load before continuing
+    else
+      runOnLoad(window);
+  }
+
+  // Watch for new browser windows opening then wait for it to load
+  function windowWatcher(subject, topic) {
+    if (topic == "domwindowopened")
+      runOnLoad(subject);
+  }
+  Services.ww.registerNotification(windowWatcher);
+
+  // Make sure to stop watching for windows if we're unloading
+  unload(function() Services.ww.unregisterNotification(windowWatcher));
 }
