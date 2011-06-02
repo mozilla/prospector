@@ -269,7 +269,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   Cu.import("resource://services-sync/util.js");
 
   // XXX Force a QI until bug 609139 is fixed
-  PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
+  let {DBConnection} = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
 
   // Add suggestions to all windows
   watchWindows(addKeywordSuggestions);
@@ -303,23 +303,21 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   let allKeywords = [];
 
   // Add bookmark keywords to the list of potential keywords
-  let query = "SELECT * FROM moz_keywords";
-  let cols = ["keyword"];
-  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
-  Utils.queryAsync(stmt, cols).forEach(function({keyword}) {
-    allKeywords.push([keyword]);
-  });
+  spinQuery(DBConnection, {
+    names: ["keyword"],
+    query: "SELECT * FROM moz_keywords",
+  }).forEach(function({keyword}) allKeywords.push([keyword]));
 
   // Use input history to discover keywords from typed letters
-  let query = "SELECT * " +
-              "FROM moz_inputhistory " +
-              "JOIN moz_places " +
-              "ON id = place_id " +
-              "WHERE input NOT NULL " +
-              "ORDER BY use_count DESC";
-  let cols = ["input", "url", "title"];
-  let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
-  Utils.queryAsync(stmt, cols).forEach(function({input, url, title}) {
+  spinQuery(DBConnection, {
+    names: ["input", "url", "title"],
+    query: "SELECT * " +
+           "FROM moz_inputhistory " +
+           "JOIN moz_places " +
+           "ON id = place_id " +
+           "WHERE input NOT NULL " +
+           "ORDER BY use_count DESC",
+  }).forEach(function({input, url, title}) {
     // Add keywords for word parts that start with the input word
     let word = input.trim().toLowerCase().split(/\s+/)[0];
     word = word.replace("www.", "");
@@ -347,10 +345,10 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 
   // Add in some typed subdomains/domains as potential keywords
   function addDomains(extraQuery) {
-    let query = "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery;
-    let cols = ["url"];
-    let stmt = PlacesUtils.history.DBConnection.createAsyncStatement(query);
-    Utils.queryAsync(stmt, cols).forEach(function({url}) addDomain(url));
+    spinQuery(DBConnection, {
+      names: ["url"],
+      query: "SELECT * FROM moz_places WHERE visit_count > 1 " + extraQuery,
+    }).forEach(function({url}) addDomain(url));
   }
   addDomains("AND typed = 1 ORDER BY frecency DESC");
   addDomains("ORDER BY visit_count DESC LIMIT 100");

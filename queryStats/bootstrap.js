@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
+const global = this;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/DownloadUtils.jsm");
 Cu.import("resource://gre/modules/PlacesUtils.jsm");
@@ -45,6 +46,9 @@ Cu.import("resource://gre/modules/Services.jsm");
  * Analyze form history with web history and output results
  */
 function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
+  // XXX Force a QI until bug 609139 is fixed
+  let {DBConnection} = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
+
   // Show a page visit with an icon and linkify
   function addEntry(container, url, text, extra) {
     let div = container.appendChild(doc.createElement("div"));
@@ -70,15 +74,18 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
       numObj = {val: 0};
 
     // Find pages from the current visit
-    let stm = PlacesUtils.history.DBConnection.createAsyncStatement(
-      "SELECT *, v.id as nextVisit " +
-      "FROM moz_historyvisits v " +
-      "JOIN moz_places h ON h.id = v.place_id " +
-      "WHERE v.from_visit = :visitId " +
-      "LIMIT :breadth");
-    stm.params.visitId = visitId;
-    stm.params.breadth = maxBreadth;
-    Utils.queryAsync(stm, ["url", "title", "nextVisit"]).forEach(function({url, title, nextVisit}) {
+    spinQuery(DBConnection, {
+      names: ["url", "title", "nextVisit"],
+      params: {
+        breadth: maxBreadth,
+        visitId: visitId,
+      },
+      query: "SELECT *, v.id as nextVisit " +
+             "FROM moz_historyvisits v " +
+             "JOIN moz_places h ON h.id = v.place_id " +
+             "WHERE v.from_visit = :visitId " +
+             "LIMIT :breadth",
+    }).forEach(function({url, title, nextVisit}) {
       // Follow the redirect to find a page with a title
       if (title == null) {
         addLinks(container, nextVisit, depth, numObj);
@@ -100,28 +107,34 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
   results.innerHTML = "";
 
   // Get the last most recently used form history items
-  let stm = Svc.Form.DBConnection.createAsyncStatement(
-    "SELECT * " +
-    "FROM moz_formhistory " +
-    "ORDER BY lastUsed DESC " +
-    "LIMIT :count");
-  stm.params.count = maxCount;
-  Utils.queryAsync(stm, ["value", "fieldname"]).forEach(function({value, fieldname}) {
+  spinQuery(Svc.Form.DBConnection, {
+    names: ["value", "fieldname"],
+    params: {
+      count: maxCount,
+    },
+    query: "SELECT * " +
+           "FROM moz_formhistory " +
+           "ORDER BY lastUsed DESC " +
+           "LIMIT :count",
+  }).forEach(function({value, fieldname}) {
     let queries = 0;
     let queryField = fieldname == "searchbar-history" ? "" : fieldname.slice(-7);
     let queryVal = value.replace(/ /g, "+");
 
     // Find the pages that used those form history queries
-    let stm = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection.createAsyncStatement(
-      "SELECT *, v.id as startVisit " +
-      "FROM moz_places h " +
-      "JOIN moz_historyvisits v ON v.place_id = h.id " +
-      "WHERE url LIKE :query AND visit_type = 1 " +
-      "ORDER BY visit_date DESC " +
-      "LIMIT :repeat");
-    stm.params.query = "%" + queryField + "=" + queryVal + "%";
-    stm.params.repeat = maxRepeat;
-    Utils.queryAsync(stm, ["url", "title", "startVisit", "visit_date"]).forEach(function({url, title, startVisit, visit_date}) {
+    spinQuery(DBConnection, {
+      names: ["url", "title", "startVisit", "visit_date"],
+      params: {
+        query: "%" + queryField + "=" + queryVal + "%",
+        repeat: maxRepeat,
+      },
+      query: "SELECT *, v.id as startVisit " +
+             "FROM moz_places h " +
+             "JOIN moz_historyvisits v ON v.place_id = h.id " +
+             "WHERE url LIKE :query AND visit_type = 1 " +
+             "ORDER BY visit_date DESC " +
+             "LIMIT :repeat",
+    }).forEach(function({url, title, startVisit, visit_date}) {
       let host = Utils.makeURI(url).host.replace(/www\./, "");
       let timeDiff = Date.now() - visit_date / 1000;
       let ago = DownloadUtils.convertTimeUnits(timeDiff / 1000).join(" ");
@@ -141,6 +154,12 @@ function analyze(doc, maxCount, maxRepeat, maxDepth, maxBreadth) {
  * Handle the add-on being activated on install/enable
  */
 function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon) {
+  // Load various javascript includes for helper functions
+  ["utils"].forEach(function(fileName) {
+    let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
+    Services.scriptloader.loadSubScript(fileURI.spec, global);
+  });
+
   Cu.import("resource://services-sync/util.js");
   let gBrowser = Services.wm.getMostRecentWindow("navigator:browser").gBrowser;
 
