@@ -92,15 +92,21 @@ function prepareLessChrome(window) {
     gNavToolbox.style.backgroundPosition = "";
   });
 
+  // Calculate the height of toolbars that should be shown
+  let TabsBar = document.getElementById("TabsToolbar");
+  let ToolbarMenu = document.getElementById("toolbar-menubar");
+  function getToolbarHeight() {
+    return TabsBar.boxObject.height + ToolbarMenu.boxObject.height;
+  }
+
   // Figure out how much to shift the main browser
   let MainBrowser = document.getElementById("browser");
-  let TabsBar = document.getElementById("TabsToolbar");
   function updateOffset() {
     // Reset the toolbox to its normal height
     gNavToolbox.style.height = "";
 
     // Do a negative offset of the difference of full height and tabs height
-    MainBrowser.style.marginTop = TabsBar.boxObject.height -
+    MainBrowser.style.marginTop = getToolbarHeight() -
       gNavToolbox.boxObject.height + "px";
   }
   updateOffset();
@@ -191,7 +197,7 @@ function prepareLessChrome(window) {
 
     // Figure out how tall various pieces are
     let total = gNavToolbox.scrollHeight;
-    let tabs = TabsBar.boxObject.height;
+    let tabs = getToolbarHeight();
     let other = total - tabs;
 
     // Keep track of the animation progress
