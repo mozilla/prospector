@@ -50,6 +50,7 @@ let gAddon;
 
 // Keep track of how often what part of the interface is used
 let usage;
+let prefetchValue;
 
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
@@ -251,8 +252,8 @@ function addAwesomeBarHD(window) {
     let {selectionEnd, selectionStart, value} = hdInput;
     if (value == gBrowser.selectedBrowser.currentURI.spec)
       value = "";
-
-    // Remove any active query terms when activating another
+	  
+	// Remove any active query terms when activating another
     let query = value;
     if (categoryBox.active != goCategory)
       query = query.replace(/^[^:]*:\s*/, "");
@@ -266,9 +267,24 @@ function addAwesomeBarHD(window) {
       query = query.slice(selectionEnd);
       sendEvent("complete", category);
     }
+	//This is the case when there is no category to match and thus do the same thing as the gURLBar is doing
+	else if(selectionStart<selectionEnd && selectionEnd==value.length){	  
+	  let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
+      if (HDlastValue != value) {
+        hdInput.value = value;
+        hdInput.setSelectionRange(selectionStart, selectionEnd);
+      }
+	  categoryBox.processInput();
+	  gURLBar.mController.handleText();
+      hdInput.focus();
+	  return;
+	}
 
     // Update the text with the active keyword
     hdInput.value = keyword + query;
+	
+	//Update the HDlastValue
+	origInput.HDlastValue = hdInput.value;
 
     // Highlight the completed keyword if there's a query
     let {length} = keyword;
@@ -406,7 +422,7 @@ function addAwesomeBarHD(window) {
 
     // Convert the input into a url for the location bar and prefetch
     let {active} = categoryBox;
-    gURLBar.value = prefetcher.load(active);
+    prefetchValue = prefetcher.load(active);
 
     // Only show results for going to a history page
     gURLBar.popup.collapsed = active != goCategory;
@@ -875,8 +891,8 @@ function addAwesomeBarHD(window) {
       hdInput.setSelectionRange(selectionStart, selectionEnd);
     }
     categoryBox.processInput();
-  }, false);
-
+  }, false); 
+  
   // Allow escaping out of the input
   hdInput.addEventListener("keydown", function(event) {
     if (event.keyCode != event.DOM_VK_ESCAPE)
@@ -967,7 +983,7 @@ function addAwesomeBarHD(window) {
     if (originalTarget == hdInput)
       origInput.HDlastValue = origInput.value = hdInput.value;
   });
-
+  
   // Allow switching providers with modified up/down
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     let {active} = categoryBox;
@@ -1009,11 +1025,20 @@ function addAwesomeBarHD(window) {
   // Allow tab completion to activate
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     if (event.keyCode != event.DOM_VK_TAB)
+      return;	
+	
+	// Let ctrl-tab do the usual behavior
+    if (event.ctrlKey){
+	  let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
+      if (HDlastValue != value) {
+        hdInput.value = value;
+        hdInput.setSelectionRange(selectionStart, selectionEnd);
+      }
+	  categoryBox.processInput();
+	  gURLBar.mController.handleText();
+      hdInput.focus();
       return;
-
-    // Let ctrl-tab do the usual tab switching
-    if (event.ctrlKey)
-      return;
+	}
 
     // Allow moving forwards or backwards through categories
     let {next, prev} = categoryBox;
