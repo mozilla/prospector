@@ -549,6 +549,52 @@ function prepareLessChrome(window) {
   }
 }
 
+// Allow turning the feature on and off
+function activateLessChrome(activating) {
+  // Watch for changes to full screen
+  watchWindows(function(window) {
+    let {async, change} = makeWindowHelpers(window);
+    let {document, FullScreen} = window;
+    let view = document.getElementById("View:FullScreen");
+
+    // Check if we're in the right activation mode depending on full screen
+    function maybeToggle() {
+      let autohide = Services.prefs.getBoolPref("browser.fullscreen.autohide");
+      let fullscreen = view.getAttribute("checked") == "true";
+
+      // Toggle off in auto-hide fullscreen or toggle on if deactivated
+      if (activating && autohide && fullscreen || !activating) {
+        unload();
+        activateLessChrome(!activating);
+      }
+    }
+
+    // Check after letting things load to see if we're in the right state
+    if (activating)
+      async(function() maybeToggle());
+
+    // Check the state after turning on/off autohiding toolbars
+    change(FullScreen, "setAutohide", function(orig) {
+      return function() {
+        orig.call(this);
+        maybeToggle();
+      };
+    });
+
+    // Check the state after moving in or out of fullscreen
+    change(FullScreen, "toggle", function(orig) {
+      return function(event) {
+        orig.call(this, event);
+        maybeToggle();
+      };
+    });
+  });
+
+  // Get ready to hide some of the chrome!
+  if (activating)
+    watchWindows(prepareLessChrome);
+}
+
 /**
  * Handle the add-on being activated on install/enable
  */
@@ -561,8 +607,8 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
 
-  // Get ready to hide some of the chrome!
-  watchWindows(prepareLessChrome);
+  // Default to turning the feature on
+  activateLessChrome(true);
 })
 
 
