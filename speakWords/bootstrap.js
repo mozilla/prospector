@@ -262,6 +262,9 @@ function addEnterSelects(window) {
       return;
     }
 
+    // Prevent the default enter (return) behavior
+    aEvent.preventDefault();
+
     // Calling handleEnter will cause the selected popup item to be used
     gURLBar.mEnterEvent = aEvent;
     gURLBar.controller.handleEnter(true);
