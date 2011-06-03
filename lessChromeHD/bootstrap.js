@@ -123,7 +123,7 @@ function prepareLessChrome(window) {
   function updateOpacity(opacity) {
     // Set the opacity for every toolbar except tabs
     Array.forEach(gNavToolbox.childNodes, function(node) {
-      if (node != TabsBar)
+      if (node != TabsBar && node != ToolbarMenu)
         node.style.opacity = opacity;
     });
   }
