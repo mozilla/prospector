@@ -111,11 +111,11 @@ function prepareLessChrome(window) {
   }
   updateOffset();
 
-  // Watch for changes to the chrome that might require resizing the browser
-  change(gBrowser, "updateWindowResizers", function(orig) {
-    return function() {
+  // Watch for changes to the toolbars being shown or hidden
+  change(window, "setToolbarVisibility", function(orig) {
+    return function(toolbar, visible) {
+      orig.call(this, toolbar, visible);
       updateOffset();
-      return orig.call(this);
     };
   });
 
