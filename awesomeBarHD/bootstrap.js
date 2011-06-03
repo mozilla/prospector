@@ -1016,9 +1016,23 @@ function addAwesomeBarHD(window) {
     if (event.ctrlKey)
       return;
 
+    // Only allow switching when the query isn't highlighted
+    function canSwitch() {
+      // Can always switch when nothing is selected
+      let {selectionEnd, selectionStart, value} = hdInput;
+      if (selectionEnd == selectionStart)
+        return true;
+
+      // Allow switching if the selection is before the query
+      let queryStart = 0;
+      if (categoryBox.active != goCategory)
+        queryStart = value.match(/^[^:]*:\s*/)[0].length;
+      return selectionStart <= queryStart;
+    }
+
     // Allow moving backwards through categories
     let {complete, next, prev} = categoryBox;
-    if (event.shiftKey) {
+    if (event.shiftKey && canSwitch()) {
       usage.tabPrev++;
       categoryBox.activate(prev);
     }
@@ -1028,7 +1042,7 @@ function addAwesomeBarHD(window) {
       categoryBox.activate(complete);
     }
     // Allow moving forwards through categories
-    else {
+    else if (canSwitch()) {
       usage.tabNext++;
       categoryBox.activate(next);
     }
