@@ -159,7 +159,8 @@ function prepareLessChrome(window) {
   let hidden = false;
   let ignoreKeys = false;
   let ignoreMouse = false;
-  let keepOpen = false;
+  let inChrome = false;
+  let inPassword = false;
   let popupOpen = false;
   let skipClick = false;
 
@@ -188,7 +189,7 @@ function prepareLessChrome(window) {
     cancelShow();
 
     // Don't bother hiding if already hidden or showing nothing
-    if (hidden || keepOpen || popupOpen || showingNothing())
+    if (hidden || inChrome || inPassword || popupOpen || showingNothing())
       return;
 
     // Stop any previous animations before starting another
@@ -279,7 +280,7 @@ function prepareLessChrome(window) {
       ignoreMouse = false;
 
     // Don't bother hiding if it shouldn't hide now
-    if (hidden || popupOpen || keepOpen)
+    if (hidden || inChrome || inPassword || popupOpen)
       return;
 
     // Only hide if the mouse moves far down enough
@@ -308,14 +309,14 @@ function prepareLessChrome(window) {
   // Hide the chrome when potentially moving focus to content
   listen(window, gNavToolbox, "blur", function() {
     // Start the hide animation now, and an immediate focus will cancel
-    keepOpen = false;
+    inChrome = false;
     hide();
   });
 
   // Detect focus events for the location bar, etc. to show chrome
   listen(window, gNavToolbox, "focus", function() {
     // Make sure to keep the chrome available even when pointing away
-    keepOpen = true;
+    inChrome = true;
     show();
   });
 
@@ -427,6 +428,10 @@ function prepareLessChrome(window) {
   let progress = {
     // If the location changes domains, show the chrome
     onLocationChange: function() {
+      // Must have navigated away, so make sure to clear the password state
+      if (inPassword)
+        setPassword(false);
+
       // Try reading out the host if possible
       let {currentURI} = gBrowser.selectedBrowser;
       let host;
@@ -442,9 +447,6 @@ function prepareLessChrome(window) {
       if (host == progress.lastHost)
         return;
       progress.lastHost = host;
-
-      // Must have navigated away, so make sure to clear the password state
-      setPassword(false);
 
       // Immediately show the chrome for context on host switch
       show();
@@ -533,7 +535,7 @@ function prepareLessChrome(window) {
 
   // Remember that we're in a password field and change the UI
   function setPassword(focused) {
-    keepOpen = focused;
+    inPassword = focused;
 
     // Make sure content and potentially the password field isn't covered
     if (focused)
