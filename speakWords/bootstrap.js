@@ -52,13 +52,34 @@ let sortedKeywords = [];
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
-  let queryLen = query.length;
   let sortedLen = sortedKeywords.length;
+  let keywordArray = [];
+	
+  let count = 0; 
+  
+  if(query[query.length-1]==' ')
+    return [query];
+  
+  let returnQuery=""
+  
+  //If query is a multiple word separated by space or . , then suggest keyword for the last word only
+  let queryArray=query.trim().split(/\s+/);
+  
+  let queryLen = queryArray[queryArray.length-1].length;
+  
+  for(let i=0;i<queryArray.length-1;i++)
+    returnQuery=returnQuery+" "+queryArray[i]
+  returnQuery=returnQuery.trim();
+  
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
-    if (keyword.slice(0, queryLen) == query)
-      return keyword;
-  }
+	
+    if (keyword.slice(0, queryLen) == queryArray[queryArray.length-1]){
+      if(queryArray.length>1 && keyword.split(/\./).length>1)
+	    continue;
+	return returnQuery+" "+keyword;
+    }
+  }  
 }
 
 /**
@@ -77,6 +98,31 @@ function addKeywordSuggestions(window) {
         break;
     }
   });
+
+  // Watch for urlbar value input changes to suggest keywords
+  listen(window, urlBar, "input", function(event) {
+    // Don't try suggesting a keyword when the user wants to delete
+    if (deleting) {
+      deleting = false;
+      return;
+    }
+
+    // See if we can suggest a keyword if it isn't the current query
+    let query = urlBar.textValue.toLowerCase();	
+	
+    let keyword = getKeyword(query);
+    if (keyword == null || keyword == query)
+      return;
+
+    // Select the end of the suggestion to allow over-typing
+    urlBar.value = keyword;
+    urlBar.selectTextRange(query.length, keyword.length);
+
+    // Make sure the search suggestions show up
+    Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
+  });
+}
+
 
   // Watch for urlbar value input changes to suggest keywords
   listen(window, urlBar, "input", function(event) {
