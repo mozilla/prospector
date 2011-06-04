@@ -448,6 +448,10 @@ function prepareLessChrome(window) {
         return;
       progress.lastHost = host;
 
+      // Don't show when switching for certain tabs
+      if (gBrowser.selectedTab.pinned)
+        return;
+
       // Immediately show the chrome for context on host switch
       show();
 
