@@ -449,7 +449,8 @@ function prepareLessChrome(window) {
       progress.lastHost = host;
 
       // Don't show when switching for certain tabs
-      if (gBrowser.selectedTab.pinned)
+      let list = window.XULBrowserWindow.inContentWhitelist;
+      if (gBrowser.selectedTab.pinned || list.indexOf(currentURI.spec) != -1)
         return;
 
       // Immediately show the chrome for context on host switch
