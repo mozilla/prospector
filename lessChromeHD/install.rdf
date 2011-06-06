@@ -8,7 +8,7 @@
     <iconURL>http://mozillalabs.com/wp-content/themes/labs_project/img/prospector-header.png</iconURL>
     <id>lessChrome.HD@prospector.labs.mozilla</id>
     <name>Mozilla Labs: Prospector - LessChrome HD</name>
-    <version>6</version>
+    <version>7</version>
 
     <bootstrap>true</bootstrap>
     <type>2</type>
