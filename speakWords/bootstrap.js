@@ -78,6 +78,28 @@ function addKeywordSuggestions(window) {
     }
   });
 
+  // Detect tab presses to move the selection to the end ready for more
+  listen(window, urlBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_TAB:
+        // Ignore tabs for switching tabs
+        if (event.ctrlKey)
+          return;
+
+        // Ignore if the selection starts at front or nothing it selected
+        let input = event.originalTarget;
+        let {selectionEnd, selectionStart} = input;
+        if (selectionStart == 0 || selectionEnd == selectionStart)
+          return;
+
+        // Move the selection to the end and stop the normal behavior
+        input.setSelectionRange(selectionEnd, selectionEnd);
+        event.stopPropagation();
+
+        break;
+    }
+  });
+
   // Watch for urlbar value input changes to suggest keywords
   listen(window, urlBar, "input", function(event) {
     justCompleted = false;
