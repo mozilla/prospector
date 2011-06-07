@@ -49,21 +49,40 @@ let justCompleted = false;
 let sortedKeywords = [];
 
 /**
- * Lookup a keyword to suggest for the provided query
- */
+* Lookup a keyword to suggest for the provided query
+*/
 function getKeyword(query) {
-  let queryLen = query.length;
   let sortedLen = sortedKeywords.length;
+  let keywordArray = [];
+
+  if(query[query.length-1]==' ')
+    return [query];
+  
+  let returnQuery=""
+  
+  //If query is a multiple word separated by space or . , then suggest keyword for the last word only
+  let queryArray=query.trim().split(/\s+/);
+  
+  let queryLen = queryArray[queryArray.length-1].length;
+  
+  for(let i=0;i<queryArray.length-1;i++)
+    returnQuery=returnQuery+" "+queryArray[i]
+  returnQuery=returnQuery.trim();
+  
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
-    if (keyword.slice(0, queryLen) == query)
-      return keyword;
+
+    if (keyword.slice(0, queryLen) == queryArray[queryArray.length-1]){
+      if(queryArray.length>1 && keyword.split(/\./).length>1)
+        continue;
+      return returnQuery+" "+keyword;
+    }
   }
 }
 
 /**
- * Automatically suggest a keyword when typing in the location bar
- */
+* Automatically suggest a keyword when typing in the location bar
+*/
 function addKeywordSuggestions(window) {
   let urlBar = window.gURLBar;
   let deleting = false;
@@ -125,6 +144,7 @@ function addKeywordSuggestions(window) {
     Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
   });
 }
+
 
 /**
  * Automatically select the first location bar result on pressing enter
