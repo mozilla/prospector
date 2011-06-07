@@ -53,6 +53,10 @@ let sortedKeywords = [];
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
+  // Don't suggest a keyword for a blank query
+  if (query == "")
+    return;
+
   let queryLen = query.length;
   let sortedLen = sortedKeywords.length;
   for (let i = 0; i < sortedLen; i++) {
