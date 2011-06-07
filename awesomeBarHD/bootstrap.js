@@ -50,7 +50,6 @@ let gAddon;
 
 // Keep track of how often what part of the interface is used
 let usage;
-let prefetchValue;
 
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
@@ -153,8 +152,6 @@ function addAwesomeBarHD(window) {
         prefetcher.lastUrl = url;
       }
     }
-
-    return url;
   };
 
   // Only prefetch if currently prefetching
@@ -422,7 +419,7 @@ function addAwesomeBarHD(window) {
 
     // Convert the input into a url for the location bar and prefetch
     let {active} = categoryBox;
-    prefetchValue = prefetcher.load(active);
+    prefetcher.load(active);
 
     // Only show results for going to a history page
     gURLBar.popup.collapsed = active != goCategory;
@@ -1031,7 +1028,7 @@ function addAwesomeBarHD(window) {
     if (event.ctrlKey){
 	  let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
       if (HDlastValue != value) {
-        hdInput.value = value;
+        origInput.HDlastValue = hdInput.value = value;
         hdInput.setSelectionRange(selectionStart, selectionEnd);
       }
 	  categoryBox.processInput();
