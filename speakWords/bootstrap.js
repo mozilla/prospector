@@ -53,6 +53,13 @@ let sortedKeywords = [];
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
+  // Split the query into before and after the last space
+  let lastStart = query.lastIndexOf(" ") + 1;
+  let before = query.slice(0, lastStart);
+
+  // Suggest keywords for the last word of the query
+  query = query.slice(lastStart);
+
   // Don't suggest a keyword for a blank query
   if (query == "")
     return;
@@ -62,7 +69,7 @@ function getKeyword(query) {
   for (let i = 0; i < sortedLen; i++) {
     let keyword = sortedKeywords[i];
     if (keyword.slice(0, queryLen) == query)
-      return keyword;
+      return before + keyword;
   }
 }
 
