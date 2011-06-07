@@ -12,6 +12,7 @@
 
     <bootstrap>true</bootstrap>
     <type>2</type>
+    <contributor>Girish Sharma</contributor>
 
     <targetApplication>
       <r:Description>
