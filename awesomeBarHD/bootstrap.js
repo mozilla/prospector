@@ -262,7 +262,6 @@ function addAwesomeBarHD(window) {
     let shortKeyword = keyword.slice(0, selectionStart);
     let shortQuery = query.slice(0, selectionStart);
     if (shortKeyword != "" && shortQuery == shortKeyword) {
-      usage.tabComplete++;
       query = query.slice(selectionEnd);
       sendEvent("complete", category);
     }
@@ -344,7 +343,9 @@ function addAwesomeBarHD(window) {
 
   // Look through the input to decide what category could be activated
   categoryBox.prepareNext = function() {
-    categoryBox.next = null;
+    // Try finding a category to complete
+    let {active} = categoryBox;
+    categoryBox.complete = null;
 
     // See if there's any potential category to complete with tab
     let {selectionStart, value} = hdInput;
@@ -352,26 +353,25 @@ function addAwesomeBarHD(window) {
     let {length} = shortValue;
     if (length > 0) {
       Array.some(categoryBox.childNodes, function(label) {
+        // Skip non-categories and the current active
         let {categoryData} = label;
-        if (categoryData == null)
+        if (categoryData == null || label == active)
           return;
+
         let {keyword} = categoryData;
         if (keyword == "")
           return;
         if (shortValue == keyword.slice(0, length)) {
-          categoryBox.next = label;
+          categoryBox.complete = label;
           return true;
         }
       });
     }
 
-    // Prepare a next category if we didn't find one from the input
-    let {active, next} = categoryBox;
-    if (active == next || next == null)
-      categoryBox.next = active.nextSibling.nextSibling || goCategory;
+    // Prepare a next category and wrap if at the very end
+    categoryBox.next = active.nextSibling.nextSibling || goCategory;
 
     // Prepare a previous category unless already at the beginning
-    categoryBox.prev = null
     if (active != goCategory)
       categoryBox.prev = active.previousSibling.previousSibling;
     else
@@ -419,6 +419,7 @@ function addAwesomeBarHD(window) {
   // Clear out various state of the current input
   categoryBox.reset = function() {
     categoryBox.active = null;
+    categoryBox.complete = null;
     categoryBox.next = null;
     categoryBox.hover = null;
     categoryBox.prev = null;
@@ -1015,15 +1016,19 @@ function addAwesomeBarHD(window) {
     if (event.ctrlKey)
       return;
 
-    // Allow moving forwards or backwards through categories
-    let {next, prev} = categoryBox;
+    // Allow moving backwards through categories
+    let {complete, next, prev} = categoryBox;
     if (event.shiftKey) {
-      if (prev != null) {
-        usage.tabPrev++;
-        categoryBox.activate(prev);
-      }
+      usage.tabPrev++;
+      categoryBox.activate(prev);
     }
-    else if (next != null) {
+    // Allow tab completion of a category
+    else if (complete != null) {
+      usage.tabComplete++;
+      categoryBox.activate(complete);
+    }
+    // Allow moving forwards through categories
+    else {
       usage.tabNext++;
       categoryBox.activate(next);
     }
