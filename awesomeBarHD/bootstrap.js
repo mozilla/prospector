@@ -869,9 +869,9 @@ function addAwesomeBarHD(window) {
 
   // Watch for inputs to handle from keyboard and from other add-ons
   hdInput.addEventListener("input", function() {
-    // Copy over the new value and selection if it changed
+    // Copy over the new value and selection if it changed when not searching
     let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
-    if (HDlastValue != value) {
+    if (HDlastValue != value && categoryBox.active == goCategory) {
       hdInput.value = value;
       hdInput.setSelectionRange(selectionStart, selectionEnd);
     }
