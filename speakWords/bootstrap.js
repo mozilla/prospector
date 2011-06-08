@@ -412,7 +412,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   // Use bookmarks to discover keywords from their titles or urls
   spinQuery(DBConnection, {
     names: ["url", "title"],
-    query: "SELECT * " +
+    query: "SELECT moz_places.url, moz_bookmarks.title " +
            "FROM moz_bookmarks " +
            "JOIN moz_places " +
            "ON moz_places.id = fk " +
