@@ -351,7 +351,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     add(explode(title, /[\s\-\/\u2010-\u202f"',.:;?!|()]+/));
 
     // Ignore some protocols
-    if (url.search(/^(data|javascript)/) == 0)
+    if (url.search(/^(data|javascript|place)/) == 0)
       return;
 
     // Strip off the protocol and query/ref/params
