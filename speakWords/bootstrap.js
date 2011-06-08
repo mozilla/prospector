@@ -379,6 +379,19 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
     addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
   });
+  
+  //Use bookmarks to discover keywords from their titles or urls 
+  spinQuery(DBConnection, {
+    names: ["url", "title"],
+    query: "SELECT *"+
+			" FROM moz_bookmarks JOIN moz_places "+
+			" ON moz_bookmarks.fk = moz_places.id "+
+			" WHERE moz_bookmarks.title NOT null "+
+			" ORDER BY moz_places.frecency DESC LIMIT 100 ",
+  }).forEach(function({url, title}) { 
+    allKeywords.push(explode(title, /['":;_\s\-\/\u2010-\u202f\"',.:;?!|()]/));
+    allKeywords.push(explode(url.split(/[?]+/)[0], /['";\/:.&#=%+_]+/).slice(1));    
+  });
 
   // Add in some typed subdomains/domains as potential keywords
   function addDomains(extraQuery) {
