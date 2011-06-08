@@ -298,7 +298,7 @@ function addEnterSelects(window) {
  */
 function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   // Load various javascript includes for helper functions
-  ["utils"].forEach(function(fileName) {
+  ["prefs", "utils"].forEach(function(fileName) {
     let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
     Services.scriptloader.loadSubScript(fileURI.spec, global);
   });
@@ -354,10 +354,16 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   let allKeywords = [];
 
   // Add bookmark keywords to the list of potential keywords
-  spinQuery(DBConnection, {
-    names: ["keyword"],
-    query: "SELECT * FROM moz_keywords",
-  }).forEach(function({keyword}) allKeywords.push([keyword]));
+  function addBookmarkKeywords() {
+    spinQuery(DBConnection, {
+      names: ["keyword"],
+      query: "SELECT * FROM moz_keywords",
+    }).forEach(function({keyword}) allKeywords.push([keyword]));
+  }
+
+  // Only add bookmark keywords if the user wants it
+  if (pref("addBookmarkKeywords"))
+    addBookmarkKeywords();
 
   // Use input history to discover keywords from typed letters
   spinQuery(DBConnection, {
