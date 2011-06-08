@@ -333,9 +333,21 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   // Add the domain (without www) for the url
   function addDomain(url) {
     try {
+      // Extract the domain and the top level domain
       let domain = url.match(/[\/@](?:www\.)?([^\/@:]+)[\/:]/)[1];
+      let suffix = Services.eTLD.getPublicSuffixFromHost(domain);
+
+      // Ignore special hostnames like localhost
+      if (suffix == domain)
+        suffix = "";
+      let {length} = suffix;
+
+      // Convert the full domain a.b.c.d into parts: a.b.c.d, b.c.d, c.d
       domain.split(".").forEach(function(val, index, all) {
-        allKeywords.push([all.slice(index).join(".")]);
+        // Only add if it's more than the suffix
+        let part = all.slice(index).join(".");
+        if (part.length > length)
+          allKeywords.push([part]);
       });
     }
     // Must have be some strange format url that we probably don't care about
