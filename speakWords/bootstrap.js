@@ -64,10 +64,16 @@ function getKeyword(query) {
   if (query == "")
     return;
 
+  // Get a local keywords reference and ignore domains for multi-word
+  let keywords = sortedKeywords;
+  if (before != "")
+    keywords = keywords.filter(function(word) word.indexOf(".") == -1);
+
+  // Find the first keyword that matches the beginning of the query
   let queryLen = query.length;
-  let sortedLen = sortedKeywords.length;
+  let sortedLen = keywords.length;
   for (let i = 0; i < sortedLen; i++) {
-    let keyword = sortedKeywords[i];
+    let keyword = keywords[i];
     if (keyword.slice(0, queryLen) == query)
       return before + keyword;
   }
