@@ -61,6 +61,7 @@ function pref(key) {
 pref.branch = "extensions.prospector.speakWords.";
 pref.defaults = {
   addBookmarkKeywords: true,
+  addDomains: true,
 };
 
 // Initialize default preferences

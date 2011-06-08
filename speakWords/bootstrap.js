@@ -336,6 +336,10 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     catch(ex) {}
   }
 
+  // Don't add domains if the user doesn't want them
+  if (!pref("addDomains"))
+    addDomain = function() {};
+
   // Add keywords from the title and url
   function addTitleUrl(add, title, url) {
     add(explode(title, /[\s\-\/\u2010-\u202f"',.:;?!|()]+/));
