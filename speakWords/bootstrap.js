@@ -336,6 +336,20 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     catch(ex) {}
   }
 
+  // Add keywords from the title and url
+  function addTitleUrl(add, title, url) {
+    add(explode(title, /[\s\-\/\u2010-\u202f"',.:;?!|()]+/));
+
+    // Ignore some protocols
+    if (url.search(/^(data|javascript)/) == 0)
+      return;
+
+    // Strip off the protocol and query/ref/params
+    url = url.replace(/^[^:]*:\/*/, "");
+    url = url.replace(/[?&#;].*$/, "");
+    add(explode(url, /(?:[\/:.=+]|%[0-9A-F]{2})+/));
+  }
+
   // Keep a nested array of array of keywords -- 2 arrays per entry
   let allKeywords = [];
 
@@ -376,8 +390,21 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
     // Add keywords from tags, url (ignoring protocol), title
     addDomain(url);
     addKeywords(tags);
-    addKeywords(explode(url, /[\/:.?&#=%+]+/).slice(1));
-    addKeywords(explode(title, /[\s\-\/\u2010-\u202f\"',.:;?!|()]/));
+    addTitleUrl(addKeywords, title, url);
+  });
+
+  // Use bookmarks to discover keywords from their titles or urls
+  spinQuery(DBConnection, {
+    names: ["url", "title"],
+    query: "SELECT * " +
+           "FROM moz_bookmarks " +
+           "JOIN moz_places " +
+           "ON moz_places.id = fk " +
+           "WHERE moz_bookmarks.title NOT NULL " +
+           "ORDER BY frecency DESC " +
+           "LIMIT 100",
+  }).forEach(function({url, title}) {
+    addTitleUrl(function(parts) allKeywords.push(parts), title, url);
   });
 
   // Add in some typed subdomains/domains as potential keywords
