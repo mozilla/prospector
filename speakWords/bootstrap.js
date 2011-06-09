@@ -314,14 +314,24 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 
   Cu.import("resource://services-sync/util.js");
 
-  // XXX Force a QI until bug 609139 is fixed
-  let {DBConnection} = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
+  // Watch for preference changes to reprocess the keyword data
+  pref.observe([
+    "addBookmarkKeywords",
+    "addDomains",
+    "addSearchKeywords",
+  ], function() crunchKeywordData());
 
   // Add suggestions to all windows
   watchWindows(addKeywordSuggestions);
   // Add enter-selects functionality to all windows
   watchWindows(addEnterSelects);
 
+  // Fill up the keyword information!
+  crunchKeywordData();
+});
+
+// Look through various places to find potential keywords
+function crunchKeywordData() {
   // Break a string into individual words separated by the splitter
   function explode(text, splitter) {
     return (text || "").toLowerCase().split(splitter).filter(function(word) {
@@ -329,6 +339,9 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
       return word && word.length > 3;
     });
   }
+
+  // XXX Force a QI until bug 609139 is fixed
+  let {DBConnection} = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
 
   let tagSvc = Cc["@mozilla.org/browser/tagging-service;1"].
     getService(Ci.nsITaggingService);
@@ -462,6 +475,9 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
   addDomains("ORDER BY visit_count DESC LIMIT 100");
   addDomains("ORDER BY last_visit_date DESC LIMIT 100");
 
+  // Clear out potentially any existing keywords
+  sortedKeywords.length = 0;
+
   // Do a breadth first traversal of the keywords
   do {
     // Remove any empty results and stop if there's no more
@@ -477,7 +493,7 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
       }
     });
   } while (true);
-});
+}
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
