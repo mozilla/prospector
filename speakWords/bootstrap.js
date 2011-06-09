@@ -53,12 +53,15 @@ let sortedKeywords = [];
  * Lookup a keyword to suggest for the provided query
  */
 function getKeyword(query) {
+  // Remember the original query to preserve its original casing
+  let origQuery = query;
+
   // Split the query into before and after the last space
   let lastStart = query.lastIndexOf(" ") + 1;
   let before = query.slice(0, lastStart);
 
   // Suggest keywords for the last word of the query
-  query = query.slice(lastStart);
+  query = query.slice(lastStart).toLowerCase();
 
   // Don't suggest a keyword for a blank query
   if (query == "")
@@ -75,7 +78,7 @@ function getKeyword(query) {
   for (let i = 0; i < sortedLen; i++) {
     let keyword = keywords[i];
     if (keyword.slice(0, queryLen) == query)
-      return before + keyword;
+      return origQuery + (before + keyword).slice(origQuery.length);
   }
 }
 
@@ -130,7 +133,7 @@ function addKeywordSuggestions(window) {
     }
 
     // See if we can suggest a keyword if it isn't the current query
-    let query = urlBar.textValue.toLowerCase();
+    let query = urlBar.textValue;
     let keyword = getKeyword(query);
     if (keyword == null || keyword == query)
       return;
