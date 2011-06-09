@@ -1091,6 +1091,9 @@ function addAwesomeBarHD(window) {
         categoryBox.reset();
       }
 
+      // Remember what loaded to clear when navigating
+      targetTab.HDloadedUrl = prefetcher.lastUrl;
+
       prefetcher.persistTo(targetTab);
       gBrowser.selectedBrowser.focus();
       gBrowser.selectedTab = targetTab;
@@ -1098,9 +1101,6 @@ function addAwesomeBarHD(window) {
       // Show the other providers as a hint to switch
       if (usage.providerSwitch < 1 && usage.activate < 30)
         async(function() active.context.openAt(providerIcon), 100);
-
-      // Remember when this load started to avoid early clearing
-      targetTab.HDloadedAt = Date.now();
 
       let {category, defaultIndex, providers} = active.categoryData;
       sendEvent("search", category + " " + providers[defaultIndex].name);
@@ -1111,13 +1111,17 @@ function addAwesomeBarHD(window) {
   change(gBrowser, "setTabTitleLoading", function(orig) {
     return function(tab) {
       if (tab == gBrowser.selectedTab) {
-        // Only reset if it's been some time since loading
-        let {HDinputtedAt, HDloadedAt} = tab;
-        if (HDloadedAt != null && Date.now() - HDloadedAt > 10000)
+        // Reset if the location is now different
+        let {HDinputtedAt, HDloadedUrl} = tab;
+        if (HDloadedUrl != null && HDloadedUrl != getURI().spec) {
           categoryBox.reset();
+          tab.HDloadedUrl = null;
+        }
         // Clear out whatever was typed after it's been there for a bit
-        else if (HDinputtedAt != null && Date.now() - HDinputtedAt > 10000)
+        else if (HDinputtedAt != null && Date.now() - HDinputtedAt > 10000) {
           categoryBox.reset();
+          tab.HDinputtedAt = null;
+        }
       }
       return orig.call(this, tab);
     };
