@@ -203,7 +203,7 @@ function addEnterSelects(window) {
         return;
 
       // Unless we just completed a domain, don't auto-select if we have a url
-      if (!justCompleted && gURLBar.willHandle)
+      if (!(justCompleted && pref("autoSelectForDomain")) && gURLBar.willHandle)
         return;
 
       // We passed all the checks, so pretend the user has the first result
