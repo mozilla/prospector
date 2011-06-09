@@ -112,6 +112,7 @@ function addKeywordSuggestions(window) {
 
         // Move the selection to the end and stop the normal behavior
         input.setSelectionRange(selectionEnd, selectionEnd);
+        event.preventDefault();
         event.stopPropagation();
 
         break;
