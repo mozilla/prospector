@@ -281,11 +281,18 @@ function addEnterSelects(window) {
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
       case event.DOM_VK_BACK_SPACE:
+        //Check if we are backspacing to nothing, to remove the popup
         if(gURLBar.value.length==1) {
           gURLBar.closePopup();
-	  return;
+          return;
 	}
       case event.DOM_VK_DELETE:
+        let {selectionStart,selectionEnd} = gURLBar;
+        //Check if deleting the last character of urlbar, to remove the popup
+        if(selectionStart==selectionEnd && selectionStart==0 && gURLBar.value.length==1)
+          gURLBar.closePopup();
+          return;
+	}
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
         if (gURLBar.value != lastSearch)
