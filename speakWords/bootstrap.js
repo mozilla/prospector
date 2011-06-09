@@ -281,6 +281,10 @@ function addEnterSelects(window) {
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
       case event.DOM_VK_BACK_SPACE:
+        if(gURLBar.value.length==1) {
+          gURLBar.closePopup();
+	  return;
+	}
       case event.DOM_VK_DELETE:
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
