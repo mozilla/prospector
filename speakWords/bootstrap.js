@@ -184,8 +184,7 @@ function addEnterSelects(window) {
 
     // Check if there's an search engine registered for the first keyword
     let keyword = search.split(/\s+/)[0];
-    return Cc["@mozilla.org/browser/search-service;1"].
-      getService(Ci.nsIBrowserSearchService).getEngineByAlias(keyword);
+    return Services.search.getEngineByAlias(keyword);
   });
 
   // Wait for results to get added to the popup
@@ -375,6 +374,19 @@ function startup(data) AddonManager.getAddonByID(data.id, function(addon) {
 
   // Keep a nested array of array of keywords -- 2 arrays per entry
   let allKeywords = [];
+
+  // Add search keywords to the list as potential keywords
+  function addSearchKeywords() {
+    Services.search.getVisibleEngines().forEach(function({alias}) {
+      // Ignore missing keywords or cleared keywords
+      if (alias != null && alias != "")
+        allKeywords.push([alias]);
+    });
+  }
+
+  // Only add search keywords if the user wants it
+  if (pref("addSearchKeywords"))
+    addSearchKeywords();
 
   // Add bookmark keywords to the list of potential keywords
   function addBookmarkKeywords() {
