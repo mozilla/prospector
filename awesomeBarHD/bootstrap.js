@@ -249,7 +249,7 @@ function addAwesomeBarHD(window) {
 
     // Most likely don't want to search the current url, so remove on activate
     let {selectionEnd, selectionStart, value} = hdInput;
-    if (value == gBrowser.selectedBrowser.currentURI.spec)
+    if (value == getURI().spec)
       value = "";
 
     // Remove any active query terms when activating another
@@ -471,7 +471,7 @@ function addAwesomeBarHD(window) {
     });
 
     // Hide the url parts if it's about:blank or active
-    let isBlank = gBrowser.selectedBrowser.currentURI.spec == "about:blank";
+    let isBlank = getURI().spec == "about:blank";
     let hideUrl = isBlank || doActive;
     urlBox.collapsed = hideUrl;
 
@@ -845,7 +845,7 @@ function addAwesomeBarHD(window) {
   hdInput.removeAttribute("placeholder");
 
   hdInput.addEventListener("blur", function() {
-    let url = gBrowser.selectedBrowser.currentURI.spec;
+    let url = getURI().spec;
     if (hdInput.value == url) {
       hdInput.value = "";
       categoryBox.processInput();
@@ -1142,7 +1142,7 @@ function addAwesomeBarHD(window) {
 
     // Allow clicking the domain text to open a new tab/window
     if (domainText.style.textDecoration != "") {
-      let domain = gBrowser.selectedBrowser.currentURI.prePath;
+      let domain = getURI().prePath;
       window.openUILinkIn(domain, window.whereToOpenLink(event, false, true), {
         relatedToCurrent: true,
       });
@@ -1227,7 +1227,7 @@ function addAwesomeBarHD(window) {
       categoryBox.updateLook();
 
       // Strip off wyciwyg and passwords
-      let uri = gBrowser.selectedBrowser.currentURI;
+      let uri = getURI();
       try {
         uri = window.XULBrowserWindow._uriFixup.createExposableURI(uri);
       }
@@ -1488,7 +1488,7 @@ function addAwesomeBarHD(window) {
       case "Browser:OpenLocation":
         // For power users, allow getting the current tab's location when empty
         if (hdInput.value == "") {
-          let url = gBrowser.selectedBrowser.currentURI.spec;
+          let url = getURI().spec;
 
           // Fill in the url and make sure to hide categories
           if (url != "about:blank") {
@@ -1544,6 +1544,16 @@ function addAwesomeBarHD(window) {
       gAddon.userDisabled = false;
     }, false);
   });
+
+  // Get the current browser's URI even if loading
+  function getURI() {
+    let channel = gBrowser.selectedBrowser.webNavigation.documentChannel;
+    if (channel != null)
+      return channel.originalURI;
+
+    // Just return the finished loading uri
+    return gBrowser.selectedBrowser.currentURI;
+  }
 
   // Check for inactiveness
   function isInactive() {
