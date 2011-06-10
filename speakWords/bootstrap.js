@@ -285,7 +285,7 @@ function addEnterSelects(window) {
     switch (event.keyCode) {
       case event.DOM_VK_BACK_SPACE:
         //Close popup when backspacing the last character in the URLBar
-        if(value.trim().length == 1 && selectionStart == selectionEnd && selectionStart==value.legnth) {
+        if(value.trim().length == 1 && selectionStart == selectionEnd && selectionStart==value.length) {
           gURLBar.closePopup();
           return;
         }
