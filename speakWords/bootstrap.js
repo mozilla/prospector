@@ -351,6 +351,26 @@ function crunchKeywordData() {
     try {
       // Extract the domain and the top level domain
       let domain = url.match(/[\/@](?:www\.)?([^\/@:]+)[\/:]/)[1];
+      let domainVisitCount = 0;
+      let urlVisitCount = 0;
+      
+      spinQuery(DBConnection, {
+        names: ["visit_count"],
+        query: "SELECT visit_count FROM moz_places WHERE url LIKE '%"+domain+"_' " +
+		"ORDER BY visit_count DESC " +
+        "LIMIT 1",
+        }).forEach(function({visit_count}) domainVisitCount=visit_count);
+	  
+      spinQuery(DBConnection, {
+        names: ["visit_count"],
+        query: "SELECT visit_count FROM moz_places WHERE url LIKE '"+url+"%' " +
+		"ORDER BY visit_count DESC " +
+        "LIMIT 1",
+        }).forEach(function({visit_count}) urlVisitCount=visit_count);
+	  
+      if (urlVisitCount >= domainVisitCount)
+	return;
+
       let suffix = Services.eTLD.getPublicSuffixFromHost(domain);
 
       // Ignore special hostnames like localhost
