@@ -281,9 +281,20 @@ function addEnterSelects(window) {
 
   // Detect deletes of text to avoid accidentally deleting items
   listen(window, gURLBar.parentNode, "keypress", function(event) {
+    let {value, selectionStart, selectionEnd} = gURLBar;
     switch (event.keyCode) {
       case event.DOM_VK_BACK_SPACE:
+        //Close popup when backspacing the last character in the URLBar
+        if(value.trim().length == 1 && selectionStart == selectionEnd && selectionStart==value.legnth) {
+          gURLBar.closePopup()
+          return;
+        }
       case event.DOM_VK_DELETE:
+        //Close Popup when deleting the last character in the URLBar
+        if(value.trim().length == 1 && selectionStart <= selectionEnd && selectionStart<=value.search(/[^\s]/)) {
+          gURLBar.closePopup()
+          return;
+        }
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
         if (gURLBar.value != lastSearch)
