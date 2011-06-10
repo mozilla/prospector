@@ -286,13 +286,7 @@ function addEnterSelects(window) {
           gURLBar.closePopup();
           return;
 	}
-      case event.DOM_VK_DELETE:
-        let {selectionStart,selectionEnd} = gURLBar;
-        //Check if deleting the last character of urlbar, to remove the popup
-        if(selectionStart==selectionEnd && selectionStart==0 && gURLBar.value.length==1)
-          gURLBar.closePopup();
-          return;
-	}
+      case event.DOM_VK_DELETE:        
         // The value will be the last search if auto-selected; otherwise the
         // value will be the manually selected autocomplete entry
         if (gURLBar.value != lastSearch)
