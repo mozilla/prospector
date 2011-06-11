@@ -118,9 +118,7 @@ getString.init = function(addon, getAlternate) {
 
     // Get a bundle and test if it's able to do simple things
     try {
-      // Avoid caching issues by always getting a new file
-      let uniqueFileSpec = propertyFile.spec + "#" + Math.random();
-      let bundle = Services.strings.createBundle(uniqueFileSpec);
+      let bundle = Services.strings.createBundle(propertyFile.spec);
       bundle.getSimpleEnumeration();
       return bundle;
     }
@@ -142,6 +140,9 @@ getString.init = function(addon, getAlternate) {
   Cu.import("resource://gre/modules/PluralForm.jsm");
   let rule = getString("pluralRule");
   [getString.plural] = PluralForm.makeGetter(rule);
+
+  // Clear out the strings cache when cleaning up so new ones load
+  unload(function() Services.strings.flushBundles());
 }
 
 /**
