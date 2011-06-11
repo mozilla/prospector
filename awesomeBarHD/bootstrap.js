@@ -390,7 +390,7 @@ function addAwesomeBarHD(window) {
       if(temp == goCategory) {
 	temp = categoryBox.lastChild.previousSibling;
 	//checking if the last category is visible or not
-	if (temp.categoryData.hidden == false)
+	if (temp.categoryData.hidden == false) {
 	  categoryBox.prev = temp;
 	  break;
 	}
