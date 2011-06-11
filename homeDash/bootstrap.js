@@ -4051,6 +4051,8 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     return "en-US";
   });
 
+  unload(getString.unload);
+
   // Crunch through some data to use later
   collectBookmarkKeywords();
   computeTopSites();

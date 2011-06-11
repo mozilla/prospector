@@ -119,7 +119,7 @@ getString.init = function(addon, getAlternate) {
     // Get a bundle and test if it's able to do simple things
     try {
       // Avoid caching issues by always getting a new file
-      let uniqueFileSpec = propertyFile.spec + "#" + Math.random();
+      let uniqueFileSpec = propertyFile.spec;
       let bundle = Services.strings.createBundle(uniqueFileSpec);
       bundle.getSimpleEnumeration();
       return bundle;
@@ -143,6 +143,8 @@ getString.init = function(addon, getAlternate) {
   let rule = getString("pluralRule");
   [getString.plural] = PluralForm.makeGetter(rule);
 }
+
+getString.unload = Services.strings.flushBundles;
 
 /**
  * Helper that adds event listeners and remembers to remove on unload
