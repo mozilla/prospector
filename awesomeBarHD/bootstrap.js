@@ -51,6 +51,9 @@ let gAddon;
 // Keep track of how often what part of the interface is used
 let usage;
 
+// Keep track whether delete or backspace was pressed
+let deleting = false;
+
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
   Cu.import("resource://services-sync/ext/Preferences.js");
@@ -268,6 +271,46 @@ function addAwesomeBarHD(window) {
     return -1;
   } 
 
+  //Show category suggestion as we type
+  function suggestCategory() {
+    let {complete} = categoryBox;
+	
+    if(complete == null)
+      return;
+	
+    let {providers, defaultIndex, keyword} = complete.categoryData;
+    let {value, selectionStart} = hdInput;
+    let {url, name} = providers[defaultIndex];
+	
+    if(keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
+      hdInput.value = keyword;	  
+      hdInput.setSelectionRange(selectionStart, keyword.length);	
+    }
+    else if(makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
+      hdInput.value = makeWord(url).toLowerCase();	  
+      hdInput.setSelectionRange(selectionStart, makeWord(url).length);
+    }
+    else {
+      hdInput.value = makeWord(name).toLowerCase();	  
+      hdInput.setSelectionRange(selectionStart, makeWord(name).length);
+    }
+
+    //Reflect the hdInput value back to gURLBar
+    let {value, selectionStart, selectionEnd} = hdInput;
+    origInput.value= value;
+    origInput.setSelectionRange(selectionStart,selectionEnd);
+  }
+  
+  // Look for deletes to handle them better on input
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_BACK_SPACE:		
+      case event.DOM_VK_DELETE:
+        deleting = true;
+        break;
+    }
+  });
+
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryNode, index) {
     usage.activate++;
@@ -292,11 +335,16 @@ function addAwesomeBarHD(window) {
     }
 
     // Update the text with the active keyword
-    hdInput.value = keyword + query;
-
-    // Highlight the completed keyword if there's a query
-    let {length} = keyword;
-    hdInput.setSelectionRange(query == "" ? length : 0, length);
+    hdInput.value = keyword;	
+    
+    let {complete} = categoryBox;    
+    //If we were not completing to a category, then add the query also.
+    if (complete == null) {
+      hdInput.value+=query;
+      // Highlight the completed keyword if there's a query
+      let {length} = keyword;
+      hdInput.setSelectionRange(query == "" ? length : 0, length);
+    }
 
     // Switch to a particular provider if necessary
     if (index != null)
@@ -376,7 +424,7 @@ function addAwesomeBarHD(window) {
     let {selectionStart, value} = hdInput;
     let shortValue = value.slice(0, selectionStart);
     let {length} = shortValue;
-    if (length > 0) {
+    if (length > 0 && active == goCategory) {
       Array.some(categoryBox.childNodes, function(label) {
         // Skip non-categories and the current active
         let {categoryData} = label;
@@ -915,13 +963,19 @@ function addAwesomeBarHD(window) {
 
   // Watch for inputs to handle from keyboard and from other add-ons
   hdInput.addEventListener("input", function() {
-    // Copy over the new value and selection if it changed when not searching
+    // Don't try suggesting a keyword when the user wants to delete
+    if (deleting) {
+      deleting = false;
+      return;
+    }
+    // Copy over the new value and selection if it changed while not searching
     let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
-    if (HDlastValue != value && categoryBox.active == goCategory) {
+    if (HDlastValue != value) {
       hdInput.value = value;
       hdInput.setSelectionRange(selectionStart, selectionEnd);
     }
     categoryBox.processInput();
+    suggestCategory();
   }, false);
 
   // Allow escaping out of the input
@@ -1061,23 +1115,25 @@ function addAwesomeBarHD(window) {
     // Let ctrl-tab do the usual tab switching
     if (event.ctrlKey)
       return;
-
+    
+    event.preventDefault();
+    event.stopPropagation();
+	
     // Only allow switching when the query isn't highlighted
     function canSwitch() {
       // Can always switch when nothing is selected
-      let {selectionEnd, selectionStart, value} = hdInput;
+      let {selectionEnd, selectionStart, value} = origInput;
       if (selectionEnd == selectionStart)
         return true;
 
       // Allow switching if the selection is before the query
       let queryStart = 0;
-      if (categoryBox.active != goCategory)
-        queryStart = value.match(/^[^:]*:\s*/)[0].length;
-      return selectionStart <= queryStart;
+      return selectionEnd < value.length ;
     }
 
     // Allow moving backwards through categories
-    let {complete, next, prev} = categoryBox;
+    let {complete, next, prev} = categoryBox;	
+    let {selectionStart, selectionEnd, value} = origInput;
     if (event.shiftKey && canSwitch()) {
       usage.tabPrev++;
       categoryBox.activate(prev);
@@ -1085,16 +1141,21 @@ function addAwesomeBarHD(window) {
     // Allow tab completion of a category
     else if (complete != null) {
       usage.tabComplete++;
-      categoryBox.activate(complete);
+      categoryBox.activate(complete);	  
+    }
+    //If there is no category to complete and we can't switch, 
+    //Copy over the new value and selection if it changed when not searching
+    else if (selectionStart<selectionEnd && selectionEnd==value.length) {
+      let {selectionStart, selectionEnd, value} = hdInput;
+      origInput.HDlastValue = origInput.value = value;
+      origInput.setSelectionRange(selectionStart, selectionEnd);
+      gURLBar.mController.handleText();      
     }
     // Allow moving forwards through categories
     else if (canSwitch()) {
       usage.tabNext++;
-      categoryBox.activate(next);
+      categoryBox.activate(next);	  
     }
-
-    event.preventDefault();
-    event.stopPropagation();
   });
 
   // Activate the go category when dismissing the autocomplete results
