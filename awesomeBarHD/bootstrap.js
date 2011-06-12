@@ -390,10 +390,6 @@ function addAwesomeBarHD(window) {
     let {active} = categoryBox;
     categoryBox.complete = null;
 
-    //Don't try to complete when the active category is not goCategory
-    if (active != goCategory)
-      return;
-
     // See if there's any potential category to complete with tab
     let {selectionStart, value} = hdInput;
     let shortValue = value.slice(0, selectionStart);
