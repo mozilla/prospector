@@ -310,11 +310,16 @@ function addAwesomeBarHD(window) {
     }
 
     // Update the text with the active keyword
-    hdInput.value = keyword + query;
-
-    // Highlight the completed keyword if there's a query
-    let {length} = keyword;
-    hdInput.setSelectionRange(query == "" ? length : 0, length);
+    hdInput.value = keyword;	
+    
+    let {complete} = categoryBox;    
+    //If we were not completing to a category, then add the query also.
+    if (complete == null) {
+      hdInput.value+=query;
+      // Highlight the completed keyword if there's a query
+      let {length} = keyword;
+      hdInput.setSelectionRange(query == "" ? length : 0, length);
+    }
 
     // Switch to a particular provider if necessary
     if (index != null)
