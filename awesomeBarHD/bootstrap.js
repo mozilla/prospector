@@ -269,6 +269,11 @@ function addAwesomeBarHD(window) {
       hdInput.value = makeWord(name).toLowerCase();	  
       hdInput.setSelectionRange(selectionStart, makeWord(name).length);
     }
+
+    //Reflect the hdInput value back to gURLBar
+    let {value, selectionStart, selectionEnd} = hdInput;
+    origInput.value= value;
+    origInput.setSelectionRange(selectionStart,selectionEnd);
   }
   
   // Look for deletes to handle them better on input
