@@ -1080,6 +1080,7 @@ function addAwesomeBarHD(window) {
 
     // Allow moving backwards through categories
     let {complete, next, prev} = categoryBox;
+    let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
     if (event.shiftKey && canSwitch()) {
       usage.tabPrev++;
       categoryBox.activate(prev);
@@ -1087,7 +1088,13 @@ function addAwesomeBarHD(window) {
     // Allow tab completion of a category
     else if (complete != null) {
       usage.tabComplete++;
-      categoryBox.activate(complete);
+      categoryBox.activate(complete);	  
+    }
+    //If there is no category to complete and we can't switch, 
+    //Copy over the new value and selection if it changed when not searching
+    else if(HDlastValue != value && categoryBox.active == goCategory && !canSwitch()) {
+      origInput.HDlastValue = hdInput.value = value;
+      hdInput.setSelectionRange(selectionStart, selectionEnd);	  
     }
     // Allow moving forwards through categories
     else if (canSwitch()) {
