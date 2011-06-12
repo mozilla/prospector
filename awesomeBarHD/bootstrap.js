@@ -399,7 +399,7 @@ function addAwesomeBarHD(window) {
     let {selectionStart, value} = hdInput;
     let shortValue = value.slice(0, selectionStart);
     let {length} = shortValue;
-    if (length > 0) {
+    if (length > 0 && active == goCategory) {
       Array.some(categoryBox.childNodes, function(label) {
         // Skip non-categories and the current active
         let {categoryData} = label;
@@ -922,18 +922,14 @@ function addAwesomeBarHD(window) {
       deleting = false;
       return;
     }
-    categoryBox.processInput();
+    // Copy over the new value and selection if it changed while not searching
     let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
-    let {complete} = categoryBox;
-    //Now that we know what is the category to complete , suggest the user about it
-    suggestCategory();
-    
-    //Now if complete is null , Copy over the new value and selection if it changed when not searching  
-    if(complete == null && HDlastValue != value && categoryBox.active == goCategory) {
+    if (HDlastValue != value) {
       hdInput.value = value;
       hdInput.setSelectionRange(selectionStart, selectionEnd);
-      categoryBox.processInput(); 
     }
+    categoryBox.processInput();
+    suggestCategory();
   }, false);
 
   // Allow escaping out of the input
@@ -1073,24 +1069,25 @@ function addAwesomeBarHD(window) {
     // Let ctrl-tab do the usual tab switching
     if (event.ctrlKey)
       return;
-
+    
+    event.preventDefault();
+    event.stopPropagation();
+	
     // Only allow switching when the query isn't highlighted
     function canSwitch() {
       // Can always switch when nothing is selected
-      let {selectionEnd, selectionStart, value} = hdInput;
+      let {selectionEnd, selectionStart, value} = origInput;
       if (selectionEnd == selectionStart)
         return true;
 
       // Allow switching if the selection is before the query
       let queryStart = 0;
-      if (categoryBox.active != goCategory)
-        queryStart = value.match(/^[^:]*:\s*/)[0].length;
-      return selectionStart <= queryStart;
+      return selectionEnd < value.length ;
     }
 
     // Allow moving backwards through categories
-    let {complete, next, prev} = categoryBox;
-    let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
+    let {complete, next, prev} = categoryBox;	
+    let {selectionStart, selectionEnd, value} = origInput;
     if (event.shiftKey && canSwitch()) {
       usage.tabPrev++;
       categoryBox.activate(prev);
@@ -1102,18 +1099,17 @@ function addAwesomeBarHD(window) {
     }
     //If there is no category to complete and we can't switch, 
     //Copy over the new value and selection if it changed when not searching
-    else if(HDlastValue != value && categoryBox.active == goCategory && !canSwitch()) {
-      origInput.HDlastValue = hdInput.value = value;
-      hdInput.setSelectionRange(selectionStart, selectionEnd);	  
+    else if (selectionStart<selectionEnd && selectionEnd==value.length) {
+      let {selectionStart, selectionEnd, value} = hdInput;
+      origInput.HDlastValue = origInput.value = value;
+      origInput.setSelectionRange(selectionStart, selectionEnd);
+      gURLBar.mController.handleText();      
     }
     // Allow moving forwards through categories
     else if (canSwitch()) {
       usage.tabNext++;
-      categoryBox.activate(next);
+      categoryBox.activate(next);	  
     }
-
-    event.preventDefault();
-    event.stopPropagation();
   });
 
   // Activate the go category when dismissing the autocomplete results
