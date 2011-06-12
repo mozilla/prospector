@@ -380,7 +380,7 @@ function addAwesomeBarHD(window) {
       Array.some(categoryBox.childNodes, function(label) {
         // Skip non-categories and the current active
         let {categoryData} = label;
-        if (categoryData == null || label == active)
+        if (categoryData == null || label == active || categoryData.hidden == true)
           return;
 
         let {keyword} = categoryData;
@@ -419,7 +419,7 @@ function addAwesomeBarHD(window) {
       let inputKeyword = inputParts[1];
       Array.some(categoryBox.childNodes, function(label) {
         let {categoryData} = label;
-        if (categoryData == null)
+        if (categoryData == null || categoryData.hidden == true)
           return;
         let {keyword} = categoryData;
         if (keyword == "")
