@@ -242,6 +242,31 @@ function addAwesomeBarHD(window) {
   categoryBox.style.cursor = "text";
   categoryBox.style.overflow = "hidden";
   categoryBox.style.pointerEvents = "none";
+  
+  //Helper function to convert url to name.
+  function firstCapital(word) {
+    if(word!= null)
+      return word.substr(0,1).toUpperCase()+word.substr(1);
+    else
+      return "";
+  }
+  
+  function makeWord(url) {
+    return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"").split(".")[0]);    
+  }
+  
+  //Figure out if the current input text is activating any provider of category.
+  function checkInputForProviders(label,shortValue) {
+    let {categoryData} = label;
+    let {providers} = categoryData;
+	
+    for(let i=0;i<providers.length;i++){
+      let {url, name} = providers[i];
+      if (shortValue == makeWord(url).toLowerCase().slice(0,shortValue.length) || shortValue ==  makeWord(name).toLowerCase().slice(0,shortValue.length))
+        return i;
+    }
+    return -1;
+  } 
 
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryNode, index) {
@@ -355,7 +380,7 @@ function addAwesomeBarHD(window) {
       Array.some(categoryBox.childNodes, function(label) {
         // Skip non-categories and the current active
         let {categoryData} = label;
-        if (categoryData == null || label == active)
+        if (categoryData == null || label == active || categoryData.hidden == true)
           return;
 
         let {keyword} = categoryData;
@@ -365,6 +390,12 @@ function addAwesomeBarHD(window) {
           categoryBox.complete = label;
           return true;
         }
+        let index = checkInputForProviders(label,shortValue);
+	if (index >= 0) {          
+	  categoryBox.complete = label;
+	  categoryBox.complete.categoryData.defaultIndex = index;		  
+	  return true;
+	}
       });
     }
 
@@ -397,7 +428,7 @@ function addAwesomeBarHD(window) {
       let inputKeyword = inputParts[1];
       Array.some(categoryBox.childNodes, function(label) {
         let {categoryData} = label;
-        if (categoryData == null)
+        if (categoryData == null || categoryData.hidden == true)
           return;
         let {keyword} = categoryData;
         if (keyword == "")
@@ -406,6 +437,12 @@ function addAwesomeBarHD(window) {
           categoryBox.active = label;
           return true;
         }
+        let index = checkInputForProviders(label,inputKeyword);
+	if (index >= 0) {          
+	  categoryBox.active = label;
+	  categoryBox.active.categoryData.defaultIndex = index;		  
+	  return true;
+	}
       });
     }
 
