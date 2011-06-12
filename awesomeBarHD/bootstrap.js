@@ -268,7 +268,7 @@ function addAwesomeBarHD(window) {
     else {
       hdInput.value = makeWord(name).toLowerCase();	  
       hdInput.setSelectionRange(selectionStart, makeWord(name).length);
-    }	
+    }
   }
   
   // Look for deletes to handle them better on input
@@ -384,6 +384,10 @@ function addAwesomeBarHD(window) {
     // Try finding a category to complete
     let {active} = categoryBox;
     categoryBox.complete = null;
+
+    //Don't try to complete when the active category is not goCategory
+    if (active != goCategory)
+      return;
 
     // See if there's any potential category to complete with tab
     let {selectionStart, value} = hdInput;
