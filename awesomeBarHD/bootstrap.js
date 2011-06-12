@@ -51,6 +51,9 @@ let gAddon;
 // Keep track of how often what part of the interface is used
 let usage;
 
+// Keep track whether delete or backspace was pressed
+let deleting = false;
+
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
   Cu.import("resource://services-sync/ext/Preferences.js");
@@ -242,6 +245,41 @@ function addAwesomeBarHD(window) {
   categoryBox.style.cursor = "text";
   categoryBox.style.overflow = "hidden";
   categoryBox.style.pointerEvents = "none";
+
+  //Show category suggestion as we type
+  function suggestCategory() {
+    let {complete} = categoryBox;
+	
+    if(complete == null)
+      return;
+	
+    let {providers, defaultIndex, keyword} = complete.categoryData;
+    let {value, selectionStart} = hdInput;
+    let {url, name} = providers[defaultIndex];
+	
+    if(keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
+      hdInput.value = keyword;	  
+      hdInput.setSelectionRange(selectionStart, keyword.length);	
+    }
+    else if(makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
+      hdInput.value = makeWord(url).toLowerCase();	  
+      hdInput.setSelectionRange(selectionStart, makeWord(url).length);
+    }
+    else {
+      hdInput.value = makeWord(name).toLowerCase();	  
+      hdInput.setSelectionRange(selectionStart, makeWord(name).length);
+    }	
+  }
+  
+  // Look for deletes to handle them better on input
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_BACK_SPACE:		
+      case event.DOM_VK_DELETE:
+        deleting = true;
+        break;
+    }
+  });
 
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryNode, index) {
@@ -869,13 +907,23 @@ function addAwesomeBarHD(window) {
 
   // Watch for inputs to handle from keyboard and from other add-ons
   hdInput.addEventListener("input", function() {
-    // Copy over the new value and selection if it changed when not searching
-    let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
-    if (HDlastValue != value && categoryBox.active == goCategory) {
-      hdInput.value = value;
-      hdInput.setSelectionRange(selectionStart, selectionEnd);
+    // Don't try suggesting a keyword when the user wants to delete
+    if (deleting) {
+      deleting = false;
+      return;
     }
     categoryBox.processInput();
+    let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
+    let {complete} = categoryBox;
+    //Now that we know what is the category to complete , suggest the user about it
+    suggestCategory();
+    
+    //Now if complete is null , Copy over the new value and selection if it changed when not searching  
+    if(complete == null && HDlastValue != value && categoryBox.active == goCategory) {
+      hdInput.value = value;
+      hdInput.setSelectionRange(selectionStart, selectionEnd);
+      categoryBox.processInput(); 
+    }
   }, false);
 
   // Allow escaping out of the input
