@@ -368,7 +368,7 @@ function addAwesomeBarHD(window) {
       });
     }
 
-    let temp = active;
+    let temp = categoryBox.active;
     // Prepare a next visible category and wrap if at the very end
     do {
       if(temp.nextSibling.nextSibling==null) {
@@ -383,7 +383,7 @@ function addAwesomeBarHD(window) {
 	temp = temp.nextSibling.nextSibling;
     }while (true);
 	
-    temp = active;	
+    let temp = categoryBox.active;	
     // Prepare a previous category unless already at the beginning and category not hidden
     do {
       //Wrapping if active is goCategory
