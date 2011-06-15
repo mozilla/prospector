@@ -118,9 +118,7 @@ getString.init = function(addon, getAlternate) {
 
     // Get a bundle and test if it's able to do simple things
     try {
-      // Avoid caching issues by always getting a new file
-      let uniqueFileSpec = propertyFile.spec + "#" + Math.random();
-      let bundle = Services.strings.createBundle(uniqueFileSpec);
+      let bundle = Services.strings.createBundle(propertyFile.spec);
       bundle.getSimpleEnumeration();
       return bundle;
     }
@@ -142,6 +140,9 @@ getString.init = function(addon, getAlternate) {
   Cu.import("resource://gre/modules/PluralForm.jsm");
   let rule = getString("pluralRule");
   [getString.plural] = PluralForm.makeGetter(rule);
+
+  // Clear out the strings cache when cleaning up so new ones load
+  unload(function() Services.strings.flushBundles());
 }
 
 /**
@@ -163,6 +164,23 @@ function listen(window, node, event, func, capture) {
     undoListen();
     undoUnload();
   };
+}
+
+/**
+ * Load various packaged styles for the add-on and undo on unload
+ *
+ * @usage loadStyles(addon, styles): Load specified styles
+ * @param [object] addon: Add-on object from AddonManager
+ * @param [array of strings] styles: Style files to load
+ */
+function loadStyles(addon, styles) {
+  let sss = Cc["@mozilla.org/content/style-sheet-service;1"].
+            getService(Ci.nsIStyleSheetService);
+  styles.forEach(function(fileName) {
+    let fileURI = addon.getResourceURI("styles/" + fileName + ".css");
+    sss.loadAndRegisterSheet(fileURI, sss.USER_SHEET);
+    unload(function() sss.unregisterSheet(fileURI, sss.USER_SHEET));
+  });
 }
 
 /**
