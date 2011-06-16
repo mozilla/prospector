@@ -372,6 +372,9 @@ function unload(callback, container) {
  * @param [function] callback: 1-parameter function that gets a browser window.
  */
 function watchWindows(callback) {
+  var unloaded = false;
+  unload(function() unloaded = true);
+
   // Wrap the callback in a function that ignores failures
   function watcher(window) {
     try {
@@ -388,6 +391,7 @@ function watchWindows(callback) {
     // Listen for one load event before checking the window type
     window.addEventListener("load", function runOnce() {
       window.removeEventListener("load", runOnce, false);
+      if (unloaded) return; // the extension has shutdown
       watcher(window);
     }, false);
   }
