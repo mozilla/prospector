@@ -144,7 +144,13 @@ function addKeywordSuggestions(window) {
     justCompleted = true;
 
     // Make sure the search suggestions show up
-    Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
+    // try calling delay() , if fails call nextTick() (For latest Nightlies)
+    try {
+      Utils.delay(function() urlBar.controller.startSearch(urlBar.value));
+    }
+    catch (e) {
+      Utils.nextTick(function() urlBar.controller.startSearch(urlBar.value));
+    }
   });
 }
 
