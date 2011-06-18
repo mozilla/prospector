@@ -368,40 +368,23 @@ function addAwesomeBarHD(window) {
       });
     }
 
-    let temp = categoryBox.active;
+    let temp = categoryBox.active.nextSibling.nextSibling;
     // Prepare a next visible category and wrap if at the very end
-    do {
-      if(temp.nextSibling.nextSibling==null) {
-	categoryBox.next = goCategory;
-	  break;
-      }
-      else if(temp.nextSibling.nextSibling.categoryData.hidden==false) {
-	categoryBox.next = temp.nextSibling.nextSibling || goCategory;
-	break;
-      }
-      else
-	temp = temp.nextSibling.nextSibling;
-    }while (true);
-	
-    let temp = categoryBox.active;	
+    while (temp && temp.categoryData.hidden) {
+      temp = temp.nextSibling.nextSibling;
+    }
+    if (!temp)
+      temp = goCategory;
+
+    categoryBox.next = temp;
+
+    let temp = (categoryBox.active != goCategory) ?
+      categoryBox.active.previousSibling.previousSibling : categoryBox.lastChild.previousSibling;
     // Prepare a previous category unless already at the beginning and category not hidden
-    do {
-      //Wrapping if active is goCategory
-      if(temp == goCategory) {
-	temp = categoryBox.lastChild.previousSibling;
-	//checking if the last category is visible or not
-	if (temp.categoryData.hidden == false) {
-	  categoryBox.prev = temp;
-	  break;
-	}
-      }
-      else if(temp.previousSibling.previousSibling.categoryData.hidden == false) {
-	categoryBox.prev = temp.previousSibling.previousSibling || goCategory;
-	break;
-      }
-      else
-        temp = temp.previousSibling.previousSibling;
-    }while (true);
+    while (temp && temp.categoryData.hidden && temp != goCategory) {
+      temp = temp.previousSibling.previousSibling;
+    }
+    categoryBox.prev = temp;
   };
 
   // Figure out if the current input text is activating a category
