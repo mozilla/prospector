@@ -1,0 +1,79 @@
+<html>
+<head>
+  <title>Recall Monkey</title>
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <link rel="stylesheet" type="text/css" href="css/reset.css" />
+  <link type="text/css" href="css/ui-darkness/jquery-ui-1.8.13.custom.css" rel="stylesheet" />	
+	<script type="text/javascript" src="js/jquery-1.5.1.min.js"></script>
+	<script type="text/javascript" src="js/jquery-ui-1.8.13.custom.min.js"></script>
+	<script>
+	$(function() {
+  		$("#start-date").datepicker({altField:"#startDate", altFormat:"@"});
+  		$("#end-date").datepicker({altField:"#endDate", altFormat:"@"});
+  	});
+  	</script>
+	</script>
+</head>
+<body onload="document.searchform.searchfield.focus();">
+
+  <div id="version-error">
+
+  </div>
+  <!--
+  <div id="version-home">
+    <div id="home-wrap">
+      <div class="main-title">RecallMonkey</div>
+      <div class="search-container">
+      <form class="searchform">
+        <input type="text" onblur="" onfocus="if (this.value == 'Search...') {this.value = '';}" value="Search..." class="searchfield">
+          <input type="button" value="Go" class="searchbutton">
+          </form>
+      </div>
+    </div>
+  </div>
+  -->
+  
+  
+  <div id="version-search">
+    <div class="main-title">RecallMonkey:</div>
+    
+    <form class="searchform" id="search-form" name="searchform">
+      <input id="search-field" type="text" onblur="" onfocus="if (this.value == 'Search...') {this.value = '';}" value="Search..." class="searchfield" name="searchfield">
+      <input type="submit" value="Go" class="searchbutton">
+    </form>
+    
+    <div id="search-not-form">
+      <div class="sidebar">
+        <h1>Time Range</h1>
+        <div class="sidebar-item">
+        <form>
+        <input type="radio" name="timerange" value="1"/>Last 24 Hours<br />
+        <input type="radio" name="timerange" value="7"/>Last Week<br />
+        <input type="radio" name="timerange" value="31"/>Last Month<br />
+        <input type="radio" name="timerange" value="366"/>Last Year<br /><br />
+        </form>
+
+
+        <!--
+        <input type="text" id="start-date" size="15"/><br />
+        <input type="hidden" id="startDate" />
+        <input type="text" id="end-date" size="15"/><br />
+        <input type="hidden" id="endDate" />
+        -->
+        <a id="clear-time" href="#" class="location">clear</a>
+        </div>
+        
+        <h1>Pinned Sites</h1>
+        <div class="sidebar-item">
+        <ul id="pinned-list"></ul>
+        </div>
+      </div>
+    
+      <div class="results">
+        <ul id="result-list">
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
