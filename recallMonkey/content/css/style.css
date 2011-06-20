@@ -20,6 +20,7 @@
 }
 
 #version-search {
+  display: none;
   margin: 0 auto 0 auto;
   width: 800px;
   font-family: Helvetica, Arial, Sans-serif;

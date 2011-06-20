@@ -4,6 +4,8 @@ function Dashboard(doc) {
   me.hostList = [];
   this.doc = doc;
   let $ = me.doc.getElementById;
+  
+  $('version-search').style.display = "block";
 
   function handleSubmit (e) {
     me.handleSubmit(e);
@@ -64,6 +66,7 @@ Dashboard.prototype.refreshPinned = function() {
     el.appendChild(link);
     $('pinned-list').appendChild(el);
   });
+  me.handleSubmit();
 }
 
 Dashboard.prototype.handleUnpinClick = function(e) {
@@ -75,6 +78,14 @@ Dashboard.prototype.handleUnpinClick = function(e) {
 }
 
 Dashboard.prototype.handleSubmit = function(e) {
+  let me = this;
+  if (e) {
+    me.e = e;
+  } else if (me.e) {
+    e = me.e;
+  } else {
+    return;
+  }
   reportError("handline submit");
   let me = this;
   e.preventDefault();
