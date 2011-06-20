@@ -15,8 +15,13 @@ function Dashboard(doc) {
     me.handleClearTime(e);
   }
 
+  function handleBlankSubmit(e) {
+    me.handleSubmit();
+  }
+
   $('clear-time').addEventListener("click", handleClearTime, false);
   $('search-form').addEventListener("submit", handleSubmit, false);
+  $('time-form').addEventListener("click", handleBlankSubmit, false);
 }
 
 
@@ -166,6 +171,7 @@ Dashboard.prototype.handleClearTime = function(e) {
   for (let i = 0; i < elems.length; i++) {
     elems[i].checked = false;
   }
+  me.handleSubmit();
 
   /*
   $('start-date').value = "";
