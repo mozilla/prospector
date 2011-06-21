@@ -57,7 +57,7 @@ AWESOMETAB_SCRIPTS = [
   "pos",
   "mixer",
   "display",
-  "tester",
+  "jump",
 ];
 
 const global = this;
@@ -81,9 +81,18 @@ RE_HOME_URL = new RegExp(/^https{0,1}:\/\/[a-zA-Z0-9\.\-\_]+\/{0,1}$/);
  */
 RE_FAIL_URL = new RegExp(/(\/post\/|\/article\/)|([\/#][0-9]+\/{0,1}$)|((\/*[0-9]){8,})/)
 
+
 function handlePageLoad(e) {
-  reportError("Handling a page load");
+  //reportError("Handling a page load");
   // global.thumbnailer.handlePageLoad(e);
+  /*
+  try {
+  let doc = e.originalTarget;
+  let win = doc.defaultView;
+  let url = doc.location.href;
+  global.jumper.addPageLoad(url);
+  } catch (ex) { reportError(ex) }
+  */
 }
 
 function handleTabSelect(e) {
@@ -92,6 +101,7 @@ function handleTabSelect(e) {
     reportError("TAB CHANGE: " + url + global.useActiveTab);
     useActive = true;
     global.lastURL = url;
+    global.jumper.addTabChange(url);
   }
 }
 
@@ -102,7 +112,8 @@ function setupListener(window) {
 
   window.addEventListener("DOMContentLoaded", handlePageLoad, true);
   let gB = Services.wm.getMostRecentWindow("navigator:browser").gBrowser;
-  gB.tabContainer.addEventListener("TabSelect", handleTabSelect, false)
+  //gB.tabContainer.addEventListener("TabSelect", handleTabSelect, false)
+  listen(window, gB.tabContainer, "TabSelect", handleTabSelect);
 
   function change(obj, prop, val) {
     let orig = obj[prop];
@@ -133,7 +144,7 @@ function setupListener(window) {
 
   unload(function() {
     window.removeEventListener("DOMContentLoaded", handlePageLoad, true);
-    gB.removeEventListener("TabSelect", handleTabSelect, true);
+    //gB.tabContainer.removeEventListener("TabSelect", handleTabSelect, true);
   }, window);
 }
 
@@ -152,10 +163,27 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
   });
   global.aboutURI = !SHOWNICE ? addon.getResourceURI("content/awesometab.html") : addon.getResourceURI("content/dial.html");
   global.central = new SiteCentral();
+  global.jumper = new JumpTracker();
+  /*
+  global.linkJumper = new LinkJumper();
+  */
   useActive = false;
 
   global.tagger = new POSTagger();
   global.utils = new AwesomeTabUtils();
+
+  let dbName = "moz_jump_tracker";
+  let schema = "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+               "src LONGVARCHAR," + 
+               "dst LONGVARCHAR," +
+               "count INTEGER," +
+               "type INTEGER";
+  try {
+    global.utils.createDB(dbName, schema);
+  } catch (ex) {
+    reportError(J(ex));
+    // do nothing, the db already exists
+  }
   // global.thumbnailer = global.thumbnailer ? global.thumbnaler : new Thumbnailer();
   watchWindows(setupListener);
 });
@@ -172,8 +200,7 @@ function shutdown(data, reason) {
 /**
  * Handle the add-on being installed
  */
-function install(data, reason) {
-}
+function install(data, reason) {}
 
 /**
  * Handle the add-on being uninstalled

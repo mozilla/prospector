@@ -58,6 +58,15 @@ function AwesomeTab(doc, utils, central, tagger, annoID) {
   let t1 = d.getTime();
   let visiblePlaces = me.getVisiblePlaces();
   let currentPlaces = me.getLastKVisiblePlaces(visiblePlaces, 3);
+  
+  /*
+  if (currentPlaces.length > 0) {
+    let revHost = visiblePlaces[currentPlaces[0]]["rev_host"];
+    let suggestions = global.linkJumper.getDestinationHosts(revHost);
+    reportError("SUGGESTED HOSTS" + J(suggestions));
+  }
+  */
+
   let t2 = d.getTime();
   let collector = new TagCollector(currentPlaces,visiblePlaces, me.utils, tagger);
   let collectedTags = collector.getResults();
