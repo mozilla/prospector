@@ -165,7 +165,7 @@ function prepareLessChrome(window) {
   let skipClick = false;
 
   // Show the chrome immediately
-  function show() {
+  function show(aTrigger) {
     // Prevent any pending hides now that we want to show
     cancelHide();
 
@@ -173,6 +173,17 @@ function prepareLessChrome(window) {
     if (!hidden)
       return;
 
+    // Default the trigger to gNavToolbox
+    let trigger = (aTrigger && aTrigger.dispatchEvent) ? aTrigger : gNavToolbox;
+    
+    // Dispatch an event before the chrome is hidden, cancel the action if preventDefault() was called
+    // event.defaultPrevented is firefox 6.0 only, event.getPreventDefault() is firefox < 6.0
+    let event = document.createEvent("Event");
+    event.initEvent("LessChromeShowing", true, true);
+    trigger.dispatchEvent(event);
+    if (event.defaultPrevented || (event.getPreventDefault && event.getPreventDefault()))
+      return;
+    
     // Stop any in-progress animations
     cancelShifter();
     hidden = false;
@@ -181,10 +192,15 @@ function prepareLessChrome(window) {
     updateOpacity(BASE_OPACITY);
     gNavToolbox.style.height = gNavToolbox.scrollHeight + "px";
     gNavToolbox.style.marginBottom = 0;
+    
+    // Dispatch an event after the chrome is shown
+    let event = document.createEvent("Event");
+    event.initEvent("LessChromeShown", true, false);
+    trigger.dispatchEvent(event);
   }
 
   // Hide the chrome by animating away the non-tabs toolbar area
-  function hide() {
+  function hide(aTrigger) {
     // Prevent any pending shows now that we want to hide
     cancelShow();
 
@@ -192,6 +208,17 @@ function prepareLessChrome(window) {
     if (hidden || inChrome || inPassword || popupOpen || showingNothing())
       return;
 
+    // Default the trigger to gNavToolbox
+    let trigger = (aTrigger && aTrigger.dispatchEvent) ? aTrigger : gNavToolbox;
+    
+    // Dispatch an event before the chrome is hidden, cancel the action if preventDefault() was called
+    // event.defaultPrevented is firefox 6.0 only, event.getPreventDefault() is firefox < 6.0
+    let event = document.createEvent("Event");
+    event.initEvent("LessChromeHiding", true, true);
+    trigger.dispatchEvent(event);
+    if (event.defaultPrevented || (event.getPreventDefault && event.getPreventDefault()))
+      return;
+    
     // Stop any previous animations before starting another
     cancelShifter();
     hidden = true;
@@ -216,11 +243,17 @@ function prepareLessChrome(window) {
       gNavToolbox.style.marginBottom = other * step + "px";
 
       // Prepare the next step of the animation
-      if (step < 1)
+      if (step < 1) {
         shiftStep();
+      }
       // Otherwise we're done!
-      else
+      else {
         shifter = null;
+        // Dispatch an event after the chrome is hidden
+        let event = document.createEvent("Event");
+        event.initEvent("LessChromeHidden", true, false);
+        trigger.dispatchEvent(event);
+      }
     }))();
   }
 
@@ -234,11 +267,11 @@ function prepareLessChrome(window) {
   });
 
   // Clicking the page content dismisses the chrome
-  listen(window, gBrowser, "click", function({button}) {
+  listen(window, gBrowser, "click", function({button, target}) {
     if (button != 0)
       return;
 
-    hide();
+    hide(target);
   });
 
   // Show the urlbar on password field focus
@@ -250,11 +283,11 @@ function prepareLessChrome(window) {
   });
 
   // Typing in the page content dismisses the chrome
-  listen(window, gBrowser, "keydown", function() {
+  listen(window, gBrowser, "keydown", function({target}) {
     if (ignoreKeys)
       return;
 
-    hide();
+    hide(target);
   });
 
   // Detect held right-clicks to show the chrome
@@ -289,7 +322,7 @@ function prepareLessChrome(window) {
   });
 
   // Hide the chrome on releasing a right-click
-  listen(window, gBrowser, "mouseup", function({button}) {
+  listen(window, gBrowser, "mouseup", function({button, target}) {
     if (button != 2)
       return;
 
@@ -297,7 +330,7 @@ function prepareLessChrome(window) {
     cancelShow();
 
     // Always hide on a finished right-click
-    hide();
+    hide(target);
   });
 
   // Show some context when switching tabs
@@ -307,17 +340,17 @@ function prepareLessChrome(window) {
   });
 
   // Hide the chrome when potentially moving focus to content
-  listen(window, gNavToolbox, "blur", function() {
+  listen(window, gNavToolbox, "blur", function({target}) {
     // Start the hide animation now, and an immediate focus will cancel
     inChrome = false;
-    hide();
+    hide(target);
   });
 
   // Detect focus events for the location bar, etc. to show chrome
-  listen(window, gNavToolbox, "focus", function() {
+  listen(window, gNavToolbox, "focus", function({target}) {
     // Make sure to keep the chrome available even when pointing away
     inChrome = true;
-    show();
+    show(target);
   });
 
   // Allow toggling the chrome when clicking the tabs area
@@ -337,9 +370,9 @@ function prepareLessChrome(window) {
 
     // Toggle to the other state
     if (hidden)
-      show();
+      show(originalTarget);
     else
-      hide();
+      hide(originalTarget);
   });
 
   // Show chrome when the mouse moves over the tabs
@@ -421,7 +454,7 @@ function prepareLessChrome(window) {
     popupOpen = true;
     skipClick = true;
 
-    show();
+    show(target);
   });
 
   // Detect progress changes for the current tab to show chrome
@@ -454,7 +487,7 @@ function prepareLessChrome(window) {
         return;
 
       // Immediately show the chrome for context on host switch
-      show();
+      show(gBrowser.selectedBrowser);
 
       // Force the chrome to stay visible in-case chrome blurred
       async(function() {
