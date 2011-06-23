@@ -1,8 +1,5 @@
 /* both search box and result hidden by default */
 
-/*
- * Form design from : http://webdesignerwall.com/tutorials/beautiful-css3-search-form
- */
 @font-face {
   font-family: 'MetaBold'; 
   src: url('http://www.mozilla.com/img/fonts/MetaWebPro-Bold.eot');
@@ -14,6 +11,10 @@
   display: none;
 }
 */
+
+body {
+  overflow-y: scroll;
+}
 
 #result-list li {
   padding: 5px 0 5px 0;
@@ -43,24 +44,42 @@
   margin-top: 50px;
 }
 
-.sidebar {
-  float: left;
-  position: absolute;
-  width: 150px;
+
+#version-search input[type="text"] {
+  border: 1px solid #d1d1d1;
+  font: Helvetica, Arial,Sans-serif;
+  color: #000000;
+  width: 400px;
+  padding: 6px 15px 6px 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) inset;
+}
+
+
+
+#search-form {
+  margin-top: 25px;
+  text-align: center;
+  padding-bottom: 25px;
+  border-bottom: 1px solid #AAAAAA;
 }
 
 .sidebar-item {
-  width: 180px;
+  float: left;
+  width: 150px;
   font-size: 12px;
   margin-top: 5px;
   margin-bottom: 15px;
 }
 
+.sidebar-item h1 {
+ font-weight: bold;
+}
 
 .results {
-  border-left: 1px solid #AAAAAA;
-  margin-left: 150px;
-  padding-left: 10px;
+  clear: both;
+  margin-top: 10px;
+  padding-top: 10px ;
+  border-top: 1px solid #AAAAAA;
 }
 
 .location {
@@ -79,9 +98,10 @@
   margin: 30px 0 0 0;
 }
 
+/*
 .searchform {
-  background: -moz-linear-gradient(center top , #FFFFFF, #EDEDED) repeat scroll 0 0 transparent;
-  border: 1px solid #D2D2D2;
+  background: -moz-linear-gradient(center top , #DDDDDD, #EDEDED) repeat scroll 0 0 transparent;
+  border: 1px solid #FFFFFF;
   border-radius: 2em 2em 2em 2em;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
   display: inline-block;
@@ -115,3 +135,4 @@
 .searchform input {
   font: 100%/140% Arial,Helvetica,sans-serif;
 }
+*/

@@ -65,25 +65,28 @@
   
   
   <div id="version-search">
-    <div class="main-title">RecallMonkey:</div>
-    
+    <!--
     <form class="searchform" id="search-form" name="searchform">
       <input id="search-field" type="text" onblur="" onfocus="if (this.value == 'Search...') {this.value = '';}" value="Search..." class="searchfield" name="searchfield">
       <input type="submit" value="Go" class="searchbutton">
     </form>
+  -->
+    
+    <form id="search-form" name="searchform">
+      <input id="search-field" name="searchfield" type="text" size="40" placeholder="Search..." />
+    </form>
     
     <div id="search-not-form">
       <div class="sidebar">
-        <h1>Time Range</h1>
+        
         <div class="sidebar-item">
+        <h1>Time Range</h1>
         <form id="time-form">
         <input type="radio" name="timerange" value="1"/>Last 24 Hours<br />
         <input type="radio" name="timerange" value="7"/>Last Week<br />
         <input type="radio" name="timerange" value="31"/>Last Month<br />
         <input type="radio" name="timerange" value="366"/>Last Year<br /><br />
         </form>
-
-
         <!--
         <input type="text" id="start-date" size="15"/><br />
         <input type="hidden" id="startDate" />
@@ -93,9 +96,14 @@
         <a id="clear-time" href="#" class="location">clear</a>
         </div>
         
-        <h1>Pinned Sites</h1>
         <div class="sidebar-item">
-        <ul id="pinned-list"></ul>
+        <h1>Prioritized Sites</h1>
+        <ul id="prioritized-list"></ul>
+        </div>
+        
+        <div class="sidebar-item">
+        <h1>Excluded Sites</h1>
+        <ul id="excluded-list"></ul>
         </div>
       </div>
     

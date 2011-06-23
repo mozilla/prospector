@@ -89,7 +89,7 @@ Search.prototype.createIDFMap = function(words) {
   });
 }
 
-Search.prototype.queryTable = function(words, preferredHosts, timeRange) {
+Search.prototype.queryTable = function(words, preferredHosts, excludedHosts, timeRange) {
   let me = this;
   me.createIDFMap(words);
   let wordSelections = [];
@@ -118,6 +118,7 @@ Search.prototype.queryTable = function(words, preferredHosts, timeRange) {
     wordParams['timeRange'] = timeRange;
   }
 
+
   let selections = wordSelections.join(' , ');
   let conditions = wordConditions.join(' OR ');
   let ranked = rankSelection.join(' + ') + " as score";
@@ -135,6 +136,21 @@ Search.prototype.queryTable = function(words, preferredHosts, timeRange) {
     ranked += "," + prefSelect;
 
     order = ' ORDER BY is_pref DESC, score DESC, frecency DESC LIMIT 50';
+  }
+
+  if (excludedHosts && excludedHosts.length > 0) {
+    if (strictConditions) {
+      strictConditions += " AND ";
+    } else {
+      strictConditions = "";
+    }
+    let i = 0;
+    strictConditions += excludedHosts.map(function(host) {
+      wordParams["exclHost"  + i] = host;
+      let str = "rev_host != :exclHost" + i;
+      i++;
+      return str;
+    }).join(' AND ');
   }
   
   if (strictConditions) {
@@ -178,11 +194,6 @@ Search.prototype.search = function(query, params) {
   reportError("tokenizing" + query);
   let words = me.tokenize(query);
   reportError("querying " + J(words));
-  if ('preferredHosts' in params) {
-    var result = me.queryTable(words, params['preferredHosts'], params.timeRange);
-  } else {
-    var result = me.queryTable(words, null, params.timeRange);
-  }
-  reportError(J(result));
+  let result = me.queryTable(words, params.preferredHosts, params.excludedHosts, params.timeRange);
   return result;
 }

@@ -1,7 +1,10 @@
 function Dashboard(doc) {
   let me = this;
   me.search = new Search();
-  me.hostList = [];
+  me.fluidLists = {
+    "prioritized" : [],
+    "excluded" : [],
+  }
   this.doc = doc;
   let $ = me.doc.getElementById;
   
@@ -14,44 +17,36 @@ function Dashboard(doc) {
   function handleClearTime (e) {
     me.handleClearTime(e);
   }
-
-  function handleBlankSubmit(e) {
-    me.handleSubmit();
-  }
-
   $('clear-time').addEventListener("click", handleClearTime, false);
-  $('search-form').addEventListener("submit", handleSubmit, false);
-  $('time-form').addEventListener("click", handleBlankSubmit, false);
+  //$('search-form').addEventListener("submit", handleSubmit, false);
+  $('search-form').addEventListener("keyup", handleSubmit, false);
+  $('time-form').addEventListener("click", handleSubmit, false);
 }
 
 
-Dashboard.prototype.addPinned = function(revHost) {
+Dashboard.prototype.addPinned = function(revHost, listType) {
   let me = this;
-  let idx = me.hostList.indexOf(revHost);
+  let idx = me.fluidLists[listType].indexOf(revHost);
   reportError(revHost);
-  reportError(J(me.hostList));
   reportError(idx);
   if (idx < 0) {
-    me.hostList.push(revHost);
+    me.fluidLists[listType].push(revHost);
   }
-  me.refreshPinned();
+  me.refreshPinned(listType);
 };
 
-Dashboard.prototype.removePinned = function(revHost) {
+Dashboard.prototype.removePinned = function(revHost, listType) {
   let me = this;
-  reportError(revHost);
-  reportError(me.hostList);
-  let idx = me.hostList.indexOf(revHost);
+  let idx = me.fluidLists[listType].indexOf(revHost);
   reportError(idx);
   if (idx < 0) {
     return;
   }
-  me.hostList.splice(idx, 1);
-  reportError(me.hostList)
-  me.refreshPinned();
+  me.fluidLists[listType].splice(idx, 1);
+  me.refreshPinned(listType);
 }
 
-Dashboard.prototype.refreshPinned = function() {
+Dashboard.prototype.refreshPinned = function(listType) {
   let me = this;
   let $ = me.doc.getElementById;
   let C = me.doc.createElement;
@@ -59,17 +54,18 @@ Dashboard.prototype.refreshPinned = function() {
   function handleUnpinClick(e) {
     me.handleUnpinClick(e);
   }
-  $('pinned-list').innerHTML = "";
-  me.hostList.forEach(function(revHost) {
+  $(listType + '-list').innerHTML = "";
+  me.fluidLists[listType].forEach(function(revHost) {
     let link = C('a')
     link.setAttribute('class', 'website');
     let webName = revHost.split('').reverse().join('').slice(1);
     link.innerHTML = 'X ' + webName;
     link.setAttribute('href', '#');
+    link.setAttribute('value', listType);
     link.addEventListener("click", handleUnpinClick, false);
     let el = C('li');
     el.appendChild(link);
-    $('pinned-list').appendChild(el);
+    $(listType + '-list').appendChild(el);
   });
   me.handleSubmit();
 }
@@ -78,8 +74,9 @@ Dashboard.prototype.handleUnpinClick = function(e) {
   let me = this;
   e.preventDefault();
   let webName = e.target.innerHTML;
+  let listType = e.target.getAttribute('value');
   let revHost = webName.slice(2).split('').reverse().join('') + '.';
-  me.removePinned(revHost);
+  me.removePinned(revHost, listType);
 }
 
 Dashboard.prototype.handleSubmit = function(e) {
@@ -96,10 +93,10 @@ Dashboard.prototype.handleSubmit = function(e) {
   e.preventDefault();
   let $ = me.doc.getElementById;
   let C = me.doc.createElement;
-  $('result-list').innerHTML = "";
 
   let params = {
-    preferredHosts: me.hostList,
+    "preferredHosts": me.fluidLists["prioritized"],
+    "excludedHosts": me.fluidLists["excluded"],
   };
   /*
   let startDate = parseInt($('startDate').value);
@@ -125,22 +122,44 @@ Dashboard.prototype.handleSubmit = function(e) {
   reportError("TIME RANGE: " + timeRange);
 
   params['timeRange'] = timeRange;
-
+  
+  $('result-list').style.visibility = "hidden";
+  $('result-list').innerHTML = "";
   try {
   me.search.search($('search-field').value, params).forEach(function({id, title, url, rev_host}) {
     let el = C('li');
     let link = C('a');
     let blank = C('br');
-    let website = C('a');
-    
+    let website = C('span');
+    let plus = C('a');
+    let minus = C('a');
 
     function handleHostClick(e) {
       me.handleHostClick(e);
     }
+
+    function handlePlusClick(e) {
+      me.handlePlusClick(e);
+    }
+
+    function handleMinusClick(e) {
+      me.handleMinusClick(e);
+    }
+
     let host = rev_host.split('').reverse().join('').slice(1);
     website.setAttribute('class', 'website');
-    website.setAttribute('href', '#');
     website.innerHTML = host;
+    
+    plus.innerHTML = '(prioritize)';
+    plus.setAttribute('class', 'website');
+    plus.setAttribute('href', '#');
+    plus.setAttribute('value', host);
+    plus.addEventListener("click", handlePlusClick, false);
+    minus.innerHTML = '(exclude)';
+    minus.setAttribute('class', 'website');
+    minus.setAttribute('href', '#');
+    minus.setAttribute('value', host);
+    minus.addEventListener("click", handleMinusClick, false);
     website.addEventListener("click", handleHostClick, false);
 
     let loc = C('span')
@@ -151,18 +170,29 @@ Dashboard.prototype.handleSubmit = function(e) {
     link.setAttribute('target', '_blank');
     el.appendChild(link);
     el.appendChild(website);
+    el.appendChild(plus);
+    el.appendChild(minus);
     el.appendChild(blank);
     el.appendChild(loc);
     $('result-list').appendChild(el);
   });
   } catch (ex) { reportError(J(ex)) };
+  $('result-list').style.visibility = "visible";
 }
 
-Dashboard.prototype.handleHostClick = function(e) {
+Dashboard.prototype.handlePlusClick = function(e) {
   let me = this;
   e.preventDefault();
-  let revHost = ("." + e.target.innerHTML).split('').reverse().join('');
-  me.addPinned(revHost);
+  let revHost = ("." + e.target.getAttribute('value')).split('').reverse().join('');
+  me.addPinned(revHost, "prioritized");
+
+}
+
+Dashboard.prototype.handleMinusClick = function(e) {
+  let me = this;
+  e.preventDefault();
+  let revHost = ("." + e.target.getAttribute('value')).split('').reverse().join('');
+  me.addPinned(revHost, "excluded");
 }
 
 Dashboard.prototype.handleClearTime = function(e) {
