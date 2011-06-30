@@ -43,6 +43,7 @@
   <title>Recall Monkey</title>
   <link rel="stylesheet" type="text/css" href="css/style.css" />
   <link rel="stylesheet" type="text/css" href="css/reset.css" />
+  <link rel="icon" type="image/png" href="img/monkey.png" />
 </head>
 <body onload="document.searchform.searchfield.focus();">
 
@@ -73,37 +74,59 @@
   -->
     
     <form id="search-form" name="searchform">
+      <img id="monkey-image" height="80" src="img/prospector.png">
       <input id="search-field" name="searchfield" type="text" size="40" placeholder="Search..." />
+      <img src="img/loading.gif" id="loading-image" style="visibility: hidden;"/>
     </form>
     
     <div id="search-not-form">
-      <div class="sidebar">
-        
+      <div class="sidebar">  
         <div class="sidebar-item">
         <h1>Time Range</h1>
         <form id="time-form">
         <input type="radio" name="timerange" value="1"/>Last 24 Hours<br />
         <input type="radio" name="timerange" value="7"/>Last Week<br />
         <input type="radio" name="timerange" value="31"/>Last Month<br />
-        <input type="radio" name="timerange" value="366"/>Last Year<br /><br />
+        <input type="radio" name="timerange" value="366"/>Last Year<br />
+        <input type="radio" name="timerange" value="0" checked/>All Time<br /><br />
         </form>
         <!--
         <input type="text" id="start-date" size="15"/><br />
         <input type="hidden" id="startDate" />
         <input type="text" id="end-date" size="15"/><br />
         <input type="hidden" id="endDate" />
-        -->
         <a id="clear-time" href="#" class="location">clear</a>
+        -->
+        
         </div>
         
+        <!--
         <div class="sidebar-item">
-        <h1>Prioritized Sites</h1>
+        <h1>Search In</h1>
+        <form id="indices-form">
+        <input type="checkbox" name="timerange" value="1"/>Title<br />
+        <input type="checkbox" name="timerange" value="7"/>URL<br />
+        <input type="checkbox" name="timerange" value="31"/>Links Text<br />
+        <input type="checkbox" name="timerange" value="366"/>Bookmark Tags<br />
+        </form>
+        </div>
+        -->
+        
+        <div class="sidebar-item">
+        <h1>Prioritized Sites<label class="arrow active up"></label></h1>
         <ul id="prioritized-list"></ul>
         </div>
         
         <div class="sidebar-item">
-        <h1>Excluded Sites</h1>
+        <h1>Excluded Sites<label class="down"></label></h1>
         <ul id="excluded-list"></ul>
+        </div>
+
+        <div class="sidebar-item">
+        <h1>Other Filters</h1>
+        <ul id="filter-list">
+        <li><input type="checkbox" id="prioritize-bookmarks"/> Prioritize Bookmarks</li>
+        </ul>
         </div>
       </div>
     
@@ -114,4 +137,10 @@
     </div>
   </div>
 </body>
+<script>
+  window.addEventListener("message", function(e) {
+    dump("received message");
+  }, false);
+  dump("added event listener");
+</script>
 </html>

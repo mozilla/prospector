@@ -35,6 +35,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+function UserDisplay(results) {
+  let me = this;
+}
+
+function DevDisplay() {
+
+}
+
 
 
 function Display(places, doc, utils, annoID) {

@@ -36,12 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-
-/*
- * Its like the allspark, but the allsearch instead
- * Does searching + ranking in moz_places
- */
-
 function AllSearch(collectedTags, collectedHosts, excludedPlaces, utils, central) {
   let me = this;
   me.utils = utils;

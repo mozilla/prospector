@@ -1,0 +1,157 @@
+/* both search box and result hidden by default */
+
+body {
+  overflow-y: scroll;
+}
+
+#result-list li {
+  padding: 5px 0 5px 0;
+}
+
+#result-list .favicon {
+  height: 17px;
+  width 17px;
+  vertical-align: top;
+  margin-left: 4px;
+}
+
+
+#loading-image {
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+#result-list .bookmarkI {
+  margin-left: 3px;
+  height: 12px;
+  width: 12px;
+}
+
+.up {
+  width: 15px;
+  height: 6px;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+.active {
+  background-image: url("../img/up2.png");
+}
+
+.inactive {
+  background-image: url("../img/up.png")
+}
+.inactive:hover {
+  background-image: url("../img/up2.png");
+  cursor: pointer;
+  cursor: hand;
+}
+
+h1 label {
+  float: right;
+}
+
+.down {
+  margin-top: 2px;
+  background-image: url("../img/x.png");
+  height: 11px;
+  width: 11px;
+  display: inline-block;
+}
+
+li .down:hover {
+  cursor: pointer;
+  cursor: hand;
+  background-position: 0 -22px;
+}
+
+#result-list img {
+  padding-right: 10px;
+}
+
+#result-list li {
+  margin: 2px 0 2px 0;
+}
+
+.result-info {
+  margin-left: 52px;
+  line-height: 1.3;
+}
+
+#version-search {
+  margin: 0 auto 0 auto;
+  width: 800px;
+  font-family: Helvetica, Arial, Sans-serif;
+}
+
+
+#version-search input[type="text"] {
+  border: 1px solid #d1d1d1;
+  font: Arial,Sans-serif;
+  color: #000000;
+  width: 600px;
+  padding: 6px 15px 6px 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) inset;
+}
+
+.sidebar {
+  border-right: 1px solid #D3E1F9;
+  margin-left: 14px;
+  margin-top: 0;
+  min-height: 0;
+  padding-left: 0;
+  padding-right: 4px;
+  padding-top: 3px;
+  top: 0;
+  width: 155px;
+  font-size: small;
+  float: left;
+}
+
+.sidebar-item {
+  width: 150px;
+  padding: 10px 0 10px 0;
+  border-bottom: 1px solid #D3E1F9;;
+}
+
+#monkey-image {
+  margin-top: 10px;
+  vertical-align: middle;
+  margin-right: 90px;
+}
+
+.sidebar-item h1 {
+ font-weight: bold;
+ margin-bottom: 5px;
+}
+
+.results {
+  margin-left: 173px;
+  padding-left: 15px;
+  border-left: 1px solid #D3E1F9;
+}
+
+.icon-bookmark {
+  display: inline;
+  position: absolute;
+}
+
+.location {
+  font-size: 12px;
+  color: #AAAAAA;
+}
+
+.website {
+  text-decoration: none;
+  color: #3B5998;
+  font-size: 12px;
+  /*color: #0E774A;*/
+}
+.website:hover {
+  cursor: pointer;
+  cursor: hand;
+}
+
+#search-not-form {
+  margin: 20px 0 0 0;
+}

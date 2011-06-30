@@ -217,6 +217,10 @@ function makeTrigger() {
 
   return addCallback;
 }
+var Svc = {};
+const {Cc, Ci, Cu, Cm} = require("chrome");
+
+Cu.import("resource://gre/modules/Services.jsm", Svc);
 
 /**
  * Synchronously query with an async statement fetching results by name
@@ -236,8 +240,8 @@ function spinQuery(connection, {names, params, query}) {
 
     // Add the observer and make sure to clean up
     let onQuit = function() abort("Application Quitting");
-    Services.obs.addObserver(onQuit, "quit-application", false);
-    unload(function() Services.obs.removeObserver(onQuit, "quit-application"));
+    Svc.Services.obs.addObserver(onQuit, "quit-application", false);
+    unload(function() Svc.Services.obs.removeObserver(onQuit, "quit-application"));
 
     // Also watch for unloads to stop queries
     unload(function() abort("Add-on Unloading"));
@@ -414,3 +418,5 @@ function watchWindows(callback) {
   // Make sure to stop watching for windows if we're unloading
   unload(function() Services.ww.unregisterNotification(windowWatcher));
 }
+
+exports.spinQuery = spinQuery;
