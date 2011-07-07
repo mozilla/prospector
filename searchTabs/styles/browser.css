@@ -1,0 +1,24 @@
+@-moz-document url-prefix("chrome://browser/content/browser.xul") {
+
+#searchTabs {
+  height: 96px;
+  pointer-events: none;
+}
+
+#searchTabs > .searchTab {
+  background-color: white;
+  border-radius: 10px 10px 0 0;
+  -moz-box-flex: 1;
+  -moz-box-pack: center;
+  padding: 32px 0;
+  pointer-events: auto;
+}
+
+#searchTabs > .searchTab > img {
+  display: block;
+  height: 32px;
+  pointer-events: none;
+  width: 32px;
+}
+
+}
