@@ -2,8 +2,8 @@
     "name": "recallmonkey",
     "license": "MPL 1.1/GPL 2.0/LGPL 2.1",
     "author": "",
-    "version": "15",
+    "version": "16",
     "fullName": "Recall Monkey",
     "id": "recallmonkey@prospector.labs.mozilla",
-    "description": "a basic add-on"
+    "description": "RecallMonkey is an improved search engine for your Firefox history. Activate with (Ctrl/Cmd) + Shift + M or by clicking the icon in the addon bar."
 }
