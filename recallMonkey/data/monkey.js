@@ -260,28 +260,21 @@ Dashboard.prototype.populate = function(results, append) {
     loc.innerHTML = url.slice(0,100);
     link.innerHTML = title.length > 70 ? title.slice(0,70) + " ..." : title;
     link.setAttribute('href', url);
-    link.setAttribute('target', '_blank');
+    // link.setAttribute('target', '_blank');
     el.setAttribute('class', 'result-info');
     el.appendChild(link);
     el.appendChild(bookmarkI);
-    /*
-    el.appendChild(blank1);
-    el.appendChild(website);
-    el.appendChild(plus);
-    el.appendChild(minus);
-    */
+    
+
     el.appendChild(blank1);
     if (tags.length > 0) {
       tagList.innerHTML = "Tags: " + tags.join(', ');
       tagList.setAttribute('class', 'location');
       el.appendChild(tagList)
     }
-//    el.appendChild(blank2);
     el.appendChild(loc);
     images.setAttribute('class', 'icon-bookmark')
     images.appendChild(upArrow);
-//    images.appendChild(imageSpacer1);
-//    images.appendChild(imageSpacer2);
     images.appendChild(downArrow);
     images.appendChild(favicon);
     bookmarkI.style.visibility = isBookmarked ? 'visible' : 'hidden';
@@ -309,15 +302,27 @@ Dashboard.prototype.handleMinusClick = function(e) {
 
 var dash = new Dashboard();
 
+function getQueryVariable(variable) {
+  let query = window.location.search.substring(1);
+  let vars = query.split("&");
+  for (let i=0; i< vars.length; i++) {
+    let pair = vars[i].split("=");
+    if (pair[0] == variable) {
+      return decodeURIComponent(pair[1]);
+    }
+  } 
+  return null;
+}
+
+let defaultSearch = getQueryVariable('s');
+if (defaultSearch) {
+  $('search-field').value = defaultSearch;
+  dash.handleSubmit();
+}
 
 self.on("message", function(data) {
-  if (data.action == "display") {
-    if (data.random == currentID) {
-      dash.populate(data.results, data.append);
-    }
-  } else {
-
-  }
-  console.log("got message from chrome");
+  if (data.action == "display" && data.random == currentID) {
+    dash.populate(data.results, data.append);
+  } 
 });
 

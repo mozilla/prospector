@@ -1,5 +1,2 @@
-This is the jetMonkey add-on.  It contains:
+This is the RecallMonkey add-on.  It is designed to be a more powerful search engine for Firefox history. Click on the monkey in the addons bar or hit ctrl/cmd + shift + m.
 
-* A program (lib/main.js).
-* A few tests.
-* Some meager documentation.

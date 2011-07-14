@@ -33,22 +33,30 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
 const self = require("self");
 const tabs = require("tabs");
 const pageMod = require("page-mod");
 const searcher = require("search");
-const helpers = require("helpers");
 const {Hotkey} = require("hotkeys");
-const {Cc, Cu, Ci, Cm} = require("chrome");
 const widgets = require("widget");
+const {Cu} = require("chrome");
 
+let J = JSON.stringify;
 
+let Svc = {};
+Cu.import("resource://gre/modules/Services.jsm", Svc);
+/*
+function addRecallSearchEngine() {
+    console.log("adding search engine");
+    Svc.Services.search.addEngineWithDetails("RecallMonkey", TWITTER_ICON, "",
+      "", "GET",
+      "http://google.com/s={searchTerms}");
+}
+addRecallSearchEngine();
+*/
 function recall() {
-  let tab = tabs.open({
+  tabs.open({
     "url" : self.data.url("dashboard.html"),
-    "title" : "Recall",
-    "favicon" : self.data.url("monkey.png"),
   });
 }
 
@@ -67,7 +75,6 @@ let mod = pageMod.PageMod({
   include: "resource://recallmonkey-at-prospector-dot-labs-dot-mozilla-recallmonkey-data/*",
   contentScriptFile: self.data.url("monkey.js"),
   onAttach: function attached(worker) {
-    worker.postMessage("message from chrome into content");
     worker.on("message", function(data) {
       if (data.action == "search") {
         let results = sr.search(data.params.query, data.params);
@@ -88,4 +95,5 @@ var showHotKey = Hotkey({
     recall();
   }
 });
-//let tab = tabs.open(self.data.url("dashboard.html"));
+
+
