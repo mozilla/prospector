@@ -1,0 +1,9 @@
+{
+    "name": "tabfocus",
+    "license": "MPL 1.1/GPL 2.0/LGPL 2.1",
+    "author": "Mozilla Labs",
+    "version": "1",
+    "fullName": "Mozilla Labs: Prospector - Tab Focus",
+    "id": "tabfocus@prospector.labs.mozilla",
+    "description": "An addon that reduces tab clutter by extracting your current browsing session into a new Panorama group."
+}
