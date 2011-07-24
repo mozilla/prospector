@@ -62,6 +62,17 @@ XPCOMUtils.defineLazyGetter(global, "prefs", function() {
 // How long to wait before reshowing other data on leaving another data
 const RESHOW_DELAY = 100;
 
+function jsdump()
+{
+  var args = [];
+  for (var i = 0; i < arguments.length; i++) {
+    args.push(arguments[i]);
+  }
+  Components.classes['@mozilla.org/consoleservice;1']
+            .getService(Components.interfaces.nsIConsoleService)
+            .logStringMessage(args.join(", "));
+}
+
 /**
  * Remove all existing chrome of the browser window
  */
@@ -3642,6 +3653,36 @@ function addDashboard(window) {
   fxIcon.addEventListener("mouseout", function() {
     fxIcon.reset();
     statusLine.reset();
+  }, false);
+
+  var vkMetaIsDown = false;
+  document.addEventListener("keydown", function(evt) {
+    if (evt.metaKey && evt.keyCode == evt.DOM_VK_META) {
+      vkMetaIsDown = true;
+    } else {
+      vkMetaIsDown = false;
+    }
+  }, false);
+
+  document.addEventListener("keyup", function(evt) {
+    vkMetaIsDown = false;
+  }, false);
+
+  document.addEventListener("DOMMouseScroll", function(evt) {
+    if (!vkMetaIsDown) {
+      return;
+    }
+
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    let now = Date.now();
+    if (now - fxIcon.lastScroll < 350)
+      return;
+    fxIcon.lastScroll = now;
+
+    // Do a "next tab" for down or right scrolls
+    showPage(evt.detail < 0, false);
   }, false);
 
   // Allow scrolling through tabs when pointing at the icon
