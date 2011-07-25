@@ -18,7 +18,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Abhinav Sharma <me@abhinavsharma.me>
+ *   Abhinav Sharma <me@abhinavsharma.me> / abhinav on irc.mozilla.org
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,6 +50,8 @@ function Dashboard() {
   }
   me.skipped = 0;
 
+  me.pendingSearches = [];
+
   function handleSubmit (e) {
     reportError("handling submission 1/2");
     me.skipped = 0;
@@ -67,6 +69,17 @@ function Dashboard() {
       me.incrementScroll();
     }
   }
+  
+  /* check once a second if there is a search request to be sent,
+   * even though we have query cancellation, its a good idea to
+   * reduce the number of queries being made as early as possible
+   * since postSearch only sends the last search request in the
+   * previous second.
+   */
+  function periodicSearch() {
+    me.postSearch();
+  }
+  me.periodicId = window.setInterval(periodicSearch, 1000);
 
   $('search-form').addEventListener("submit", handleSubmit, false);
   $('search-form').addEventListener("keyup", handleSubmit, false);
@@ -113,15 +126,30 @@ Dashboard.prototype.handleSubmit = function(e, append) {
   params['timeRange'] = timeRange;
   params['query'] = $('search-field').value;
   reportError(J(params));
-  currentID = Math.floor(Math.random() * 16000);
-  self.postMessage({
-    "random" : currentID,
+  currentID = Date.now();
+  me.submitSearch({
+    "time"   : currentID,
     "action" : "search",
     "params" : params,
     "append" : append ? true : false,
   });
   $('loading-image').style.visibility = "visible";
   } catch (ex) {console.log(ex) }
+}
+
+Dashboard.prototype.submitSearch = function(searchObj) {
+  let me = this;
+  me.pendingSearches.push(searchObj);
+}
+
+Dashboard.prototype.postSearch = function() {
+  let me = this;
+  let l = me.pendingSearches.length;
+  if (l == 0)
+    return;
+  let sObj = me.pendingSearches[l-1];
+  me.pendingSearches = [];
+  self.postMessage(sObj);
 }
 
 Dashboard.prototype.addPinned = function(revHost, listType) {
@@ -308,7 +336,7 @@ function getQueryVariable(variable) {
   for (let i=0; i< vars.length; i++) {
     let pair = vars[i].split("=");
     if (pair[0] == variable) {
-      return decodeURIComponent(pair[1]);
+      return unescape(pair[1]);
     }
   } 
   return null;
@@ -321,7 +349,7 @@ if (defaultSearch) {
 }
 
 self.on("message", function(data) {
-  if (data.action == "display" && data.random == currentID) {
+  if (data.action == "display" && data.time == currentID) {
     dash.populate(data.results, data.append);
   } 
 });

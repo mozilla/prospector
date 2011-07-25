@@ -18,7 +18,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Abhinav Sharma <me@abhinavsharma.me>
+ *  Abhinav Sharma <me@abhinavsharma.me> / abhinav on irc.mozilla.org
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,10 +34,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const reportError = console.log;
+const reportError = function(){}
 const J = JSON.stringify;
+const ss           = require("simple-storage");
 const {Cc, Ci, Cu, Cm} = require("chrome");
-const utils = require("./utils");
 
 const helpers = require("helpers");
 let help = new helpers.help();
@@ -54,6 +54,7 @@ Cu.import("resource://gre/modules/PlacesUtils.jsm", Places);
 function Search() {
   let me = this;
   me.idfMap = {};
+  me.pendingQueries = [];
 
   /* tokenize on spaces */
   me.re_tokenize = new RegExp(/[\s]/);
@@ -108,74 +109,61 @@ Search.prototype.tokenize = function(str) {
  * @param {list} tokens a list of words to create a mapping for
  * @return undefined
  */
-Search.prototype.createIDFMap = function(tokens) {
+Search.prototype.createIDFMap = function(tokens, data, searcher) {
   let me = this;
   let idfMap = {};
+  reportError("creating idf map");
 
-  /* find the number of documents aka. the number of places in moz_places, N */
-  let N = utils.spinQuery(Places.PlacesUtils.history.DBConnection, {
-    "query" : "SELECT COUNT(1) AS N FROM moz_places",
-    "params": {},
-    "names" : ["N"]
-  })[0]["N"];
+  let innerSelections = ["count"];
+  let innerConditions = [];
+  let params = {};
+  let outerNames = ["count"];
+  let outerSelections = ["count"];
+  for (let i = 0; i < tokens.length; i++) {
+    params["left"+i]  = '% ' + tokens[i]; + '%';
+    params["right"+i] = '%'  + tokens[i]  + ' %';
+    params["token"+i] = tokens[i];
+    let condition = "(title LIKE :left" + i + 
+                    " OR title LIKE :right" + i + 
+                    " OR LOWER(title) = :token" + i + ")";
+    innerSelections.push(condition + " as match" + i);
+    innerConditions.push(condition);
+    outerSelections.push("SUM(match" + i + ") as count" + i);
+    outerNames.push("count" + i);
+  }
+  innerSelections = innerSelections.join(',');
+  innerConditions = innerConditions.join(' OR ');
+  outerSelections = outerSelections.join(',');
+  let base = "(SELECT *, (SELECT COUNT(1) FROM moz_places) as count FROM moz_places)";
+  let inner = "(SELECT " + innerSelections + " FROM " + base + " WHERE " +
+              innerConditions + ")";
+  let outer = "SELECT " + outerSelections + " FROM " + inner;
+
+  /* prepare db connection and query */
+  let conn = Places.PlacesUtils.history.DBConnection;
+  let stmt = conn.createStatement(outer);
+  for (let key in params) {
+    stmt.params[key] = params[key];
+  }
   
-  /* now, find the idf for each word */
-  tokens.forEach(function(word) {
-    /* the idf map is global for each RecallMonkey instance, 
-     * memoization to reduce db calls */
-    if (word in me.idfMap) {
-      return;
+  /* execute in async and call the continuation search function */
+  let pendingIDF = stmt.executeAsync({
+    handleResult: function(aResultSet) {
+      /* the result is in a single row, so guaranteed to be the first row */
+      for (let row = aResultSet.getNextRow(); row; row=aResultSet.getNextRow()) {
+        for (let i = 0; i < tokens.length; i++) {
+          let n = row.getResultByName("count" + i);
+          let N = row.getResultByName("count");
+          me.idfMap[tokens[i]] = Math.log((N - n + 0.5)/(n +0.5));
+        }
+      }
+      /* call the search continuation */
+      searcher();
     }
-    
-    /* this covers all possible matches, some examples:
-       "bar" matches "foo bar" using left
-       "foo" matches "foo bar" using right
-       "foo" matches "foo" using LOWER(title) = word
-     */
-    let left = '% ' + word + '%';
-    let right = '%' + word + ' %';
-    let query = "SELECT COUNT(1) as n from moz_places " +
-      "WHERE LOWER(title) = :word OR title LIKE :left " +
-      "OR title LIKE :right";
-    let result = utils.spinQuery(Places.PlacesUtils.history.DBConnection, {
-      "query" : query,
-      "params" : {
-        "left" : left,
-        "right": right,
-        "word": word,
-      },
-      "names": ["n"]
-    });
-    if (result.length == 0)
-      return; // no matches, do not update the idf map
-
-    /* the number of documents that match the token, n */
-    let n = result[0]["n"];
-
-    /* update the object idf map using the Okapi BM25 idf definition */
-    me.idfMap[word] = Math.log((N - n + 0.5)/(n +0.5));
   });
+  me.pendingQueries.push({"time" : data.time, "query": pendingIDF});
+
 }
-
-/**
- * Gets the rowid which is used as the "parent" in the db
- * for all bookmarks that are actually tags.
- *
- * @return {number} rowid - the row ID that will later be used in the db call
- */
-Search.prototype.setRowID = function() {
-  let me = this;
-  let result = utils.spinQuery(Places.PlacesUtils.history.DBConnection, {
-    "query" : "SELECT rowid FROM moz_bookmarks_roots WHERE root_name = 'tags';",
-    "params" : {},
-    "names" : ["rowid"],
-  });
-  if (result.length == 0)
-    throw "error: parent id for tags not found in moz_bookmarks_roots";
-
-  me.rowid = result[0]["rowid"];
-}
-
 
 /**
  * Queries the database for the given tokens. For what a rev_host is, look in
@@ -191,16 +179,13 @@ Search.prototype.setRowID = function() {
  *
  * @return {list}
  */
-Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts, 
-                                timeRange, limit, skip, prioritizeBookmarks) {
+Search.prototype.queryTable = function(tokens, params, data, worker) {
   let me = this;
 
   if (tokens.length == 0)
     return [];
 
   /* make sure the new tokens are in the idf map */
-  me.createIDFMap(tokens);
-
   let wordSelections = [];
   let wordConditions = [];
   let rankSelection = [];
@@ -208,13 +193,12 @@ Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts,
   let names = ["id", "title", "tags","url", "frecency", "score", "rev_host", 
                "last_visit_date", "is_bookmark"];
   let orderList = [];
-    
-  me.setRowID();
-  if (me.rowid < 0) {
+  
+  if (ss.storage.rowid <= 0) {
     return [];
   }
   let wordParams = {
-    "rowid" : me.rowid,
+    "rowid" : ss.storage.rowid,
   };
 
   for (let i = 0; i < tokens.length; i++) {
@@ -259,22 +243,22 @@ Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts,
   /* default time range is 0, which means search everything, adjust if custom
    * by adding a strict condition.
    */
-  if (timeRange != 0) {
+  if (params.timeRange != 0) {
     /* sql db stores time with more preciseness than js */
     let t = new Date().getTime() * 1000;
     strictConditions = t + " - last_visit_date < " + 
       "(:timeRange * 24 * 60 * 60 * 1000 * 1000) " + 
       "AND last_visit_date IS NOT NULL";
-    wordParams['timeRange'] = timeRange;
+    wordParams['timeRange'] = params.timeRange;
   }
   
   /* if certain hosts are marked as preferred, prioritze them using a strict condition
    * and then changing the order.
    */
-  if (preferredHosts && preferredHosts.length > 0) {
+  if (params.preferredHosts && params.preferredHosts.length > 0) {
     let pref = [];
-    for (let i = 0; i < preferredHosts.length; i++) {
-      wordParams["host" + i] = preferredHosts[i];
+    for (let i = 0; i < params.preferredHosts.length; i++) {
+      wordParams["host" + i] = params.preferredHosts[i];
       pref.push("(CASE rev_host WHEN :host" + i + " THEN 1 ELSE 0 END)")
     }
     let prefSelect = pref.join(' OR ') + " as is_pref";
@@ -284,19 +268,19 @@ Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts,
   }
 
   /* prioritize bookmarks if desired by changing the order */
-  if (prioritizeBookmarks) {
+  if (params.prioritizeBookmarks) {
     orderList.unshift("is_bookmark");
   }
   
   /* excluded certain hosts if desired using a strict condition */
-  if (excludedHosts && excludedHosts.length > 0) {
+  if (params.excludedHosts && params.excludedHosts.length > 0) {
     if (strictConditions) {
       strictConditions += " AND ";
     } else {
       strictConditions = "";
     }
     let i = 0;
-    strictConditions += excludedHosts.map(function(host) {
+    strictConditions += params.excludedHosts.map(function(host) {
       wordParams["exclHost"  + i] = host;
       let str = "rev_host != :exclHost" + i;
       i++;
@@ -309,12 +293,12 @@ Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts,
     conditions = "(" + conditions + ") AND " + strictConditions;
   }
 
-  /* this is the outermost set of columns to be searched in, these come from both me.inner and
-   * the extra conditions like is_pref.
+  /* this is the outermost set of columns to be searched in, 
+   * these come from both me.inner and the extra conditions like is_pref.
    */
   let order = ' ORDER BY ' +
               orderList.map(function(cat) { return cat + " DESC"}).join(",") + 
-              ' LIMIT ' + skip + ',' + limit;
+              ' LIMIT ' + params.skip + ',' + params.limit;
   let searchDB = "(SELECT id, title, tags, url, frecency, rev_host,  is_bookmark, last_visit_date," + 
     selections + " FROM (" + me.inner + ") WHERE " + conditions + ")";
   let query = "SELECT id,title, tags, url, frecency, rev_host,is_bookmark,last_visit_date," + ranked + 
@@ -324,21 +308,42 @@ Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts,
   if (Object.keys(wordParams).length == 0) {
     return [];
   }
+  
 
-  return utils.spinQuery(Places.PlacesUtils.history.DBConnection, {
-    "names": names,
-    "params": wordParams,
-    "query" : query,
-  }).map(function ({id, title, tags, url, frecency, rev_host, last_visit_date}) {
-    return {
-      "title" : title,
-      "url" : url,
-      "revHost": rev_host ,
-      "isBookmarked": help.isBookmarked(url),
-      "faviconData": help.getFaviconData(url),
-      "tags" : tags ? tags.split(',') : [],
-    };
+  let conn = Places.PlacesUtils.history.DBConnection;
+  let stmt = conn.createStatement(query);
+  for (let key in wordParams) {
+    stmt.params[key] = wordParams[key];
+  }
+  let results = [];
+
+  let pendingTF = stmt.executeAsync({
+    handleResult: function(aResultSet) {
+      for (let row = aResultSet.getNextRow(); row; row=aResultSet.getNextRow()) {
+        let tags = row.getResultByName("tags");
+        results.push({
+          "title"       : row.getResultByName("title"),
+          "url"         : row.getResultByName("url"),
+          "revHost"     : row.getResultByName("rev_host"),
+          "isBookmarked": row.getResultByName("is_bookmark"),
+          "faviconData" : help.getFaviconData(row.getResultByName("url")),
+          "tags" : tags ? tags.split(',') : [],
+        })
+      }
+      reportError(results.length);   
+    },
+
+    handleCompletion: function(aReason) {
+      worker.postMessage({
+        "action": "display",
+        "results" : results,
+        "append" : data.append,
+        "time"   : data.time
+      });
+    },
+
   });
+  me.pendingQueries.push({"time" : data.time, "query": pendingTF});
 }
 
 /**
@@ -353,17 +358,35 @@ Search.prototype.queryTable = function(tokens, preferredHosts, excludedHosts,
  *  params.skip                {number} Number of results to be skipped
  *  params.prioritizeBookmarks {boolean} true to float all bookmarked results to top.
  */
-Search.prototype.search = function(query, params) {
+Search.prototype.search = function(query, params, data, worker) {
   let me = this;
+
+  /* on a new search, cancel all pending searches to save resources */
+  me.pendingQueries = me.pendingQueries.map(function({time, query}) {
+    if (time < data.time && query) {
+      query.cancel();
+    }
+    return {"time" : time, "query" : query}
+  }).filter(function({time, query}) {
+    return (time >= data.time);
+  });
 
   /* tokenize and execute query */
   let tokens = me.tokenize(query);
-  try{
-  return me.queryTable(tokens, params.preferredHosts, 
-                       params.excludedHosts, params.timeRange, 
-                       params.limit, params.skip, params.prioritizeBookmarks);
-                       } catch (ex) { reportError(J(ex)) }
-}
+  if (tokens.length == 0) {
+    worker.postMessage({
+      "action": "display",
+      "results" : [],
+      "append" : data.append,
+      "time"   : data.time,
+    });
+    return;
+  }
 
+  me.createIDFMap(tokens, data, function() {
+    /* execute tf search as a continuation after the idf map is ready */
+    me.queryTable(tokens, params, data, worker);
+  });
+}
 /* export as a function in the search module */
 exports.search = Search;

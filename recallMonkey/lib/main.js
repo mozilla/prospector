@@ -18,7 +18,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Abhinav Sharma <me@abhinavsharma.me>
+ *   Abhinav Sharma <me@abhinavsharma.me> / abhinav on irc.mozilla.org
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -33,33 +33,74 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-const self = require("self");
-const tabs = require("tabs");
-const pageMod = require("page-mod");
-const searcher = require("search");
-const {Hotkey} = require("hotkeys");
-const widgets = require("widget");
-const {Cu} = require("chrome");
+const self         = require("self");
+const tabs         = require("tabs");
+const ss           = require("simple-storage");
+const pageMod      = require("page-mod");
+const unload       = require("unload");
+const searcher     = require("search");
+const {Hotkey}     = require("hotkeys");
+const utils        = require("./utils");
+const widgets      = require("widget");
+const {Cu, Cc, Ci} = require("chrome");
+
+var Places = {};
+Cu.import("resource://gre/modules/PlacesUtils.jsm", Places);
+Places.PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase);
 
 let J = JSON.stringify;
 
 let Svc = {};
 Cu.import("resource://gre/modules/Services.jsm", Svc);
-/*
-function addRecallSearchEngine() {
-    console.log("adding search engine");
-    Svc.Services.search.addEngineWithDetails("RecallMonkey", TWITTER_ICON, "",
-      "", "GET",
-      "http://google.com/s={searchTerms}");
+
+/* add a keyword bookmark for quick access */
+function addBookmark() {
+  let bmsvc = Cc["@mozilla.org/browser/nav-bookmarks-service;1"]
+              .getService(Ci.nsINavBookmarksService);
+  let ios = Cc["@mozilla.org/network/io-service;1"]
+            .getService(Ci.nsIIOService);
+  let bid = bmsvc.insertBookmark(bmsvc.unfiledBookmarksFolder, 
+    ios.newURI("resource://recallmonkey-at-prospector-dot-labs-dot-mozilla-recallmonkey-data/dashboard.html?s=%s", null, null),
+    bmsvc.DEFAULT_INDEX,
+    "RecallMonkey Search"
+    );
+  bmsvc.setKeywordForBookmark(bid, "r");
+  ss.storage.bookmarkId = bid;
 }
-addRecallSearchEngine();
-*/
+
+/* create a keyword bookmark for quick access */
+if(!ss.storage.isBookmarked) {
+  addBookmark();
+  ss.storage.isBookmarked = true;
+}
+
+/* tags have a particular parent in the bookmark table, get it and save it */
+function setRowID() {
+  let me = this;
+  let result = utils.spinQuery(Places.PlacesUtils.history.DBConnection, {
+    "query" : "SELECT rowid FROM moz_bookmarks_roots WHERE root_name = 'tags';",
+    "params" : {},
+    "names" : ["rowid"],
+  });
+  if (result.length == 0)
+    throw "error: parent id for tags not found in moz_bookmarks_roots";
+
+  ss.storage.rowid = result[0]["rowid"];
+}
+
+/* */
+if (!ss.storage.rowid) {
+  setRowID();
+}
+
+/* open up a recallMonkey tab */
 function recall() {
   tabs.open({
     "url" : self.data.url("dashboard.html"),
   });
 }
 
+/* attach addon bar icon */
 widgets.Widget({
   id: "recall-monkey-launcher",
   label: "Launch Recall Monkey",
@@ -71,24 +112,21 @@ widgets.Widget({
 
 let sr = new searcher.search();
 
+/* attach a worker that listens to the content script for messages */
 let mod = pageMod.PageMod({
   include: "resource://recallmonkey-at-prospector-dot-labs-dot-mozilla-recallmonkey-data/*",
   contentScriptFile: self.data.url("monkey.js"),
   onAttach: function attached(worker) {
     worker.on("message", function(data) {
+      /* recieved a search request, the worker does the postMessage return */
       if (data.action == "search") {
-        let results = sr.search(data.params.query, data.params);
-        worker.postMessage({
-          "action" : "display",
-          "results": results,
-          "random" : data.random,
-          "append" : data.append,
-        })
+        sr.search(data.params.query, data.params, data,  worker);
       }
     });
   }
 });
 
+/* attach keyboard shortcut for RecallMonkey */
 var showHotKey = Hotkey({
   combo: "accel-shift-m",
   onPress: function() {
@@ -97,3 +135,13 @@ var showHotKey = Hotkey({
 });
 
 
+function handleUnload(reason) {
+  console.log(reason);
+  let bmsvc = Cc["@mozilla.org/browser/nav-bookmarks-service;1"]
+              .getService(Ci.nsINavBookmarksService);
+  let ios = Cc["@mozilla.org/network/io-service;1"]
+            .getService(Ci.nsIIOService);
+  let bid = ss.storage.bookmarkId;
+  bmsvc.removeItem(bid);
+}
+unload.when(handleUnload);
