@@ -246,6 +246,17 @@ function addAwesomeBarHD(window) {
   categoryBox.style.overflow = "hidden";
   categoryBox.style.pointerEvents = "none";
   
+  // Add an area to show complete category suggestion
+  let completePanel = createNode("hbox");
+  urlbarStack.appendChild(completePanel);
+
+  completePanel.setAttribute("flex", 1);
+  completePanel.setAttribute("pack", "end");
+  completePanel.setAttribute("collapsed", true);
+
+  completePanel.style.overflow = "hidden";
+  completePanel.style.pointerEvents = "none";
+
   //Helper function to convert url to name.
   function firstCapital(word) {
     if(word!= null)
@@ -1481,6 +1492,10 @@ function addAwesomeBarHD(window) {
     tabPanel.parentNode.removeChild(tabPanel);
   });
 
+  unload(function() {
+    completePanel.parentNode.removeChild(completePanel);
+  });
+
   // Create a local scope for various tabPanel specific nodes
   {
     let tabBox = createNode("hbox");
@@ -1589,6 +1604,73 @@ function addAwesomeBarHD(window) {
     unload(function() {
       filter.parentNode.removeChild(filter);
     });
+  }
+  // Create a local scope for Complete Category popup panel
+  {
+    let tabBox = createNode("hbox");
+    completePanel.appendChild(tabBox);
+
+    tabBox.setAttribute("align", "center");
+    tabBox.setAttribute("style", "border:solid 1px; -moz-border-left-colors:rgba(50,50,50,0.5);" 
+      + "-moz-border-bottom-colors:rgba(50,50,50,0); -moz-border-right-colors:rgba(50,50,50,0);"
+      + "-moz-border-top-colors:rgba(50,50,50,0);margin-top:-2px;");
+    tabBox.style.backgroundColor = "rgba(255,255,255,0)";
+    tabBox.style.margin = "-2px 0px";
+    tabBox.style.overflow = "hidden";
+
+    let textPress = createNode("label");
+    tabBox.appendChild(textPress);
+
+    textPress.setAttribute("value", "Press");
+    textPress.style.color = "#999";
+    textPress.style.margin = "0 3px 0 3px";
+
+    let textTab = createNode("label");
+    completePanel.textTab = textTab;
+    tabBox.appendChild(textTab);
+
+    textTab.style.backgroundImage = "-moz-linear-gradient(top, rgb(240, 240, 240), rgb(220, 220, 220))";
+    textTab.style.borderRadius = "2px";
+    textTab.style.margin = "0";
+    textTab.style.padding = "0 2px";
+
+    let textTo = createNode("label");
+    tabBox.appendChild(textTo);
+
+    textTo.setAttribute("value", "to ");
+
+    textTo.style.color = "#999";
+    textTo.style.margin = "0 0 0 3px";
+
+    let preUnder = createNode("label");
+    completePanel.preUnder = preUnder;
+    tabBox.appendChild(preUnder);
+
+    preUnder.style.color = "#999";
+    preUnder.style.margin = "0";
+
+    let postUnder = createNode("label");
+    completePanel.postUnder = postUnder;
+    tabBox.appendChild(postUnder);
+
+    postUnder.style.color = "#555";
+    postUnder.style.margin = "0";
+
+    let textAt = createNode("label");
+    tabBox.appendChild(textAt);
+
+    textAt.setAttribute("value", "at");
+
+    textAt.style.color = "#999";
+    textAt.style.margin = "0 3px";
+
+    let provider = createNode("label");
+    completePanel.provider = provider;
+    tabBox.appendChild(provider);
+
+    provider.style.color = "#666";
+    provider.style.borderRadius = "3px";
+    provider.style.padding = "0 2px";
   }
 
   // Catch various existing browser commands to redirect to the dashboard
