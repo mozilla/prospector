@@ -322,6 +322,65 @@ function addAwesomeBarHD(window) {
     }
   });
 
+
+  // Take pixel data for an image and find the dominant color
+  function processPixels(pixels) {
+    // Keep track of how many times a color appears in the image
+    let colorCount = {};
+    let dominantColor = "";
+    let maxCount = 0;
+
+    // Process each pixel one by one
+    pixels.forEach(function(data) {
+      // Round the color values to the closest multiple of 8
+      let [red, green, blue, alpha] = data.map(function(v) Math.round(v / 8) * 8);
+
+      // Ignore transparent pixels
+      if (alpha <= 40)
+        return;
+
+      // Ignore black-ish and white-ish
+      if (Math.max(red, green, blue) <= 40 || Math.min(red, green, blue) >= 216)
+        return;
+
+      // Increment or initialize the counter
+      let color = red + "," + green + "," + blue;
+      colorCount[color] = (colorCount[color] || 0) + 1;
+
+      // Keep track of the color that appears the most times
+      if (colorCount[color] > maxCount) {
+        maxCount = colorCount[color];
+        dominantColor = color;
+      }
+    });
+
+    // Break the color into rgb pieces
+    return dominantColor.split(",");
+  }
+
+  //// Compute the dominant color for a xhtml:img element
+  function getDominantColor(image) {
+    let canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+    let {height, width} = image;
+    if (height <= 0 || width <= 0 || !height || !width)
+      return "255,255,255";
+    canvas.height = height;
+    canvas.width = width;
+
+    let context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0);
+
+    // Get the rgba pixel values as 4 one-byte values
+    let {data} = context.getImageData(0, 0, height, width);
+
+    // Group each set of 4 bytes into pixels
+    let pixels = [];
+    for (let i = 0; i < data.length; i += 4)
+      pixels.push(Array.slice(data, i, i + 4));
+
+    return processPixels(pixels);
+  }
+
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryNode, index) {
     usage.activate++;
@@ -1476,6 +1535,83 @@ function addAwesomeBarHD(window) {
 
     // Show the panel just above the input near the cursor
     tabPanel.openPopup(iconBox, "before_start");
+  };
+
+  // Add an event listener to show or hide completePanel popup
+  listen(window, gURLBar.parentNode, "keypress", function() {
+    if (categoryBox.complete != null && categoryBox.complete != goCategory)
+      completePanel.showCompletedCategory();
+    else 
+      completePanel.collapsed = true;
+  }, false);
+  
+  // Open the panel showing what next category to tab to
+  completePanel.showCompletedCategory = function() {
+    let {textTab} = completePanel;
+    let {complete} = categoryBox;
+
+    if (complete != null && complete != goCategory) {
+      categoryBox.collapsed = true;
+      tabPanel.hidePopup();
+    }
+    else {
+      categoryBox.collapsed = !displayCategoryBox();
+      completePanel.collapsed = true;
+      return;
+    }
+
+    // Set the appropriate key to press
+    textTab.setAttribute("value", "Tab");
+
+    // Read out various state to specially highlight based on input
+    let {category, defaultIndex, providers} = complete.categoryData;
+    let {selectionStart, value} = hdInput;
+    let shortValue = value.slice(0, selectionStart);
+    let {length} = shortValue;
+
+    // Track various parts of the text to split in the panel
+    let splitParts = {
+      preUnder: "search for ",
+      postUnder: "",
+    }
+
+    splitParts.postUnder = category;
+
+    // Slightly change the wording for the search category
+    if (complete == searchCategory) {
+      splitParts.preUnder = "";
+      splitParts.postUnder += " the web";
+    }
+
+    // Set the words in the corresponding parts
+    for (let [part, text] in Iterator(splitParts))
+      completePanel[part].setAttribute("value", text);
+
+    // Update the provider information
+    if (completingIndex == null)
+      completingIndex = defaultIndex;
+    let {name} = providers[completingIndex];
+    completePanel.provider.setAttribute("value", name);
+
+    // Show the panel just above the input near the cursor
+    completePanel.collapsed = false;
+
+    let display = document.createElementNS("http://www.w3.org/1999/xhtml", "img");
+    display.setAttribute("src", complete.categoryData.providers[completingIndex].icon);
+    let color;
+
+    async( function() {
+      color = getDominantColor(display);
+      function rgb(a) "rgba(" + color + "," + a +")";
+      let gradient = ["top left", "farthest-corner", rgb(.2), rgb(.4)];
+
+      completePanel.provider.style.backgroundImage = "-moz-radial-gradient(" + gradient + ")";
+    });
+
+    async( function() {
+      categoryBox.collapsed = !displayCategoryBox();
+      completePanel.collapsed = true;
+      }, 10000);
   };
 
   // Maybe update the panel if the shift key is held
