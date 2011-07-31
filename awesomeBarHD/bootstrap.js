@@ -517,6 +517,11 @@ function addAwesomeBarHD(window) {
       });
     }
 
+    if (categoryBox.complete == null) {
+      completePanel.collapsed = true;
+      categoryBox.collapsed = false;
+    }
+
     let temp = categoryBox.active.nextSibling.nextSibling;
     // Prepare a next visible category and wrap if at the very end
     while (temp && temp.categoryData.hidden) {
@@ -645,8 +650,13 @@ function addAwesomeBarHD(window) {
     // Show the next category if focus is in the box
     if (focused && !likeUrl)
       tabPanel.showNextCategory();
-    else
+    else if (!categoryBox.complete && categoryBox.complete != goCategory)
       tabPanel.hidePopup();
+
+    if (categoryBox.complete != null && categoryBox.complete != goCategory)
+      completePanel.showCompletedCategory();
+    else
+      completePanel.collapsed = true;
 
     // Show the original identity box when inactive
     origIdentity.collapsed = doActive;
@@ -1035,6 +1045,8 @@ function addAwesomeBarHD(window) {
   hdInput.addEventListener("input", function() {
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
+      categoryBox.complete = null;
+      completePanel.showCompletedCategory();
       deleting = false;
       return;
     }
@@ -1466,6 +1478,11 @@ function addAwesomeBarHD(window) {
 
   // Open the panel showing what next category to tab to
   tabPanel.showNextCategory = function() {
+
+    // Do nothing if complete category suggestion is shown
+    if (completePanel.collapsed == false)
+      return;
+
     // Show the previous category if going backwards
     let {shifted, textTab} = tabPanel;
     let {next, prev} = categoryBox;
