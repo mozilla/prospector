@@ -54,6 +54,19 @@ let usage;
 // Keep track whether delete or backspace was pressed
 let deleting = false;
 
+// Keep track of what was there in the urlBar before Tab press
+let textBeforeTabPress = "";
+
+// Keep track of the ative category
+let activeCategory = "null";
+let activeCategoryList = ["null"];
+
+// Keep track of te original style for Identity Box
+let goCategoryStyle = null;
+
+// Track the completing index for a category
+let completingIndex = null;
+
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
   Cu.import("resource://services-sync/ext/Preferences.js");
@@ -82,7 +95,25 @@ function addAwesomeBarHD(window) {
 
   let providerIcon = createNode("image");
   providerIcon.setAttribute("id", "page-proxy-favicon");
+  providerIcon.setAttribute("style","margin:0px 4px 0px 4px;padding:0px;");
+
+  let identityLabel = createNode("label");
+  identityLabel.setAttribute("id","identity-icon-label");
+  identityLabel.setAttribute("collapsed",true);
+  identityLabel.setAttribute("flex",1);
+  identityLabel.setAttribute("style","padding:0px 2px 0px 0px;margin:0px;"
+    + "color:rgb(40,40,40);");
+
+  let identityCountryLabel = createNode("label");  
+  identityCountryLabel.setAttribute("id","identity-icon-country-label");
+  identityCountryLabel.setAttribute("collapsed",true);
+  identityCountryLabel.setAttribute("flex",1);
+  identityCountryLabel.setAttribute("style","padding:0px 2px 0px 2px;"
+    + "margin:0px;color:rgb(40,40,40);");
+
   iconBox.appendChild(providerIcon);
+  iconBox.appendChild(identityLabel);
+  iconBox.appendChild(identityCountryLabel);
 
   // Show providers at the icon if something is active
   providerIcon.handleMouse = function() {
@@ -94,6 +125,12 @@ function addAwesomeBarHD(window) {
 
   providerIcon.addEventListener("click", providerIcon.handleMouse, false);
   providerIcon.addEventListener("mouseover", providerIcon.handleMouse, false);
+
+  identityLabel.addEventListener("click", function() {},false);
+  identityLabel.addEventListener("mouseover", function() {},false);
+
+  identityCountryLabel.addEventListener("click", function() {},false);
+  identityCountryLabel.addEventListener("mouseover", function() {},false);
 
   // Add stuff around the original urlbar input box
   let urlbarStack = createNode("stack");
@@ -169,6 +206,11 @@ function addAwesomeBarHD(window) {
   prefetcher.persistTo = function(targetTab) {
     let targetBrowser = targetTab.linkedBrowser;
     targetBrowser.stop();
+
+    // Updating the category of the targetTab and the current tab
+    activeCategoryList[targetTab._tPos] = activeCategoryList[gBrowser.selectedTab._tPos];
+    if (targetTab._tPos != gBrowser.selectedTab._tPos)
+      activeCategoryList[gBrowser.selectedTab._tPos] = "null";
 
     // Unhook our progress listener
     let selectedIndex = targetTab._tPos;
@@ -267,6 +309,63 @@ function addAwesomeBarHD(window) {
   
   function makeWord(url) {
     return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"").split(".")[0]);    
+  }
+
+  function updateLabel() {
+    let {active} = categoryBox;
+
+    if (active == null || active == goCategory) {
+      identityLabel.collapsed = true;
+      identityCountryLabel.collapsed = true;
+      identityCountryLabel.value=identityLabel.value="";
+      return;
+    }
+
+    let {defaultIndex, providers, keyword} = active.categoryData;
+    identityLabel.collapsed = false;
+    identityCountryLabel.collapsed = false;
+
+    keyword = keyword.replace(":","").trim();
+    if (keyword == "search")
+      keyword = firstCapital(keyword)+" the web at";
+    else
+      keyword = "Search " + keyword + " at";
+    identityLabel.value = keyword;
+
+    let {name} = providers[defaultIndex];
+    identityCountryLabel.value = makeWord(name);
+  }
+
+  function updateIconColor() {
+    let {active} = categoryBox;
+
+    if (active == null || active == goCategory) {
+      if (goCategoryStyle != null)
+        iconBox.setAttribute("style",goCategoryStyle);
+      else
+        goCategoryStyle = iconBox.style;
+
+      return;
+    }
+
+    let display = document.createElementNS("http://www.w3.org/1999/xhtml", "img");
+    display.setAttribute("src", active.categoryData.providers[active.categoryData.defaultIndex].icon);
+    async(function() {
+      let {active} = categoryBox;
+      if (active == null || active == goCategory) {
+        if (goCategoryStyle != null)
+          iconBox.setAttribute("style",goCategoryStyle);
+        else
+          goCategoryStyle = iconBox.style;
+        return;
+      }
+      let color;
+      color = getDominantColor(display);
+      function rgb(a) "rgba(" + color + "," + a +")";
+      let gradient = ["top left", "farthest-corner", rgb(.3), rgb(.5)];
+
+      iconBox.setAttribute("style","background:-moz-radial-gradient(" + gradient + ")");
+    });
   }
   
   //Figure out if the current input text is activating any provider of category.
