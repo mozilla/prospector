@@ -124,11 +124,19 @@ function makeOneLine(window) {
   }, false);
 
   // Move the navigation controls to the tabs bar
-  tabsBar.insertBefore(search, tabsBar.firstChild);
-  tabsBar.insertBefore(stop, search);
-  tabsBar.insertBefore(reload, stop);
-  tabsBar.insertBefore(urlContainer, reload);
-  tabsBar.insertBefore(backForward, urlContainer);
+  let navOrder = [backForward, urlContainer, reload, stop, search];
+  navOrder.reverse().forEach(function(node) {
+    if (node != null)
+      tabsBar.insertBefore(node, tabsBar.firstChild);
+  });
+
+  // Create a dummy backForward object if we don't have the node
+  backForward = backForward || {
+    boxObject: {
+      width: 0,
+    },
+    style: {},
+  };
 
   // Fix up some styling of the now one-line toolbar
   navBar.collapsed = true;
