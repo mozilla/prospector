@@ -139,7 +139,7 @@ function makeOneLine(window) {
   };
 
   // Fix up some styling of the now one-line toolbar
-  navBar.collapsed = true;
+  navBar.hidden = true;
   urlContainer.removeAttribute("flex");
   urlContainer.style.position = "relative";
 
@@ -149,7 +149,7 @@ function makeOneLine(window) {
     origNav.forEach(function(node) navBar.appendChild(node));
 
     backForward.style.marginRight = "";
-    navBar.collapsed = false;
+    navBar.hidden = false;
     urlContainer.removeAttribute("width");
     urlContainer.setAttribute("flex", 400);
     urlContainer.style.position = "";
