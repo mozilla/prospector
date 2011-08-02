@@ -64,6 +64,9 @@ function makeOneLine(window) {
      "Browser:Back", "Browser:Forward",
     ].map(function(id) document.getElementById(id));
 
+  // Save the order of elements in the navigation bar to restore later
+  let origNav = Array.slice(navBar.childNodes);
+
   // Create a new search button that can prefill the search input box
   let search = createNode("toolbarbutton");
   search.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
@@ -135,10 +138,7 @@ function makeOneLine(window) {
   // Clean up various changes when the add-on unloads
   unload(function() {
     tabsBar.removeChild(search);
-    navBar.insertBefore(stop, navBar.firstChild);
-    navBar.insertBefore(reload, stop);
-    navBar.insertBefore(urlContainer, reload);
-    navBar.insertBefore(backForward, urlContainer);
+    origNav.forEach(function(node) navBar.appendChild(node));
 
     backForward.style.marginRight = "";
     navBar.collapsed = false;
