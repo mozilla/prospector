@@ -141,6 +141,7 @@ function makeOneLine(window) {
   // Fix up some styling of the now one-line toolbar
   navBar.hidden = true;
   urlContainer.removeAttribute("flex");
+  urlContainer.removeAttribute("width");
   urlContainer.style.position = "relative";
 
   // Clean up various changes when the add-on unloads
