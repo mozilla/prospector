@@ -50,7 +50,7 @@ const URLBAR_WIDTH = 400;
 
 // Combine the navigation and tabs into one line
 function makeOneLine(window) {
-  let {change, createNode, listen, unload} = makeWindowHelpers(window);
+  let {async, change, createNode, listen, unload} = makeWindowHelpers(window);
   let {document, gBrowser, gURLBar} = window;
 
   // Get aliases to various elements
@@ -194,6 +194,18 @@ function makeOneLine(window) {
   // Make sure we set the right size of the urlbar on blur or focus
   listen(gURLBar, "blur", function() updateBackForward());
   listen(gURLBar, "focus", function() updateBackForward());
+
+  // Detect escaping from the location bar when nothing changes
+  listen(gURLBar, "keydown", function(event) {
+    if (event.keyCode == event.DOM_VK_ESCAPE) {
+      let {popupOpen, value} = gURLBar;
+      async(function() {
+        // Only return focus to the page if nothing changed since escaping
+        if (gURLBar.popupOpen == popupOpen && gURLBar.value == value)
+          gBrowser.selectedBrowser.focus();
+      });
+    }
+  });
 }
 
 /**
