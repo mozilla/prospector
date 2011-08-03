@@ -1,0 +1,7 @@
+@-moz-document url-prefix("chrome://browser/content/browser.xul") {
+
+.tabbrowser-tab:not([pinned]) {
+  min-width: 40px !important;
+}
+
+}

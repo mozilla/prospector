@@ -223,6 +223,9 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
     images[fileName] = addon.getResourceURI("images/" + fileName + ".png").spec;
   });
 
+  // Load various stylesheets that automatically unload
+  loadStyles(addon, ["browser"]);
+
   // Move the navigation bar into the tabs bar
   watchWindows(function(window) {
     let {async} = makeWindowHelpers(window);
