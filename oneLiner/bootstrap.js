@@ -165,7 +165,8 @@ function makeOneLine(window) {
       buttons = 1;
 
     // Cover up some buttons by shifting the urlbar left
-    let width = URLBAR_WIDTH - buttonWidth * buttons;
+    let baseWidth = (gURLBar.focused ? 2 : 1) * URLBAR_WIDTH;
+    let width = baseWidth - buttonWidth * buttons;
     let offset = -buttonWidth * (2 - buttons);
     urlContainer.setAttribute("width", width);
     backForward.style.marginRight = offset + "px";
@@ -189,6 +190,10 @@ function makeOneLine(window) {
       search.doCommand();
     }
   });
+
+  // Make sure we set the right size of the urlbar on blur or focus
+  listen(gURLBar, "blur", function() updateBackForward());
+  listen(gURLBar, "focus", function() updateBackForward());
 }
 
 /**
