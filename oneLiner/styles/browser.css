@@ -1,5 +1,17 @@
 @-moz-document url-prefix("chrome://browser/content/browser.xul") {
 
+#unified-back-forward-button {
+  -moz-transition-property: margin-right;
+  -moz-transition-duration: 100ms;
+  -moz-transition-timing-function: ease-out;
+}
+
+#urlbar-container {
+  -moz-transition-property: width;
+  -moz-transition-duration: 100ms;
+  -moz-transition-timing-function: ease-out;
+}
+
 .tabbrowser-tab:not([pinned]) {
   min-width: 40px !important;
 }

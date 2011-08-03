@@ -150,9 +150,9 @@ function makeOneLine(window) {
 
     backForward.style.marginRight = "";
     navBar.hidden = false;
-    urlContainer.removeAttribute("width");
     urlContainer.setAttribute("flex", 400);
     urlContainer.style.position = "";
+    urlContainer.style.width = "";
   });
 
   // Figure out how much the back/forward button should get covered by urls
@@ -168,8 +168,8 @@ function makeOneLine(window) {
     let baseWidth = (gURLBar.focused ? 2 : 1) * URLBAR_WIDTH;
     let width = baseWidth - buttonWidth * buttons;
     let offset = -buttonWidth * (2 - buttons);
-    urlContainer.setAttribute("width", width);
     backForward.style.marginRight = offset + "px";
+    urlContainer.style.width = width + "px";
   }
 
   // Update the look immediately when activating
