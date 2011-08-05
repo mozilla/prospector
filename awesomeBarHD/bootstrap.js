@@ -1252,58 +1252,58 @@ function addAwesomeBarHD(window) {
   }, false);
 
   // Watch for inputs to handle from keyboard and from other add-ons
+  var hdListener =
+  {
+    QueryInterface: function(aIID) {
+      if (aIID.equals(Components.interfaces.nsIWebProgressListener) ||
+        aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
+        aIID.equals(Components.interfaces.nsISupports))
+        return this;
+      throw Components.results.NS_NOINTERFACE;
+    },
 
+    onLocationChange: function(aProgress, aRequest, aURI) {
+      // Copy over the new value and selection if it changed
+      gURLBar.onchange();
+    }
+  };
+  gBrowser.addTabsProgressListener(hdListener);
+  unload( function() {
+    gBrowser.removeTabsProgressListener(hdListener);
+  }); 
 
+  gURLBar.onchange = function() {
+    // Copy over the new value and selection if it changed and if not searching
+    if (activeCategory != null && activeCategory != "null" 
+      && !categoryBox.active && categoryBox.active != goCategory)
+      return;
 
+    async(function() {
+      categoryBox.updateLook();
 
+      // Strip off wyciwyg and passwords
+      let uri = getURI();
+      try {
+        uri = window.XULBrowserWindow._uriFixup.createExposableURI(uri);
+      }
+      catch(ex) {}
 
+      // Break the url down into differently-styled parts 
+      let url = window.losslessDecodeURI(uri);
+      if (gURLBar.value.match(/^([^:]*:\/*)/) != null)
+        url = gURLBar.value.match(/^([^:]*:\/*)/)[1];
+      url = url.match(/^([^:]*:\/*)/)[1] + gURLBar.value.replace(/^([^:]*:\/\/)/,"");
+      if (url == "about:blank")
+        return;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      let match = url.match(/^([^:]*:\/*)([^\/]*)(.*)$/);
+      let urlParts = match == null ? ["", "", url] : match.slice(1);
+      origInput.HDlastValue = url;
+      preDomain.setAttribute("value", urlParts[0]);
+      domainText.setAttribute("value", urlParts[1]);
+      postDomain.setAttribute("value", urlParts[2]);
+    });
+  };
 
   hdInput.addEventListener("input", function() {
     // Don't try suggesting a keyword when the user wants to delete
@@ -1440,10 +1440,6 @@ function addAwesomeBarHD(window) {
     // Let ctrl-tab do the usual tab switching
     if (event.ctrlKey)
       return;
-
-
-
-
 
     // Only allow switching when the query isn't highlighted
     function canSwitch() {
