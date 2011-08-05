@@ -1200,16 +1200,16 @@ function addAwesomeBarHD(window) {
     });
 
     // If we have a visible last separator, make it a period
+    let temp = categoryBox.lastChild.previousSibling;
+    while (temp.categoryData.hidden && temp != goCategory) {
+      temp = temp.previousSibling.previousSibling;
+    }
+    let {showIcon} = temp.categoryData;
 
-
-
-
-
-
-    if (lastSeparator != null)
+    if (lastSeparator != null && !showIcon)
       lastSeparator.setAttribute("value", ".");
-
-
+    else if (lastSeparator != null)
+      lastSeparator.setAttribute("value", "");
   }
   fixSeparators();
 
