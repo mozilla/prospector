@@ -176,8 +176,8 @@ function addAwesomeBarHD(window) {
 
     // Strip off the keyword based on the current active category
     let {value} = hdInput;
-
-
+    if (value.length < 1)
+      return;
     if (categoryBox.active != goCategory) {
       value = encodeURIComponent(value.replace(/^[^:]*:\s*/, ""));
       value = value.replace(/%20/g, spaceChar);
@@ -194,8 +194,6 @@ function addAwesomeBarHD(window) {
         prefetcher.lastUrl = url;
       }
     }
-
-    return url;
   };
 
   // Only prefetch if currently prefetching
