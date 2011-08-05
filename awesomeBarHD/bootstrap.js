@@ -176,6 +176,8 @@ function addAwesomeBarHD(window) {
 
     // Strip off the keyword based on the current active category
     let {value} = hdInput;
+
+
     if (categoryBox.active != goCategory) {
       value = encodeURIComponent(value.replace(/^[^:]*:\s*/, ""));
       value = value.replace(/%20/g, spaceChar);
@@ -287,7 +289,7 @@ function addAwesomeBarHD(window) {
   categoryBox.style.cursor = "text";
   categoryBox.style.overflow = "hidden";
   categoryBox.style.pointerEvents = "none";
-  
+
   // Add an area to show complete category suggestion
   let completePanel = createNode("hbox");
   urlbarStack.appendChild(completePanel);
@@ -309,6 +311,7 @@ function addAwesomeBarHD(window) {
   
   function makeWord(url) {
     return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"").split(".")[0]);    
+
   }
 
   function updateLabel() {
@@ -344,7 +347,6 @@ function addAwesomeBarHD(window) {
         iconBox.setAttribute("style",goCategoryStyle);
       else
         goCategoryStyle = iconBox.style;
-
       return;
     }
 
@@ -367,60 +369,66 @@ function addAwesomeBarHD(window) {
       iconBox.setAttribute("style","background:-moz-radial-gradient(" + gradient + ")");
     });
   }
-  
-  //Figure out if the current input text is activating any provider of category.
-  function checkInputForProviders(label,shortValue) {
-    let {categoryData} = label;
-    let {providers} = categoryData;
-	
-    for(let i=0;i<providers.length;i++){
-      let {url, name} = providers[i];
-      if (shortValue == makeWord(url).toLowerCase().slice(0,shortValue.length) || shortValue ==  makeWord(name).toLowerCase().slice(0,shortValue.length))
-        return i;
-    }
-    return -1;
-  } 
 
   //Show category suggestion as we type
   function suggestCategory() {
     let {complete} = categoryBox;
-	
-    if(complete == null)
+
+    if (complete == null || complete == goCategory)
       return;
-	
-    let {providers, defaultIndex, keyword} = complete.categoryData;
-    let {value, selectionStart} = hdInput;
-    let {url, name} = providers[defaultIndex];
-	
-    if(keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
-      hdInput.value = keyword;	  
-      hdInput.setSelectionRange(selectionStart, keyword.length);	
+
+    let {providers, keyword, defaultIndex} = complete.categoryData;
+    let {value, selectionStart, selectionEnd} = hdInput;
+    if (completingIndex == null)
+      completingIndex = defaultIndex;
+    let {url, name} = providers[completingIndex];
+
+    // If curesor at middle of input, compare for the whole input.
+    if (selectionStart == selectionEnd && selectionEnd < value.length)
+      return;
+
+    if (keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
+      hdInput.value = keyword;
+      hdInput.setSelectionRange(selectionStart, keyword.length);
     }
-    else if(makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
-      hdInput.value = makeWord(url).toLowerCase();	  
+    else if (makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
+      hdInput.value = makeWord(url).toLowerCase();
       hdInput.setSelectionRange(selectionStart, makeWord(url).length);
     }
     else {
-      hdInput.value = makeWord(name).toLowerCase();	  
-      hdInput.setSelectionRange(selectionStart, makeWord(name).length);
+      hdInput.value = name.toLowerCase();
+      hdInput.setSelectionRange(selectionStart, name.length);
     }
 
     //Reflect the hdInput value back to gURLBar
     let {value, selectionStart, selectionEnd} = hdInput;
-    origInput.value= value;
+    origInput.value = value;
     origInput.setSelectionRange(selectionStart,selectionEnd);
   }
-  
+
   // Look for deletes to handle them better on input
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
-      case event.DOM_VK_BACK_SPACE:		
+      case event.DOM_VK_BACK_SPACE:
+        let {value} = hdInput;
+        if (value.length == 0 && categoryBox.active != goCategory && categoryBox.active != null) {
+          categoryBox.activate(goCategory);
+          hdInput.value = textBeforeTabPress;
+          event.preventDefault();
+
+          if (textBeforeTabPress != "")
+            async(function() {
+              if (textBeforeTabPress.length > 0) {
+                gURLBar.controller.startSearch(textBeforeTabPress);
+                gURLBar.popup.selectedIndex = 0;
+              }
+            },100);
+        }
       case event.DOM_VK_DELETE:
         deleting = true;
         break;
     }
   });
-
 
   // Take pixel data for an image and find the dominant color
   function processPixels(pixels) {
@@ -491,33 +499,52 @@ function addAwesomeBarHD(window) {
 
     // Remove any active query terms when activating another
     let query = value;
-    if (categoryBox.active != goCategory)
+    if (categoryBox.active != null && categoryBox.active != goCategory)
       query = query.replace(/^[^:]*:\s*/, "");
 
+    // Remember the urlBar value before changing the category from goCatgory
+    let {complete, active} = categoryBox;
+    if ((active == null || active == goCategory) && complete != null )
+      textBeforeTabPress = hdInput.value.slice(0, selectionStart);
+
     // Remove the short keyword from the query on tab complete
-    let {category, keyword} = categoryNode.categoryData;
+    let {category, keyword} = categoryNode.categoryData;    
     let shortKeyword = keyword.slice(0, selectionStart);
     let shortQuery = query.slice(0, selectionStart);
-    if (shortKeyword != "" && shortQuery == shortKeyword) {
+    if ((shortKeyword != "" && shortQuery == shortKeyword)) {
       query = query.slice(selectionEnd);
       sendEvent("complete", category);
     }
 
-    // Update the text with the active keyword
-    hdInput.value = keyword;	
-    
-    let {complete} = categoryBox;    
-    //If we were not completing to a category, then add the query also.
-    if (complete == null) {
-      hdInput.value+=query;
-      // Highlight the completed keyword if there's a query
-      let {length} = keyword;
-      hdInput.setSelectionRange(query == "" ? length : 0, length);
-    }
+    // Update the text with the remaining query
+    let {complete} = categoryBox;
+    if (complete == null)
+      hdInput.value=query
+    else
+      hdInput.value = "";
 
+    origInput.HDlastValue = hdInput.value;
     // Switch to a particular provider if necessary
     if (index != null)
       categoryNode.setIndex(index);
+
+    // Update the activeCategory Label for future reference
+    if (categoryNode != goCategory)
+      activeCategory = keyword;
+    else {
+      activeCategory = "null";
+      exitCategory.hidePopup();
+    }
+    checkCategoryPerTab();
+
+    // If active category is goCategory, tell the user about backspacing out of the category changed to
+    if (categoryBox.active == null || categoryBox.active == goCategory && hdInput.value == "")
+      exitCategory.showPanel();
+
+    // Reflect back the hdInput values back to gURLBar
+    let {value, selectionStart, selectionEnd} = hdInput;
+    origInput.value = value;
+    origInput.setSelectionRange(selectionStart, selectionEnd);
 
     // Update the autocomplete results now that we've activated
     categoryBox.processInput();
@@ -588,11 +615,11 @@ function addAwesomeBarHD(window) {
     // Try finding a category to complete
     let {active} = categoryBox;
     categoryBox.complete = null;
-
     // See if there's any potential category to complete with tab
-    let {selectionStart, value} = hdInput;
-    let shortValue = value.slice(0, selectionStart);
+    let {selectionStart, selectionEnd, value} = hdInput;
+    let shortValue = value.slice(0, (selectionStart == selectionEnd && selectionEnd < value.length) ? value.length : selectionStart);
     let {length} = shortValue;
+
     if (length > 0 && active == goCategory) {
       Array.some(categoryBox.childNodes, function(label) {
         // Skip non-categories and the current active
@@ -600,19 +627,20 @@ function addAwesomeBarHD(window) {
         if (categoryData == null || label == active || categoryData.hidden == true)
           return;
 
-        let {keyword} = categoryData;
+        let {keyword, defaultIndex} = categoryData;
         if (keyword == "")
           return;
         if (shortValue == keyword.slice(0, length)) {
           categoryBox.complete = label;
+          completingIndex = defaultIndex;
           return true;
         }
         let index = checkInputForProviders(label,shortValue);
-	if (index >= 0) {          
-	  categoryBox.complete = label;
-	  categoryBox.complete.categoryData.defaultIndex = index;		  
-	  return true;
-	}
+        if (index >= 0) {
+          categoryBox.complete = label;
+          completingIndex = index;
+          return true;
+        }
       });
     }
 
@@ -640,14 +668,82 @@ function addAwesomeBarHD(window) {
     categoryBox.prev = temp;
   };
 
+  //Figure out if the current input text is activating any provider of category.
+  function checkInputForProviders(label,shortValue) {
+    let {providers} = label.categoryData;
+
+    for (let i=0; i<providers.length; i++){
+      let {url, name} = providers[i];
+      if (shortValue == makeWord(url).toLowerCase().slice(0,shortValue.length)
+        || shortValue == makeWord(name).toLowerCase().slice(0,shortValue.length))
+          return i;
+    }
+    return -1;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // Figure out if the current input text is activating a category
   categoryBox.processInput = function() {
     // Figure out what's the active category based on the input
-    let {value} = hdInput;
-    let inputParts = value.match(/^([^:]*):\s*(.*?)$/);
+    let {value, selectionStart} = hdInput;
+    activeCategory = activeCategoryList[gBrowser.selectedTab._tPos];
+
+    let inputParts = value.match(/^([^:]*):\s*(.*?)$/) || activeCategory.match(/^([^:]*):\s*(.*?)$/);
     categoryBox.active = goCategory;
     if (inputParts != null) {
       let inputKeyword = inputParts[1];
+
       Array.some(categoryBox.childNodes, function(label) {
         let {categoryData} = label;
         if (categoryData == null || categoryData.hidden == true)
@@ -655,16 +751,34 @@ function addAwesomeBarHD(window) {
         let {keyword} = categoryData;
         if (keyword == "")
           return;
+
         if (inputKeyword == keyword.slice(0, inputKeyword.length)) {
           categoryBox.active = label;
+
+          if (activeCategory == "null") 
+            textBeforeTabPress = inputKeyword.slice(0, selectionStart);
+          if (hdInput.value.search(":") > -1)
+            hdInput.value = hdInput.value.replace(/.+:/,"");
+
+          activeCategory = inputKeyword + ": ";
+          checkCategoryPerTab();
           return true;
         }
+
         let index = checkInputForProviders(label,inputKeyword);
-	if (index >= 0) {          
-	  categoryBox.active = label;
-	  categoryBox.active.categoryData.defaultIndex = index;		  
-	  return true;
-	}
+        if (index >= 0) {
+          categoryBox.active = label;
+          categoryBox.active.categoryData.defaultIndex = index;
+
+          if (activeCategory == "null")
+            textBeforeTabPress = inputKeyword.slice(0, selectionStart);
+          if (hdInput.value.search(":") > -1)
+            hdInput.value = hdInput.value.replace(/.+:/,"");
+
+          activeCategory = inputKeyword + ": ";
+          checkCategoryPerTab();
+          return true;
+        }
       });
     }
 
@@ -674,7 +788,7 @@ function addAwesomeBarHD(window) {
 
     // Convert the input into a url for the location bar and prefetch
     let {active} = categoryBox;
-    gURLBar.value = prefetcher.load(active);
+    prefetcher.load(active);
 
     // Only show results for going to a history page
     gURLBar.popup.collapsed = active != goCategory;
@@ -734,9 +848,15 @@ function addAwesomeBarHD(window) {
         color = "#00f";
         line = true;
       }
+
       style.color = color;
       style.textDecoration = line && categoryData != null ? "underline" : "";
     });
+
+    // Updating the text in the labels
+    updateLabel();
+    // Change the color of iconBox
+    updateIconColor();
 
     // Hide the url parts if it's about:blank or active
     let isBlank = getURI().spec == "about:blank";
@@ -1096,8 +1216,16 @@ function addAwesomeBarHD(window) {
     });
 
     // If we have a visible last separator, make it a period
+
+
+
+
+
+
     if (lastSeparator != null)
       lastSeparator.setAttribute("value", ".");
+
+
   }
   fixSeparators();
 
@@ -1137,10 +1265,64 @@ function addAwesomeBarHD(window) {
 
   hdInput.addEventListener("focus", function() {
     gURLBar.setAttribute("focused", true);
+
     categoryBox.processInput();
   }, false);
 
   // Watch for inputs to handle from keyboard and from other add-ons
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   hdInput.addEventListener("input", function() {
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
@@ -1152,9 +1334,14 @@ function addAwesomeBarHD(window) {
     // Copy over the new value and selection if it changed while not searching
     let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
     if (HDlastValue != value) {
-      hdInput.value = value;
+      origInput.HDlastValue = hdInput.value = value;
       hdInput.setSelectionRange(selectionStart, selectionEnd);
     }
+
+    // If use enters some text ater category change , clear out textBeforeTabPress
+    if (hdInput.value.length > 0)
+      textBeforeTabPress = "";
+
     categoryBox.processInput();
     suggestCategory();
   }, false);
@@ -1167,14 +1354,20 @@ function addAwesomeBarHD(window) {
     // Keep the focus in the input box instead of blurring
     event.preventDefault();
 
-    // Return focus to the browser if already empty
-    if (hdInput.value == "")
-      gBrowser.selectedBrowser.focus();
-    // Empty out the input on first escape
-    else {
-      hdInput.value = "";
-      categoryBox.processInput();
+    // Hide the results popup if it is visible
+    if (!gURLBar.popup.collapsed && gURLBar.popup.selectedIndex != -1) {
+      gURLBar.popup.selectedIndex = -1;
+      gURLBar.popup.collapsed = true;
     }
+    // Return focus to the browser if already empty and make active category null
+    else if (hdInput.value == "") {
+      activeCategory = "null";
+      categoryBox.processInput();
+      gBrowser.selectedBrowser.focus();
+    }
+    // Empty out the input on the escape when Results popup is nt viible
+    else
+      textBeforeTabPress = origInput.value = hdInput.value = "";
   }, false);
 
   // Detect cursor movements to auto-select the keyword
@@ -1296,6 +1489,7 @@ function addAwesomeBarHD(window) {
     // Let ctrl-tab do the usual tab switching
     if (event.ctrlKey)
       return;
+
     
     event.preventDefault();
     event.stopPropagation();
@@ -1337,6 +1531,12 @@ function addAwesomeBarHD(window) {
       usage.tabNext++;
       categoryBox.activate(next);	  
     }
+
+
+
+
+
+
   });
 
   // Activate the go category when dismissing the autocomplete results
@@ -1564,6 +1764,13 @@ function addAwesomeBarHD(window) {
 
   tabPanel.style.MozWindowShadow = "none";
 
+
+
+
+
+
+
+
   // Change display when shift is pressed
   tabPanel.onKey = function(event) {
     if (event.keyCode != event.DOM_VK_SHIFT)
@@ -1651,6 +1858,9 @@ function addAwesomeBarHD(window) {
 
     // Show the panel just above the input near the cursor
     tabPanel.openPopup(iconBox, "before_start");
+
+    // Hide the panel after 5 seconds
+    async(function() tabPanel.hidePopup(), 5000);
   };
 
   // Add an event listener to show or hide completePanel popup
@@ -1659,6 +1869,13 @@ function addAwesomeBarHD(window) {
       completePanel.showCompletedCategory();
     else 
       completePanel.collapsed = true;
+
+
+
+
+
+
+
   }, false);
   
   // Open the panel showing what next category to tab to
@@ -1730,6 +1947,24 @@ function addAwesomeBarHD(window) {
       }, 10000);
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // Maybe update the panel if the shift key is held
   hdInput.addEventListener("keydown", tabPanel.onKey, true);
   hdInput.addEventListener("keyup", tabPanel.onKey, true);
@@ -1747,6 +1982,9 @@ function addAwesomeBarHD(window) {
   unload(function() {
     completePanel.parentNode.removeChild(completePanel);
   });
+
+
+
 
   // Create a local scope for various tabPanel specific nodes
   {
@@ -1924,6 +2162,25 @@ function addAwesomeBarHD(window) {
     provider.style.borderRadius = "3px";
     provider.style.padding = "0 2px";
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // Catch various existing browser commands to redirect to the dashboard
   let commandSet = document.getElementById("mainCommandSet");
@@ -2140,6 +2397,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Combine location and search!
   watchWindows(addAwesomeBarHD);
+
 })
 
 
