@@ -667,57 +667,57 @@ function addAwesomeBarHD(window) {
     return -1;
   }
 
+  gBrowser.mTabContainer.addEventListener("TabOpen", function(event) {
+    let leftArray = activeCategoryList.slice(0, event.target._tPos);
+    activeCategory = (event.target._tPos == gBrowser.selectedTab._tPos) ? 
+      "null" : activeCategory;
+    activeCategoryList = leftArray.concat("null", activeCategoryList.slice(event.target._tPos));
+    // Display the corrent url of the new page.
+    window.URLBarSetURI();
+  }, false);
 
+  gBrowser.mTabContainer.addEventListener("TabClose", function(event) {
+    async(function() {
+      activeCategory = activeCategoryList[gBrowser.selectedTab._tPos];
+      categoryBox.processInput();
+      activeCategoryList.splice(event.target._tPos, 1);
+    },100);
+  }, false);
 
+  // Function to update the activeCategoryList for each tab
+  // based on activeCategory and the selected tab
+  function checkCategoryPerTab() {
+    let {length} = activeCategoryList;
 
+    if (length < gBrowser.selectedTab._tPos) {
+      while (length <= gBrowser.selectedTab._tPos) {
+        activeCategoryList.push("null");
+        length = activeCategoryList.length;
+      }
+    }
+    else {
+      if (activeCategoryList[gBrowser.selectedTab._tPos] == null)
+        activeCategory = activeCategoryList[gBrowser.selectedTab._tPos] = "null";
+      else
+        activeCategoryList[gBrowser.selectedTab._tPos] = activeCategory;
+    }
+  }
 
+  // Function to decide whether to show the category box or not
+  function displayCategoryBox() {
+    // Check if the input looks like a url
+    let {value} = hdInput;
+    let likeUrl = value.indexOf(" ") == -1 && value.indexOf("/") != -1;
 
+    let focused = gURLBar.hasAttribute("focused");
+    let doActive = focused || value != "";
 
+    // Hide the url parts if it's about:blank or active
+    let isBlank = getURI().spec == "about:blank";
+    let hideUrl = isBlank || doActive;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return !(likeUrl || !hideUrl);
+  }
 
   // Figure out if the current input text is activating a category
   categoryBox.processInput = function() {
@@ -1247,7 +1247,7 @@ function addAwesomeBarHD(window) {
 
   hdInput.addEventListener("focus", function() {
     gURLBar.setAttribute("focused", true);
-
+    checkCategoryPerTab();
     categoryBox.processInput();
   }, false);
 
@@ -1826,7 +1826,6 @@ function addAwesomeBarHD(window) {
       if (categoryBox.active != null && categoryBox.active != goCategory)
         exitCategory.showPanel();
     });
-
   }, false);
   
   // Open the panel showing what next category to tab to
