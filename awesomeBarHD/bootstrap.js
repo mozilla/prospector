@@ -1715,12 +1715,12 @@ function addAwesomeBarHD(window) {
 
   tabPanel.style.MozWindowShadow = "none";
 
+  // Creating a popup to tell user that he can backspace to exit that category
+  let exitCategory = createNode("panel");
+  document.getElementById("mainPopupSet").appendChild(exitCategory);
+  exitCategory.setAttribute("noautofocus", true);
 
-
-
-
-
-
+  exitCategory.style.MozWindowShadow = "none";
 
   // Change display when shift is pressed
   tabPanel.onKey = function(event) {
@@ -1934,8 +1934,9 @@ function addAwesomeBarHD(window) {
     completePanel.parentNode.removeChild(completePanel);
   });
 
-
-
+  unload(function() {
+    exitCategory.parentNode.removeChild(exitCategory);
+  });
 
   // Create a local scope for various tabPanel specific nodes
   {
@@ -2113,26 +2114,26 @@ function addAwesomeBarHD(window) {
     provider.style.borderRadius = "3px";
     provider.style.padding = "0 2px";
   }
+  // Create a local scope for exit Category Panel
+  {
+    let popupBox = createNode("hbox");
+    exitCategory.appendChild(popupBox);
 
+    popupBox.setAttribute("align", "center");
 
+    popupBox.style.backgroundColor = "white";
+    popupBox.style.border = "1px solid rgb(50, 50, 50)";
+    popupBox.style.borderRadius = "5px";
+    popupBox.style.padding = "2px";
 
+    let textBox = createNode("label");
+    popupBox.appendChild(textBox);
 
+    textBox.setAttribute("value", "Press Backspace to exit out of this category.");
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    textBox.style.color = "#999";
+    textBox.style.margin = "0 3px 0 0";  
+  }
   // Catch various existing browser commands to redirect to the dashboard
   let commandSet = document.getElementById("mainCommandSet");
   let commandWatcher = function(event) {
