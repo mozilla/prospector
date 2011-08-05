@@ -1821,11 +1821,11 @@ function addAwesomeBarHD(window) {
     else 
       completePanel.collapsed = true;
 
-
-
-
-
-
+    // Call the exitCategory function after a delay to let happen the keypress event
+    async(function() {
+      if (categoryBox.active != null && categoryBox.active != goCategory)
+        exitCategory.showPanel();
+    });
 
   }, false);
   
@@ -1898,23 +1898,23 @@ function addAwesomeBarHD(window) {
       }, 10000);
   };
 
+  // Function to show the exitCategory popup when no input in hdInput
+  exitCategory.showPanel = function() {
+    let {value} = hdInput;
+    let {active} = categoryBox;
+    // Hide the tabPanel temorarily
+    let {state} = tabPanel;
+    tabPanel.hidePopup();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (value.length == 0 && origInput.value.length == 0) {
+      exitCategory.openPopup(iconBox, "before_start");
+      async( function() {
+        exitCategory.hidePopup();
+        if (state == "open")
+          tabPanel.showNextCategory();
+      }, 2000);
+    }
+  };
 
   // Maybe update the panel if the shift key is held
   hdInput.addEventListener("keydown", tabPanel.onKey, true);
