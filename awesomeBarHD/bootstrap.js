@@ -299,17 +299,17 @@ function addAwesomeBarHD(window) {
   completePanel.style.overflow = "hidden";
   completePanel.style.pointerEvents = "none";
 
-  //Helper function to convert url to name.
+  // Helper function to convert url's names to proper words.
   function firstCapital(word) {
-    if(word!= null)
+    if (word != null)
       return word.substr(0,1).toUpperCase()+word.substr(1);
     else
       return "";
   }
-  
-  function makeWord(url) {
-    return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"").split(".")[0]);    
 
+  function makeWord(url) {
+    return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"")
+      .split(".")[0]);
   }
 
   function updateLabel() {
@@ -2342,9 +2342,8 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Combine location and search!
   watchWindows(addAwesomeBarHD);
-
+  async(function() categoryBox.processInput(), 500);
 })
-
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
