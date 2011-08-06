@@ -1,0 +1,15 @@
+{
+  "name": "prospector-instant-preview",
+  "fullName": "Mozilla Labs: Prospector - Instant Preview",
+  "author": "Mozilla Labs",
+  "contributors": [
+     "Edward Lee <edilee@mozilla.com>",
+     "Erik Vold <erikvvold@gmail.com>",
+     "Greg Parris <greg.parris@gmail.com>"
+   ],
+  "id": "instant.preview@prospector.labs.mozilla",
+  "version": "5",
+  "homepage": "https://mozillalabs.com/prospector",
+  "description": "Start loading pages as you select them from the location bar suggestions",
+  "dependencies": ["addon-kit", "api-utils"]
+}
