@@ -1,0 +1,15 @@
+{
+  "name": "prospector",
+  "fullName": "Prospector Modules",
+  "description": "A collection of modules used for Prospector add-ons.",
+  "keywords": ["prospector"],
+  "author": "Mozilla Labs",
+  "homepage": "https://github.com/mozilla/prospector",
+  "contributors": [
+    "Edward Lee <edilee@mozilla.com>",
+    "Erik Vold <erikvvold@gmail.com>"
+  ],
+  "version": "0.0.1a1pre",
+  "license": "MPL 1.1/GPL 2.0/LGPL 2.1",
+  "dependencies": ["addon-kit", "api-utils"]
+}
