@@ -309,7 +309,7 @@ function addAwesomeBarHD(window) {
 
   function makeWord(url) {
     return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"")
-      .split(".")[0]);
+      .split("/")[0]);
   }
 
   function updateLabel() {
@@ -2342,8 +2342,6 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Combine location and search!
   watchWindows(addAwesomeBarHD);
-  let {async} = makeWindowHelpers(window);
-  async(function() categoryBox.processInput(), 500);
 })
 
 /**
