@@ -11,5 +11,5 @@
   "version": "5",
   "homepage": "https://mozillalabs.com/prospector",
   "description": "Start loading pages as you select them from the location bar suggestions",
-  "dependencies": ["addon-kit", "api-utils"]
+  "dependencies": ["addon-kit", "api-utils", "prospector"]
 }

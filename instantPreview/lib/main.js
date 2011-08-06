@@ -36,10 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const {interfaces: Ci, utils: Cu} = Components;
-const global = this;
-Cu.import("resource://gre/modules/AddonManager.jsm");
-Cu.import("resource://gre/modules/Services.jsm");
+const {Ci, Cu} = require("chrome");
+var {listen} = require("listen");
+var {unload} = require("unload+");
 
 /**
  * Start showing a preview of the selected location bar suggestion
@@ -150,7 +149,8 @@ function addPreviews(window) {
       stop = false;
       return;
     }
-    Utils.delay(arguments.callee, 100);
+
+    require("timers").setTimeout(arguments.callee, 100);
 
     // Short circuit if there's no suggestions but don't remove the preview
     if (!urlBar.popupOpen)
@@ -158,6 +158,7 @@ function addPreviews(window) {
 
     // Make sure we have something selected to show
     let result = richBox.selectedItem;
+
     if (result == null) {
       removePreview();
       return;
@@ -236,25 +237,6 @@ function addPreviews(window) {
 /**
  * Handle the add-on being activated on install/enable
  */
-function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon) {
-  // Load various javascript includes for helper functions
-  ["utils"].forEach(function(fileName) {
-    let fileURI = addon.getResourceURI("scripts/" + fileName + ".js");
-    Services.scriptloader.loadSubScript(fileURI.spec, global);
-  });
-
-  Cu.import("resource://services-sync/util.js");
-  watchWindows(addPreviews);
-});
-
-/**
- * Handle the add-on being deactivated on uninstall/disable
- */
-function shutdown(data, reason) {
-  // Clean up with unloaders when we're deactivating
-  if (reason != APP_SHUTDOWN)
-    unload();
+exports.main = function main() {
+  require("window-watcher").watchWindows(addPreviews);
 }
-
-function install() {}
-function uninstall() {}
