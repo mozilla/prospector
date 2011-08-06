@@ -2342,6 +2342,7 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Combine location and search!
   watchWindows(addAwesomeBarHD);
+  categoryBox.processInput();
 })
 
 /**
