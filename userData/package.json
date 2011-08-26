@@ -4,5 +4,6 @@
   , "private": true
   , "dependencies": {
       "express": "2.4.3"
+    , "bcrypt": "0.2.4"
   }
 }

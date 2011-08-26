@@ -1,3 +1,4 @@
+var crypto = require("./crypto");
 var express = require("express");
 var rawData = require("./rawData");
 
@@ -28,5 +29,7 @@ app.get("/view/:url", function(req, res) {
   });
 });
 
-app.listen(80);
-console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+crypto.ready(function() {
+  app.listen(80);
+  console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+});
