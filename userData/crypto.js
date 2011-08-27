@@ -84,7 +84,7 @@ function askPassword() {
 exports.encrypt = function(data, onEncrypt) {
   exports.ready(function() {
     var encrypter = crypto.createCipher("aes256", passwordHash);
-    onEncrypt(encrypter.update(data) + encrypter.final());
+    onEncrypt(encrypter.update(data, "utf8") + encrypter.final());
   });
 };
 
@@ -92,7 +92,7 @@ exports.encrypt = function(data, onEncrypt) {
 exports.decrypt = function(data, onDecrypt) {
   exports.ready(function() {
     var decrypter = crypto.createDecipher("aes256", passwordHash);
-    onDecrypt(decrypter.update(data) + decrypter.final());
+    onDecrypt(decrypter.update(data, null, "utf8") + decrypter.final("utf8"));
   });
 };
 
