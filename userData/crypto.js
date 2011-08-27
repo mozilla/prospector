@@ -81,21 +81,19 @@ function askPassword() {
 }
 
 // Encrypt data with the password hash
-exports.encrypt = function(data) {
-  if (!ready)
-    throw "not ready";
-
-  var encrypter = crypto.createCipher("aes256", passwordHash);
-  return encrypter.update(data) + encrypter.final();
+exports.encrypt = function(data, onEncrypt) {
+  exports.ready(function() {
+    var encrypter = crypto.createCipher("aes256", passwordHash);
+    onEncrypt(encrypter.update(data) + encrypter.final());
+  });
 };
 
 // Decrypt data with the password hash
-exports.decrypt = function(data) {
-  if (!ready)
-    throw "not ready";
-
-  var decrypter = crypto.createDecipher("aes256", passwordHash);
-  return decrypter.update(data) + decrypter.final();
+exports.decrypt = function(data, onDecrypt) {
+  exports.ready(function() {
+    var decrypter = crypto.createDecipher("aes256", passwordHash);
+    onDecrypt(decrypter.update(data) + decrypter.final());
+  });
 };
 
 // Remember if we're ready and what callbacks to trigger

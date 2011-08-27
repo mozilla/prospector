@@ -1,6 +1,7 @@
+var crypto = require("./crypto");
 var fs = require("fs");
 
-const DATA_PATH = "rawData";
+const DATA_PATH = "encrypted";
 
 // Make sure the directory exists
 fs.mkdir(DATA_PATH, 0750);
@@ -46,10 +47,12 @@ exports.readAll = function(onFile) {
 
       // Grab the next file and update the remaining files
       var file = DATA_PATH + "/" + files.shift();
-      fs.readFile(file, "utf8", function(error, json) {
-        // Give the callback a js object; grab more files when it returns true
-        if (onFile(JSON.parse(json)))
-          getNextFile();
+      fs.readFile(file, "utf8", function(error, blob) {
+        crypto.decrypt(blob, function(json) {
+          // Give the callback a js object; grab more files when it returns true
+          if (onFile(JSON.parse(json)))
+            getNextFile();
+        });
       });
     })();
   });
@@ -76,7 +79,9 @@ exports.save = function(data) {
 
     // Save the data to disk as JSON
     var file = DATA_PATH + "/" + Date.now();
-    fs.writeFile(file, JSON.stringify(data));
+    crypto.encrypt(JSON.stringify(data), function(blob) {
+      fs.writeFile(file, blob);
+    });
 
     return true;
   }
