@@ -411,7 +411,7 @@ function prepareLessChrome(window) {
     if (ignoreMouse)
       return;
 
-    delayShow(500);
+    delayShow(50); //500
   });
 
   // Disable the add-on when customizing
