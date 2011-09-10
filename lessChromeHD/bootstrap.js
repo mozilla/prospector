@@ -261,7 +261,7 @@ function prepareLessChrome(window) {
     // Do all steps on a timer so that show-hide-show won't flicker
     (function shiftStep() shifter = async(function() {
       // Start a little slow then speed up
-      let step = Math.pow(Math.min(1, (Date.now() - startTime) / 150), 1.5);
+      let step = Math.pow(Math.min(1, (Date.now() - startTime) / 10), 1.5);   // slow original: 150
       let comp = 1 - step;
 
       // Shrink the visible height while maintaining the overall height
