@@ -95,19 +95,20 @@ function prepareLessChrome(window) {
   // Calculate the height of toolbars that should be shown
   let TabsBar = document.getElementById("TabsToolbar");
   let ToolbarMenu = document.getElementById("toolbar-menubar");
-  function getToolbarHeight() {
-    return TabsBar.boxObject.height + ToolbarMenu.boxObject.height;
+  function getToolbarHeight() { 
+    return TabsBar.getBoundingClientRect().height + ToolbarMenu.getBoundingClientRect().height;
   }
 
   // Figure out how much to shift the main browser
   let MainBrowser = document.getElementById("browser");
+  let BookmarksToolbar = document.getElementById("PersonalToolbar");
   function updateOffset() {
     // Reset the toolbox to its normal height
     gNavToolbox.style.height = "";
 
     // Do a negative offset of the difference of full height and tabs height
     MainBrowser.style.marginTop = getToolbarHeight() -
-      gNavToolbox.boxObject.height + "px";
+      gNavToolbox.getBoundingClientRect().height + BookmarksToolbar.getBoundingClientRect().height + "px";
   }
   updateOffset();
 
@@ -224,7 +225,7 @@ function prepareLessChrome(window) {
     hidden = true;
 
     // Figure out how tall various pieces are
-    let total = gNavToolbox.scrollHeight;
+    let total = gNavToolbox.scrollHeight - BookmarksToolbar.getBoundingClientRect().height;
     let tabs = getToolbarHeight();
     let other = total - tabs;
 
