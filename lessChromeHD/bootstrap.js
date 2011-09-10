@@ -95,8 +95,10 @@ function prepareLessChrome(window) {
   // Calculate the height of toolbars that should be shown
   let TabsBar = document.getElementById("TabsToolbar");
   let ToolbarMenu = document.getElementById("toolbar-menubar");
+  let PrintPreviewToolbarHeight = 0;
   function getToolbarHeight() { 
-    return TabsBar.getBoundingClientRect().height + ToolbarMenu.getBoundingClientRect().height;
+    return TabsBar.getBoundingClientRect().height + ToolbarMenu.getBoundingClientRect().height 
+      + PrintPreviewToolbarHeight;
   }
 
   // Figure out how much to shift the main browser
@@ -117,6 +119,30 @@ function prepareLessChrome(window) {
     return function(toolbar, visible) {
       orig.call(this, toolbar, visible);
       updateOffset();
+    };
+  });
+
+  // Watch for creation of print preview toolbar
+  change(gNavToolbox.parentNode, "insertBefore", function(orig) {
+    return function(newElement, referenceElement) {
+      var insElement = orig.call(this, newElement, referenceElement);
+      if (newElement.id == "print-preview-toolbar") {
+	PrintPreviewToolbarHeight = insElement.getBoundingClientRect().height;
+	updateOffset();
+	}
+      return insElement;
+    };
+  });
+
+  // Watch for removal of print preview toolbar
+  change(gNavToolbox.parentNode, "removeChild", function(orig) {
+    return function(child) {
+      var oldChild = orig.call(this, child);
+      if (child.id == "print-preview-toolbar") {
+	PrintPreviewToolbarHeight = 0;
+	async(function() updateOffset(), 200);
+	}
+      return oldChild;
     };
   });
 
