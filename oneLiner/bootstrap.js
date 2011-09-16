@@ -52,6 +52,7 @@ const URLBAR_WIDTH = 400;
 function makeOneLine(window) {
   let {async, change, createNode, listen, unload} = makeWindowHelpers(window);
   let {document, gBrowser, gURLBar} = window;
+  var search = null;
 
   // Get aliases to various elements
   let [commands,
@@ -67,8 +68,9 @@ function makeOneLine(window) {
   // Save the order of elements in the navigation bar to restore later
   let origNav = Array.slice(navBar.childNodes);
 
-  // Create a new search button that can prefill the search input box
-  let search = createNode("toolbarbutton");
+  // If toolbar has search box, create a new search button that can prefill the search input box
+  if (document.getElementById('searchbar') !== null) {
+  search = createNode("toolbarbutton");
   search.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
   search.setAttribute("image", images.search16);
   search.addEventListener("command", function() {
@@ -122,7 +124,7 @@ function makeOneLine(window) {
       gURLBar.value = "";
     }, false);
   }, false);
-
+  }
   // Move the navigation controls to the tabs bar
   let navOrder = [backForward, urlContainer, reload, stop, search];
   navOrder.reverse().forEach(function(node) {
@@ -185,13 +187,14 @@ function makeOneLine(window) {
   });
 
   // Do the custom search button command instead of the original
+  if (search !== null) {
   listen(commands, "command", function(event) {
     if (event.target.id == "Tools:Search") {
       event.stopPropagation();
       search.doCommand();
     }
   });
-
+  }
   // Make sure we set the right size of the urlbar on blur or focus
   listen(gURLBar, "blur", function() updateBackForward());
   listen(gURLBar, "focus", function() updateBackForward());
