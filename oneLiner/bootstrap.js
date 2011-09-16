@@ -70,60 +70,60 @@ function makeOneLine(window) {
 
   // If toolbar has search box, create a new search button that can prefill the search input box
   if (document.getElementById('searchbar') !== null) {
-  search = createNode("toolbarbutton");
-  search.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
-  search.setAttribute("image", images.search16);
-  search.addEventListener("command", function() {
-    let browser = gBrowser.selectedBrowser;
+    search = createNode("toolbarbutton");
+    search.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
+    search.setAttribute("image", images.search16);
+    search.addEventListener("command", function() {
+      let browser = gBrowser.selectedBrowser;
 
-    // See if we should copy over the value in the input when searching
-    let prefill = gURLBar.value.trim();
-    if (prefill.search(/[:\/\.]/) != -1)
-      prefill = "";
+      // See if we should copy over the value in the input when searching
+      let prefill = gURLBar.value.trim();
+      if (prefill.search(/[:\/\.]/) != -1)
+        prefill = "";
 
-    // Check for a focused plain textbox
-    let {focusedElement} = document.commandDispatcher;
-    let {nodeName, type, value} = focusedElement || {};
-    if (prefill == "" &&
-        focusedElement != gURLBar.inputField &&
-        nodeName != null &&
-        nodeName.search(/^(html:)?input$/i) == 0 &&
-        type.search(/^text$/i) == 0) {
-      prefill = value.trim();
-    }
+      // Check for a focused plain textbox
+      let {focusedElement} = document.commandDispatcher;
+      let {nodeName, type, value} = focusedElement || {};
+      if (prefill == "" &&
+          focusedElement != gURLBar.inputField &&
+          nodeName != null &&
+          nodeName.search(/^(html:)?input$/i) == 0 &&
+          type.search(/^text$/i) == 0) {
+        prefill = value.trim();
+      }
 
-    // Check the page for selected text
-    if (prefill == "")
-      prefill = browser.contentWindow.getSelection().toString().trim();
+      // Check the page for selected text
+      if (prefill == "")
+        prefill = browser.contentWindow.getSelection().toString().trim();
 
-    // Check the clipboard for text
-    if (prefill == "")
-      prefill = (window.readFromClipboard() || "").trim();
+      // Check the clipboard for text
+      if (prefill == "")
+        prefill = (window.readFromClipboard() || "").trim();
 
-    // Make sure to not replace pinned tabs
-    if (gBrowser.selectedTab.pinned) {
-      let tab = gBrowser.addTab("about:home");
-      gBrowser.selectedTab = tab;
-      browser = tab.linkedBrowser;
-    }
-    // Replace the tab with search
-    else
-      browser.loadURI("about:home");
+      // Make sure to not replace pinned tabs
+      if (gBrowser.selectedTab.pinned) {
+        let tab = gBrowser.addTab("about:home");
+        gBrowser.selectedTab = tab;
+        browser = tab.linkedBrowser;
+      }
+      // Replace the tab with search
+      else
+        browser.loadURI("about:home");
 
-    // Prepare about:home with a prefilled search once
-    browser.focus();
-    browser.addEventListener("DOMContentLoaded", function doPrefill() {
-      browser.removeEventListener("DOMContentLoaded", doPrefill, false);
+      // Prepare about:home with a prefilled search once
+      browser.focus();
+      browser.addEventListener("DOMContentLoaded", function doPrefill() {
+        browser.removeEventListener("DOMContentLoaded", doPrefill, false);
 
-      // Prefill then select it for easy typing over
-      let input = browser.contentDocument.getElementById("searchText");
-      input.value = prefill;
-      input.setSelectionRange(0, prefill.length);
+        // Prefill then select it for easy typing over
+        let input = browser.contentDocument.getElementById("searchText");
+        input.value = prefill;
+        input.setSelectionRange(0, prefill.length);
 
-      // Clear out the location bar so it shows the placeholder text
-      gURLBar.value = "";
+        // Clear out the location bar so it shows the placeholder text
+        gURLBar.value = "";
+      }, false);
     }, false);
-  }, false);
   }
   // Move the navigation controls to the tabs bar
   let navOrder = [backForward, urlContainer, reload, stop, search];
@@ -188,12 +188,12 @@ function makeOneLine(window) {
 
   // Do the custom search button command instead of the original
   if (search !== null) {
-  listen(commands, "command", function(event) {
-    if (event.target.id == "Tools:Search") {
-      event.stopPropagation();
-      search.doCommand();
-    }
-  });
+    listen(commands, "command", function(event) {
+      if (event.target.id == "Tools:Search") {
+        event.stopPropagation();
+        search.doCommand();
+      }
+    });
   }
   // Make sure we set the right size of the urlbar on blur or focus
   listen(gURLBar, "blur", function() updateBackForward());
