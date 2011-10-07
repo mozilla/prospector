@@ -188,7 +188,13 @@ function addPreviews(window) {
       preview.setAttribute("autocompletepopup", browser.getAttribute("autocompletepopup"));
       preview.setAttribute("contextmenu", browser.getAttribute("contentcontextmenu"));
       preview.setAttribute("tooltip", browser.getAttribute("contenttooltip"));
-      preview.setAttribute("style", "opacity:0.6;background:rgba(200,200,200,0.9);");
+
+      // Make the preview sit on top of the page
+      preview.style.background = "rgba(200, 200, 200, .9)";
+      preview.style.borderRadius = "50px";
+      preview.style.boxShadow = "0 0 10px black";
+      preview.style.opacity = .9;
+      preview.style.overflow = "hidden";
 
       // Prevent title changes from showing during a preview
       preview.addEventListener("DOMTitleChanged", function(e) e.stopPropagation(), true);
