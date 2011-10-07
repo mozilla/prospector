@@ -189,7 +189,6 @@ function addPreviews(window) {
       preview.style.borderRadius = "50px";
       preview.style.boxShadow = "0 0 10px black";
       preview.style.opacity = .9;
-      preview.style.overflow = "hidden";
 
       // Prevent title changes from showing during a preview
       preview.addEventListener("DOMTitleChanged", function(e) e.stopPropagation(), true);
