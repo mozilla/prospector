@@ -169,12 +169,7 @@ function addPreviews(window) {
     if (url.search('://') == -1) {
       url = "http://" + url;
     }
-    if (url.search(/^(data|ftp|https?):/) == -1 || url.search(/\.(rar|zip|xpi|mp3|mpeg|mp4|wmv|avi|tor)$/) != -1 || url.search(/^(javascript)/) != -1) {
-      removePreview();
-      return;
-    }
-
-    if(((url.length/(url.split(/\/+/).length))>20 && url.length > 35 )|| url.search(urlBar.value.split(/\s+/)[0])>40){
+    if (url.search(/^(data|ftp|https?):/) == -1 || url.search(/\.(rar|zip|xpi|mp3|mpeg|mp4|wmv|avi|tor)$/) != -1) {
       removePreview();
       return;
     }
