@@ -150,7 +150,8 @@ function addPreviews(window) {
       stop = false;
       return;
     }
-    Utils.delay(arguments.callee, 100);
+    (Utils.delay || Utils.namedTimer)(
+        arguments.callee, 100, window, 'preview-popup-shown');
 
     // Short circuit if there's no suggestions but don't remove the preview
     if (!urlBar.popupOpen)
@@ -165,6 +166,9 @@ function addPreviews(window) {
 
     // Only auto-load some types of uris
     let url = result.getAttribute("url");
+    if (url.search('://') == -1) {
+      url = "http://" + url;
+    }
     if (url.search(/^(data|ftp|https?):/) == -1 || url.search(/\.(rar|zip|xpi|mp3|mpeg|mp4|wmv|avi|tor)$/) != -1 || url.search(/^(javascript)/) != -1) {
       removePreview();
       return;
