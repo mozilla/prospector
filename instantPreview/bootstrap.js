@@ -166,6 +166,9 @@ function addPreviews(window) {
 
     // Only auto-load some types of uris
     let url = result.getAttribute("url");
+    if (url.search('://') == -1) {
+      url = "http://" + url;
+    }
     if (url.search(/^(data|ftp|https?):/) == -1 || url.search(/\.(rar|zip|xpi|mp3|mpeg|mp4|wmv|avi|tor)$/) != -1 || url.search(/^(javascript)/) != -1) {
       removePreview();
       return;
