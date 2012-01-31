@@ -55,11 +55,11 @@ function makeOneLine(window) {
   var search = null;
 
   // Get aliases to various elements
-  let [commands,
+  let [appmenu, commands,
        navBar, tabsBar,
        backForward, urlContainer, reload, stop,
        backCmd, forwardCmd] =
-    ["mainCommandSet",
+    ["appmenu-toolbar-button", "mainCommandSet",
      "nav-bar", "TabsToolbar",
      "unified-back-forward-button", "urlbar-container", "reload-button", "stop-button",
      "Browser:Back", "Browser:Forward",
@@ -126,7 +126,7 @@ function makeOneLine(window) {
     }, false);
   }
   // Move the navigation controls to the tabs bar
-  let navOrder = [backForward, urlContainer, reload, stop, search];
+  let navOrder = [appmenu, backForward, urlContainer, reload, stop, search];
   navOrder.reverse().forEach(function(node) {
     if (node != null)
       tabsBar.insertBefore(node, tabsBar.firstChild);
