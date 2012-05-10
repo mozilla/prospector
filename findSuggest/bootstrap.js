@@ -20,6 +20,7 @@
  * Contributor(s):
  *   Edward Lee <edilee@mozilla.com>
  *   Erik Vold <erikvvold@gmail.com>
+ *   Greg Parris <greg.parris@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -146,6 +147,11 @@ function addFindSuggestions(window) {
   function suggest(query, content) {
     clearSuggestions();
 
+    // Don't suggest for empty queries
+    let queryLen = query.length;
+    if (queryLen == 0)
+      return;
+
     // Provide a callback to handle clicks that recursively suggests
     function suggestionClick(event) {
       let suggestion = event.target.value;
@@ -160,7 +166,6 @@ function addFindSuggestions(window) {
 
     // Figure out which words to show for the given query
     let lowerQuery = query.toLowerCase();
-    let queryLen = query.length;
     let matches = 0;
     let sortedWords = getSortedWords(content);
     let limit = getPref("maxResults");
