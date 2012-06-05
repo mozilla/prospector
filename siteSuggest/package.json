@@ -11,7 +11,7 @@
             "name": "apps_page_url",
             "title": "apps page url",
             "type": "string",
-            "value":  null 
+            "value":  "https://newnewtab-dev.mozillalabs.com/"
         }
      ]
 }
