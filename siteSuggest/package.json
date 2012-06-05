@@ -1,0 +1,17 @@
+{
+    "name": "newtab", 
+    "license": "MPL 1.1/GPL 2.0/LGPL 2.1", 
+    "author": "", 
+    "version": "0.1", 
+    "fullName": "newtab", 
+    "id": "jid1-g9J9DON7BbvIBw", 
+    "description": "a basic add-on",
+    "preferences": [
+        {
+            "name": "apps_page_url",
+            "title": "apps page url",
+            "type": "string",
+            "value":  null 
+        }
+     ]
+}

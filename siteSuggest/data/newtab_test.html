@@ -1,0 +1,43 @@
+<html>
+<head>
+<script >
+
+
+window.onload = function( ) {
+    //alert(  window.getCats );
+	//console.log( window.getCats );
+	function outputData( id , result ) {
+		var doc = window.document;
+		var el = doc.getElementById( id );
+		var string = "";
+		
+	    Object.keys(result).sort(function(a, b) {
+	      return result[b] - result[a];
+	    }).map(function(category) {
+			string += category + ": " + result[category] + "\n";
+	    });
+
+		console.log( string );
+		el.textContent = string;
+	};
+
+	window.getCategories( function( result ) {
+		outputData( "interests" , result );
+    });
+
+	window.getDemographics( function( result ) {
+		outputData( "demographics" , result );
+	});
+};
+
+</script>
+</head>
+<body>
+<p>hello  - this is new tab API test</p>
+<h3>interests</h3>
+<pre id="interests"></pre>
+<h3>demographics</h3>
+<pre id="demographics"></pre>
+
+</body>
+</html>
