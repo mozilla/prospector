@@ -98,10 +98,6 @@ try{
 			callback( this._demographer.getInterests( ) );
 		}.bind( this );
 
-		iframe.contentWindow.wrappedJSObject.rebuildInterests = function( ) {   
-			this._demographer.rebuild( );
-		}.bind( this );
-
         iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {   
                  callback( {} );
         }
