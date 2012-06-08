@@ -51,8 +51,18 @@ const timers = require("timers");
 Cu.import("resource://gre/modules/Services.jsm", this);
 const PromptService = Cc["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 const ObserverService = require("observer-service");
+const {Demographer} = require("Demographer");
 
-var index = 1;
+/**
+ * User profile object 
+*/
+function UserProfile() {
+  let profile = this;
+  // create demographer
+  this.demographer = new Demographer( "AlexaSites.txt" );
+}
+
+const gUserProfile = new UserProfile();
 
 function addAppsButton( window , browser ) {
 
@@ -83,6 +93,7 @@ function addAppsButton( window , browser ) {
   					window: window,
 					document: document,
 					bElement: div,
+					demographer: gUserProfile.demographer 
 					});
 
    contentWindow.onresize = function onRes(event) {
@@ -109,15 +120,16 @@ function addAppsButton( window , browser ) {
 
 }
 
+
 exports.main = function(options) {
 try {
 
-  // per-window initialization
-  watchWindows(function(window) {
+    // per-window initialization
+    watchWindows(function(window) {
     // let {change, createNode, listen, unload} = makeWindowHelpers(window);
     let {gBrowser} = window;
 
-   // Listen for tab content loads.
+    // Listen for tab content loads.
 	tabs.on('ready', function(tab) {
 		if( tabs.activeTab.url == "about:newtab" ) {
 			addAppsButton( window , gBrowser );

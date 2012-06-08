@@ -50,47 +50,15 @@ const simplePrefs = require("simple-prefs");
 
 Cu.import("resource://gre/modules/Services.jsm", this);
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
-const CATEGORY_RESULTS = {
-Arts: 0.9,
-Business: 0.8,
-Computers: 0.6,
-Games: 0.7,
-Health: 0.8,
-Home: 0.9,
-News: 0.7,
-Recreation: 0.2,
-Reference: 0.1,
-Regional: 0.2,
-Science: 0.1,
-Shopping: 0.2,
-Society: 0.1
-};
 
-const DEMOGRAPHICS_RESULTS = {
-age_18: 0.2,
-age_25: 0.3,
-age_35: 0.7,
-age_45: 0.9,
-age_55: 0.3,
-age_65: 0.1,
-no_college: 0.1,
-some_college: 0.3,
-college: 0.1,
-graduate: 0.4,
-male: 0.1,
-female: 0.5,
-children: 0.5,
-no_children: 0.1,
-home: 0.2,
-school: 0.1,
-work: 0.8
-}
 
 function AppViewer( configObject ) {
 try{
     this._window = configObject.window;
 	this._document = configObject.document;
 	this._backGroundElement = configObject.bElement;
+	this._demographer = configObject.demographer;
+
     //let {change, createNode, listen, unload} = makeWindowHelpers(this._window);
 	let div  = this._document.getElementById( "newtab-vertical-margin");
 
@@ -127,14 +95,19 @@ try{
 		Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
 
 		iframe.contentWindow.wrappedJSObject.getCategories = function( callback ) {   
-			callback( CATEGORY_RESULTS );
-		}
+			callback( this._demographer.getInterests( ) );
+		}.bind( this );
 
-		iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {   
-			callback( DEMOGRAPHICS_RESULTS );
-		}
+		iframe.contentWindow.wrappedJSObject.rebuildInterests = function( ) {   
+			this._demographer.rebuild( );
+		}.bind( this );
+
+        iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {   
+                 callback( {} );
+        }
+
 	  } catch (ex) {  console.log( "ERROR " + ex ); }
-	};
+	}.bind( this );
 	Services.obs.addObserver( apiInjector , 'document-element-inserted', false);
 
 	//iframe.src = "https://myapps.mozillalabs.com";
@@ -180,8 +153,6 @@ try{
 
 }
 }
-
-
 
 AppViewer.prototype = {
     show: function () {
