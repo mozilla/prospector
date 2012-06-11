@@ -10,16 +10,16 @@ Cu.import("resource://gre/modules/Services.jsm", this);
 
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
-function AppViewer( configObject ) {
+function AppViewer(configObject) {
   this._window = configObject.window;
   this._document = configObject.document;
   this._backGroundElement = configObject.bElement;
   this._demographer = configObject.demographer;
 
-  let div  = this._document.getElementById( "newtab-vertical-margin");
+  let div  = this._document.getElementById("newtab-vertical-margin");
 
   let iframe = this._document.createElementNS(XHTML_NS, "iframe");
-  iframe.setAttribute( "type" , "content" );
+  iframe.setAttribute("type", "content");
   iframe.style.left = "-1000px";
   iframe.style.top = "36px";
   iframe.style.width = "85%";
@@ -39,31 +39,29 @@ function AppViewer( configObject ) {
 
   // now that we have iframe, let's install apis into it
   var apiInjector = function(doc, topic, data) {
-
     try {
-
-        // make sure that it's our iframe document that has been inserted into iframe
-        if( !doc.defaultView || doc.defaultView != iframe.contentWindow) {
-               return;  // so it was not
-        }
-
-        console.log( "caught document insertion" );
-        Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
-
-        iframe.contentWindow.wrappedJSObject.getCategories = function( callback ) {
-        callback( this._demographer.getInterests( ) );
-
-      }.bind( this );
-
-      iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {
-                 callback( {} );
+      // make sure that it's our iframe document that has been inserted into iframe
+      if (!doc.defaultView || doc.defaultView != iframe.contentWindow) {
+        return;  // so it was not
       }
 
-    } catch (ex) {  console.log( "ERROR " + ex ); }
+      console.log("caught document insertion");
+      Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
 
-  }.bind( this );
+      iframe.contentWindow.wrappedJSObject.getCategories = function(callback) {
+        callback(this._demographer.getInterests());
+      }.bind(this);
 
-  Services.obs.addObserver( apiInjector , 'document-element-inserted', false);
+      iframe.contentWindow.wrappedJSObject.getDemographics = function(callback) {
+        callback({});
+      }
+    }
+    catch(ex) {
+      console.log("ERROR " + ex);
+    }
+  }.bind(this);
+
+  Services.obs.addObserver(apiInjector, 'document-element-inserted', false);
   iframe.src = simplePrefs.prefs.apps_page_url;
 
   // insert doc into the thing
@@ -75,55 +73,51 @@ function AppViewer( configObject ) {
   this._shown = false;
 
   var self = this;
-  iframe.onload = function ( event ) {
-
-    iframe.contentWindow.addEventListener("click", function( event ) {
-        if( self._shown == false ) { self.show( ); }
+  iframe.onload = function(event) {
+    iframe.contentWindow.addEventListener("click", function(event) {
+      if (self._shown == false) {
+        self.show();
+      }
     });
 
-    self.hide( );
+    self.hide();
   };
 
-  iframe.contentWindow.onresize = function ( event ) {
-    self.resize( );
+  iframe.contentWindow.onresize = function(event) {
+    self.resize();
   };
-
 }
 
 AppViewer.prototype = {
-    show: function () {
+  show: function() {
+    let baseWidth = this._backGroundElement.clientWidth;
+    let leftExtent =(baseWidth - this._iframe.clientWidth) / 2;
+    this._shown = true;
+    this._iframe.style.MozTransitionProperty = "left";
+    this._iframe.style.MozTransitionDuration = "1s";
+    this._iframe.style.left = leftExtent + "px";
+    this._backGroundElement.style.opacity = "0.5";
+  },
 
-      let baseWidth = this._backGroundElement.clientWidth;
-      let leftExtent = ( baseWidth - this._iframe.clientWidth ) / 2;
-      this._shown = true;
-      this._iframe.style.MozTransitionProperty = "left";
-      this._iframe.style.MozTransitionDuration = "1s";
-      this._iframe.style.left = leftExtent + "px";
-      this._backGroundElement.style.opacity = "0.5";
-
-    } ,
-
-    hide: function () {
-
-      //let baseWidth = this._backGroundElement.clientWidth;
-      let leftExtent = this._iframe.clientWidth + 10;
-      this._iframe.style.left = "-" + leftExtent + "px";
-
-      this._window.setTimeout(  function( ) {
-        this._iframe.style.MozTransitionProperty = "";
-        this._iframe.style.MozTransitionDuration = "";
-        this._backGroundElement.style.opacity = "";
-        this._shown = false;
-      }.bind( this ) , 1000 );
-
-    } ,
-
-  resize: function( ) {
-
-    if( this._shown == true ) return;
-    let leftExtent = this._iframe.clientWidth - 40;
+  hide: function() {
+    let leftExtent = this._iframe.clientWidth + 10;
     this._iframe.style.left = "-" + leftExtent + "px";
 
+    this._window.setTimeout(function() {
+      this._iframe.style.MozTransitionProperty = "";
+      this._iframe.style.MozTransitionDuration = "";
+      this._backGroundElement.style.opacity = "";
+      this._shown = false;
+    }.bind(this), 1000);
+  },
+
+  resize: function() {
+    if (this._shown == true) {
+      return;
+    }
+
+    let leftExtent = this._iframe.clientWidth - 40;
+    this._iframe.style.left = "-" + leftExtent + "px";
   },
 
 }
