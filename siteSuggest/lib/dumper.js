@@ -36,6 +36,5 @@
 
 "use strict";
 
-
 exports.trace = function( str ) {  console.log( str ); }
 

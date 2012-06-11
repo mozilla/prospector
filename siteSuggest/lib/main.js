@@ -57,9 +57,12 @@ const {Demographer} = require("Demographer");
  * User profile object 
 */
 function UserProfile() {
+
   let profile = this;
+
   // create demographer
   this.demographer = new Demographer( "AlexaSites.txt" );
+
 }
 
 const gUserProfile = new UserProfile();
@@ -73,11 +76,6 @@ function addAppsButton( window , browser ) {
 
 
   let div = document.getElementById( "newtab-vertical-margin");
-
-//  listen( window , div , "click" , function(event) {
-//			console.log( "CLICKED DIV" );
-//     } );
-
   let contentWindow = browser.contentWindow;
   let appToggle = hisToggle.cloneNode(true);
   appToggle.setAttribute("id", "apps-toggle");
@@ -90,58 +88,51 @@ function addAppsButton( window , browser ) {
   hisToggle.parentNode.insertBefore(appToggle, hisToggle.nextSibling);
   var toggleStateShown = false;
   var appViewer = new AppViewer( { 
-  					window: window,
-					document: document,
-					bElement: div,
-					demographer: gUserProfile.demographer 
-					});
+                      window: window,
+                      document: document,
+                      bElement: div,
+                      demographer: gUserProfile.demographer 
+                    });
 
-   contentWindow.onresize = function onRes(event) {
-   		appViewer.resize( );
-   };
+  contentWindow.onresize = function onRes(event) {
+           appViewer.resize( );
+  };
 
   appToggle.onclick = function( ) { 
     
-  	if( toggleStateShown ) { 
-		appViewer.hide( );
-		toggleStateShown = false;
-	} else {
-		appViewer.show( );
-		toggleStateShown = true;
-   }
+    if( toggleStateShown ) { 
+        appViewer.hide( );
+        toggleStateShown = false;
+    } else {
+        appViewer.show( );
+        toggleStateShown = true;
+    }
+
   };
 
   var oldHandler = hisToggle.onclick;
   hisToggle.onclick = function( ) {
-  	appViewer.hide( );
-    toggleStateShown = false;
-	oldHandler( );
-  }
+      appViewer.hide( );
+      toggleStateShown = false;
+      oldHandler( );
+  }; 
 
 }
 
-
 exports.main = function(options) {
-try {
 
     // per-window initialization
     watchWindows(function(window) {
-    // let {change, createNode, listen, unload} = makeWindowHelpers(window);
     let {gBrowser} = window;
 
-    // Listen for tab content loads.
-	tabs.on('ready', function(tab) {
-		if( tabs.activeTab.url == "about:newtab" ) {
-			addAppsButton( window , gBrowser );
-		}
-	});
+     // Listen for tab content loads.
+     tabs.on('ready', function(tab) {
+     
+        if( tabs.activeTab.url == "about:newtab" ) {
+            addAppsButton( window , gBrowser );
+        }
 
-  });
+      });   // end of tabs.on.ready
+  });       // end of watchWindows 
 
-}
-catch ( ex ) {
-
-	console.log( "ERROR" + ex );
-
-}
 }

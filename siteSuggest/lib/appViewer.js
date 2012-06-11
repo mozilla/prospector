@@ -53,139 +53,122 @@ const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 
 function AppViewer( configObject ) {
-try{
-    this._window = configObject.window;
-	this._document = configObject.document;
-	this._backGroundElement = configObject.bElement;
-	this._demographer = configObject.demographer;
+  this._window = configObject.window;
+  this._document = configObject.document;
+  this._backGroundElement = configObject.bElement;
+  this._demographer = configObject.demographer;
 
-    //let {change, createNode, listen, unload} = makeWindowHelpers(this._window);
-	let div  = this._document.getElementById( "newtab-vertical-margin");
+  //let {change, createNode, listen, unload} = makeWindowHelpers(this._window);
+  let div  = this._document.getElementById( "newtab-vertical-margin");
 
-	let iframe = this._document.createElementNS(XHTML_NS, "iframe");
-	iframe.setAttribute( "type" , "content" );
-    iframe.style.left = "-1000px";
-    iframe.style.top = "36px";
-    iframe.style.width = "85%";
-    iframe.style.height = "90%";
-	iframe.style.position = "absolute";
-	iframe.style.background = "white";
+  let iframe = this._document.createElementNS(XHTML_NS, "iframe");
+  iframe.setAttribute( "type" , "content" );
+  iframe.style.left = "-1000px";
+  iframe.style.top = "36px";
+  iframe.style.width = "85%";
+  iframe.style.height = "90%";
+  iframe.style.position = "absolute";
+  iframe.style.background = "white";
 
-    iframe.style.boxShadow = "5px 5px 10px black";
-    iframe.style.borderRadius = "10px 10px 10px 10px";
+  iframe.style.boxShadow = "5px 5px 10px black";
+  iframe.style.borderRadius = "10px 10px 10px 10px";
 
-	//iframe.style.MozTransitionProperty = "left";
-	//iframe.style.MozTransitionDuration = "2s";
+  // remove the border pixels
+  iframe.style.borderWidth = "0px";
+  iframe.style.borderLeftWidth = "0px";
+  iframe.style.borderRightWidth = "0px";
+  iframe.style.borderTopWidth = "0px";
+  iframe.style.borderBottomWidth = "0px";
 
-	// remove the border pixels
-	iframe.style.borderWidth = "0px";
-	iframe.style.borderLeftWidth = "0px";
-	iframe.style.borderRightWidth = "0px";
-	iframe.style.borderTopWidth = "0px";
-	iframe.style.borderBottomWidth = "0px";
+  // now that we have iframe, let's install apis into it
+  var apiInjector = function(doc, topic, data) {
 
-	// now that we have iframe, let's install apis into it
-    var apiInjector = function(doc, topic, data) {
-	try {
-		// make sure that it's our iframe document that has been inserted into iframe
-		if( !doc.defaultView || doc.defaultView != iframe.contentWindow) {
-		          return;  // so it was not
-	    }
-		console.log( "caught document insertion" );
-		Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
+    try {
 
-		iframe.contentWindow.wrappedJSObject.getCategories = function( callback ) {   
-			callback( this._demographer.getInterests( ) );
-		}.bind( this );
-
-        iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {   
-                 callback( {} );
+        // make sure that it's our iframe document that has been inserted into iframe
+        if( !doc.defaultView || doc.defaultView != iframe.contentWindow) {
+               return;  // so it was not
         }
 
-	  } catch (ex) {  console.log( "ERROR " + ex ); }
-	}.bind( this );
-	Services.obs.addObserver( apiInjector , 'document-element-inserted', false);
+        console.log( "caught document insertion" );
+        Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
 
-	//iframe.src = "https://myapps.mozillalabs.com";
-	iframe.src = (simplePrefs.prefs.apps_page_url || data.url( "newtab_test.html" ));
-	//iframe.src = data.url( "newtab_test.html" );
-	// insert doc into the thing
-	div.parentNode.insertBefore(iframe, div.nextSibling)
+        iframe.contentWindow.wrappedJSObject.getCategories = function( callback ) {   
+        callback( this._demographer.getInterests( ) );
 
-	// move left to clientWidth
-	iframe.style.left =  "-" + iframe.clientWidth + "px";
-	this._iframe = iframe;
-	this._shown = false;
+      }.bind( this );
 
-	var self = this;
-    iframe.onload = function ( event ) {
-		console.log( "loaded" );
-		iframe.contentWindow.addEventListener("click", function( event ) {
-	        console.log("iframe clicked");
-			if( self._shown == false ) {
-				self.show( );
-			}
-	   });
-	   self.hide( );
-	};
+      iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {   
+                 callback( {} );
+      }
 
-	iframe.contentWindow.onresize = function ( event ) {
-		self.resize( );
-	};
+    } catch (ex) {  console.log( "ERROR " + ex ); }
 
-    /*** this is no loger needed, since we have buttons coltrooling hide/show 
-	//
-	this._backGroundElement.addEventListener("click", function(event) {
-	        console.log( "CLICKED DIV" );
-			if( self._shown == true ) {
-				self.hide( );
-			}
-      } );
-	 ****/
+  }.bind( this );
 
-} catch ( ex ) {
+  Services.obs.addObserver( apiInjector , 'document-element-inserted', false);
+  iframe.src = (simplePrefs.prefs.apps_page_url || data.url( "newtab_test.html" ));
 
-    console.log( "ERROR" + ex );
+  // insert doc into the thing
+  div.parentNode.insertBefore(iframe, div.nextSibling)
 
-}
+  // move left to clientWidth
+  iframe.style.left =  "-" + iframe.clientWidth + "px";
+  this._iframe = iframe;
+  this._shown = false;
+
+  var self = this;
+  iframe.onload = function ( event ) {
+
+    iframe.contentWindow.addEventListener("click", function( event ) {
+        if( self._shown == false ) { self.show( ); }
+    });
+
+    self.hide( );
+  };
+
+  iframe.contentWindow.onresize = function ( event ) {
+    self.resize( );
+  };
+
 }
 
 AppViewer.prototype = {
     show: function () {
-	try {
-		let baseWidth = this._backGroundElement.clientWidth;
-		let leftExtent = ( baseWidth - this._iframe.clientWidth ) / 2;
-		this._shown = true;
-		//this._iframe.style.visibility = "visible";
-		this._iframe.style.MozTransitionProperty = "left";
-		this._iframe.style.MozTransitionDuration = "1s";
-		this._iframe.style.left = leftExtent + "px";
-		this._backGroundElement.style.opacity = "0.5";
-		} catch( ex ) { console.log( "ERROR" + ex ); }
+
+      let baseWidth = this._backGroundElement.clientWidth;
+      let leftExtent = ( baseWidth - this._iframe.clientWidth ) / 2;
+      this._shown = true;
+      this._iframe.style.MozTransitionProperty = "left";
+      this._iframe.style.MozTransitionDuration = "1s";
+      this._iframe.style.left = leftExtent + "px";
+      this._backGroundElement.style.opacity = "0.5";
+
     } ,
 
     hide: function () {
-	try {
-		//let baseWidth = this._backGroundElement.clientWidth;
-		let leftExtent = this._iframe.clientWidth + 10;
-		this._iframe.style.left = "-" + leftExtent + "px";
 
-		this._window.setTimeout(  function( ) {
-			this._iframe.style.MozTransitionProperty = "";
-			this._iframe.style.MozTransitionDuration = "";
-			this._backGroundElement.style.opacity = "";
-			//this._iframe.style.visibility = "hidden";
-			this._shown = false;
-		}.bind( this ) , 1000 );
-		} catch( ex ) { console.log( "ERROR" + ex ); }
+      //let baseWidth = this._backGroundElement.clientWidth;
+      let leftExtent = this._iframe.clientWidth + 10;
+      this._iframe.style.left = "-" + leftExtent + "px";
+
+      this._window.setTimeout(  function( ) {
+        this._iframe.style.MozTransitionProperty = "";
+        this._iframe.style.MozTransitionDuration = "";
+        this._backGroundElement.style.opacity = "";
+        this._shown = false;
+      }.bind( this ) , 1000 );
+
     } ,
 
-	resize: function( ) {
-	    console.log( "in resize" );
-		if( this._shown == true ) return;
-		let leftExtent = this._iframe.clientWidth - 40;
-        this._iframe.style.left = "-" + leftExtent + "px";
-	},
+  resize: function( ) {
+
+    if( this._shown == true ) return;
+    let leftExtent = this._iframe.clientWidth - 40;
+    this._iframe.style.left = "-" + leftExtent + "px";
+
+  },
+
 }
 
 exports.AppViewer = AppViewer;

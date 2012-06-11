@@ -56,47 +56,42 @@ Cu.import("resource://gre/modules/PlacesUtils.jsm", this);
  */
 
 exports.executeHistoryQuery  = function execQuery( query , params , callbacks ) {
-try {
-
     let connection = PlacesUtils.history.QueryInterface(Ci.nsPIPlacesDatabase).DBConnection;
     let statement = connection.createAsyncStatement(query);
-
-		  console.log( connection , statement , query );
-
     if (params) {
+
       for (let param in params) {
         console.log("MorePlacesUtils._getAsyncStatement: param: " + param + " = " + params[param]);
         statement.params[param] = params[param];
       }
+
     }
     statement.executeAsync({
 
         handleResult: function (result) {
-		try {
-          //console.log("MorePlacesUtils._executeAsyncStatement:handleResult " + JSON.stringify( result ));
+
           let rows = [];
           let row = null;
           while (row = result.getNextRow()) {
-		    if( callbacks.onRow ) {
-				callbacks.onRow( row );
-			}
-		   }  // eof while
-		  } catch (er) {
-		  	console.log( "exception " + er );
-		  }
+            if( callbacks.onRow ) {
+              callbacks.onRow( row );
+            }
+          }  // eof while
+
         },
+
         handleCompletion: function (reason) {
-          //console.log("MorePlacesUtils._executeAsyncStatement:handleCompletion " + reason );
-		  if( callbacks.onCompletion ) { callbacks.onCompletion( reason ); }
+
+          if( callbacks.onCompletion ) { callbacks.onCompletion( reason ); }
+
         },
+
         handleError: function (error) {
-          //console.log("MorePlacesUtils._executeAsyncStatement:handleError");
-		  if( callbacks.onError ) callbacks.onError( error );
+
+          if( callbacks.onError ) callbacks.onError( error );
+
         }
 
-	});
+   });
 
-} catch ( ex ) {
-	console.log( "Exception " + ex );
-}
 } // end of execQuery
