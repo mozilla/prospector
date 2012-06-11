@@ -42,8 +42,9 @@ function addAppsButton(window, browser) {
   appToggle.style.top = "12px";
   appToggle.style.right = "40px";
   hisToggle.parentNode.insertBefore(appToggle, hisToggle.nextSibling);
-  var toggleStateShown = false;
-  var appViewer = new AppViewer({
+
+  let toggleStateShown = false;
+  let appViewer = new AppViewer({
     window: window,
     document: document,
     bElement: div,
@@ -65,7 +66,7 @@ function addAppsButton(window, browser) {
     }
   };
 
-  var oldHandler = hisToggle.onclick;
+  let oldHandler = hisToggle.onclick;
   hisToggle.onclick = function() {
     appViewer.hide();
     toggleStateShown = false;

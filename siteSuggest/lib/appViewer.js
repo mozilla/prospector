@@ -38,7 +38,7 @@ function AppViewer(configObject) {
   iframe.style.borderBottomWidth = "0px";
 
   // now that we have iframe, let's install apis into it
-  var apiInjector = function(doc, topic, data) {
+  let apiInjector = function(doc, topic, data) {
     try {
       // make sure that it's our iframe document that has been inserted into iframe
       if (!doc.defaultView || doc.defaultView != iframe.contentWindow) {
@@ -72,7 +72,7 @@ function AppViewer(configObject) {
   this._iframe = iframe;
   this._shown = false;
 
-  var self = this;
+  let self = this;
   iframe.onload = function(event) {
     iframe.contentWindow.addEventListener("click", function(event) {
       if (self._shown == false) {
