@@ -2,26 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const file = require("file");
-const widgets = require("widget");
-const tabs = require("tabs");
-const request = require("request");
-const timers = require("timers");
-const windows = require("windows");
-const simpleStorage = require("simple-storage");
-const preferences = require("preferences-service");
-const {PageMod} = require("page-mod");
+"use strict";
 const {data} = require("self");
-const passwords = require("passwords");
-
-const {Cc,Ci,Cm,Cr,Cu,components} = require("chrome");
-
-Cm.QueryInterface(Ci.nsIComponentRegistrar);
-
-Cu.import("resource://gre/modules/PlacesUtils.jsm", this);
-Cu.import("resource://gre/modules/XPCOMUtils.jsm", this);
-Cu.import("resource://gre/modules/Services.jsm", this);
-
 const historyUtils = require("HistoryUtils");
 
 function Demographer( sitesCatFile ) {
@@ -112,7 +94,7 @@ Demographer.prototype = {
   },
 
   computeSitesData: function( ) {
-    for ( domain in this.mySites ) {
+    for (let domain in this.mySites ) {
         this.processHistorySite( domain );
     }
     this.normalize( );

@@ -3,21 +3,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
-const {Ci,Cu} = require("chrome");
-const {makeWindowHelpers} = require("makeWindowHelpers");
-const {unload} = require("unload+");
-const {watchWindows} = require("watchWindows");
-const {trace} = require("dumper");
-const {listen} = require("listen");
-const {data} = require("self");
-const file = require("file");
-const {XMLHttpRequest} = require("xhr");
-const timers = require("timers");
+const {Cc,Ci,Cu} = require("chrome");
 const simplePrefs = require("simple-prefs");
 
 Cu.import("resource://gre/modules/Services.jsm", this);
-const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
+const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 function AppViewer( configObject ) {
   this._window = configObject.window;

@@ -23,7 +23,6 @@ exports.watchWindows = function(callback) {
   function watcher(window) {
     try {
       // Now that the window has loaded, only handle browser windows
-	  // XXXX what does {} notion mean?
       let {documentElement} = window.document;
       if (documentElement.getAttribute("windowtype") == "navigator:browser")
         callback(window);

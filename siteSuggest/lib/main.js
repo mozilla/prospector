@@ -4,23 +4,12 @@
 
 "use strict";
 const {Ci,Cu,Cc} = require("chrome");
-const tabs = require("tabs");
-const {makeWindowHelpers} = require("makeWindowHelpers");
-const {unload} = require("unload+");
-const {watchWindows} = require("watchWindows");
 const {AppViewer} = require("appViewer");
-const {PageMod} = require("page-mod");
-const {data} = require("self");
-const {listen} = require("listen");
-const simplePrefs = require("simple-prefs");
-const file = require("file");
-const {XMLHttpRequest} = require("xhr");
-const timers = require("timers");
+const {Demographer} = require("Demographer");
+const tabs = require("tabs");
+const {watchWindows} = require("watchWindows");
 
 Cu.import("resource://gre/modules/Services.jsm", this);
-const PromptService = Cc["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
-const ObserverService = require("observer-service");
-const {Demographer} = require("Demographer");
 
 /**
  * User profile object 

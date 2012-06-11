@@ -60,7 +60,6 @@ exports.unload = function(callback, container) {
 
     // Wrap the callback to additionally remove the unload listener
     let origCallback = callback;
-	// XXXX who is using this new callback
     callback = function() {
       container.removeEventListener("unload", removeUnloader, false);
       origCallback();
