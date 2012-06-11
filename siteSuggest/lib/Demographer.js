@@ -233,6 +233,9 @@ Demographer.prototype = {
 
     Object.keys( this.cats ).forEach( function ( key ) {
         this.cats[ key ]  =  this.cats[ key ] * 100.0 / this.totalVisits ;
+        if( this.cats[ key ] < 0.001 ) {
+          delete this.cats[ key ];
+        }
     }.bind( this ));
 
   },

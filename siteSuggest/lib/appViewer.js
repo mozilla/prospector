@@ -25,7 +25,6 @@ function AppViewer( configObject ) {
   this._backGroundElement = configObject.bElement;
   this._demographer = configObject.demographer;
 
-  //let {change, createNode, listen, unload} = makeWindowHelpers(this._window);
   let div  = this._document.getElementById( "newtab-vertical-margin");
 
   let iframe = this._document.createElementNS(XHTML_NS, "iframe");
@@ -74,7 +73,7 @@ function AppViewer( configObject ) {
   }.bind( this );
 
   Services.obs.addObserver( apiInjector , 'document-element-inserted', false);
-  iframe.src = (simplePrefs.prefs.apps_page_url || data.url( "newtab_test.html" ));
+  iframe.src = (simplePrefs.prefs.apps_page_url || "http://people.mozilla.com/~mzhilyaev/newtab_test.html";
 
   // insert doc into the thing
   div.parentNode.insertBefore(iframe, div.nextSibling)
