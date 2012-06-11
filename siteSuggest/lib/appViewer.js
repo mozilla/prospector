@@ -73,7 +73,7 @@ function AppViewer( configObject ) {
   }.bind( this );
 
   Services.obs.addObserver( apiInjector , 'document-element-inserted', false);
-  iframe.src = (simplePrefs.prefs.apps_page_url || "http://people.mozilla.com/~mzhilyaev/newtab_test.html";
+  iframe.src = simplePrefs.prefs.apps_page_url;
 
   // insert doc into the thing
   div.parentNode.insertBefore(iframe, div.nextSibling)
