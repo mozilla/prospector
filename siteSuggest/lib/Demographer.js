@@ -35,7 +35,7 @@ Demographer.prototype = {
 
   extractDomain: function ( url ) {
 
-    // now we need to grep the domain 
+    // now we need to grep the domain
     let domain = require("url").URL( url ).host;
 
     // and make sure to get rid of www
@@ -61,14 +61,14 @@ Demographer.prototype = {
   readHistory: function ( cb ) {
 
     let query = "select visit_count , url from moz_places where visit_count >= 1";
-    historyUtils.executeHistoryQuery( query , null , 
+    historyUtils.executeHistoryQuery( query , null ,
        {
          onRow: function ( row ) {
 
             let vcount = row.getResultByIndex( 0 );
             let url = row.getResultByIndex( 1 );
 
-            // now we need to grep the domain 
+            // now we need to grep the domain
             let domain = this.extractDomain( url );
             if( ! domain ) return;   // bail if domain is empty
 
@@ -102,7 +102,7 @@ Demographer.prototype = {
 
   processHistorySite: function( domain ) {
 
-    // ok check if site is present 
+    // ok check if site is present
     let siteData = this.allSites[ domain ];
     let vcount = this.mySites[ domain ];
 
@@ -118,7 +118,7 @@ Demographer.prototype = {
             this.addToCategory( domain , category , vcount , addedHash );
         }.bind( this ));
         this.totalVisits += vcount;
-    } 
+    }
 
   },
 
@@ -136,10 +136,10 @@ Demographer.prototype = {
     // check if we saw this category already
     if( addedHash[ top ] ) {
         return;
-    } 
+    }
 
     addedHash[ top ] = 1;
-    if( ! this.cats[ top ]  ) { 
+    if( ! this.cats[ top ]  ) {
         this.cats[ top ] = 0;
     }
     this.cats[ top ] += count;

@@ -50,12 +50,12 @@ function AppViewer( configObject ) {
         console.log( "caught document insertion" );
         Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
 
-        iframe.contentWindow.wrappedJSObject.getCategories = function( callback ) {   
+        iframe.contentWindow.wrappedJSObject.getCategories = function( callback ) {
         callback( this._demographer.getInterests( ) );
 
       }.bind( this );
 
-      iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {   
+      iframe.contentWindow.wrappedJSObject.getDemographics = function( callback ) {
                  callback( {} );
       }
 

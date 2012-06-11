@@ -11,12 +11,12 @@ Cu.import("resource://gre/modules/PlacesUtils.jsm", this);
  * runs a query agaisnt places database
  *
  * @usage executeHistoryQuery( query , params , callbacks )
- * @param [string] query: what to execute 
+ * @param [string] query: what to execute
  * @param [object] params: names of the parameters
  * @return [object] callback: handlig row, completion, and error
- * 
- * @example executeHistoryQuery( "select * from t" , 
- *                              myparams, 
+ *
+ * @example executeHistoryQuery( "select * from t" ,
+ *                              myparams,
  *                              { onRow: handleRow( row ) ,
  *                                onCompletion: handleCompletion( reason ),
  *                                onErrro: handleError( error )

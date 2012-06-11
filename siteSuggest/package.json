@@ -1,10 +1,10 @@
 {
-    "name": "newtab", 
+    "name": "newtab",
     "license": "MPL 2.0",
-    "author": "", 
-    "version": "0.1", 
-    "fullName": "newtab", 
-    "id": "jid1-g9J9DON7BbvIBw", 
+    "author": "",
+    "version": "0.1",
+    "fullName": "newtab",
+    "id": "jid1-g9J9DON7BbvIBw",
     "description": "a basic add-on",
     "preferences": [
         {

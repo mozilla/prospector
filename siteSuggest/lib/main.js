@@ -12,7 +12,7 @@ const {watchWindows} = require("watchWindows");
 Cu.import("resource://gre/modules/Services.jsm", this);
 
 /**
- * User profile object 
+ * User profile object
 */
 function UserProfile() {
 
@@ -45,20 +45,20 @@ function addAppsButton( window , browser ) {
   appToggle.style.right = "40px";
   hisToggle.parentNode.insertBefore(appToggle, hisToggle.nextSibling);
   var toggleStateShown = false;
-  var appViewer = new AppViewer( { 
+  var appViewer = new AppViewer( {
                       window: window,
                       document: document,
                       bElement: div,
-                      demographer: gUserProfile.demographer 
+                      demographer: gUserProfile.demographer
                     });
 
   contentWindow.onresize = function onRes(event) {
            appViewer.resize( );
   };
 
-  appToggle.onclick = function( ) { 
-    
-    if( toggleStateShown ) { 
+  appToggle.onclick = function( ) {
+
+    if( toggleStateShown ) {
         appViewer.hide( );
         toggleStateShown = false;
     } else {
@@ -73,7 +73,7 @@ function addAppsButton( window , browser ) {
       appViewer.hide( );
       toggleStateShown = false;
       oldHandler( );
-  }; 
+  };
 
 }
 
@@ -85,12 +85,12 @@ exports.main = function(options) {
 
      // Listen for tab content loads.
      tabs.on('ready', function(tab) {
-     
+
         if( tabs.activeTab.url == "about:newtab" ) {
             addAppsButton( window , gBrowser );
         }
 
       });   // end of tabs.on.ready
-  });       // end of watchWindows 
+  });       // end of watchWindows
 
 }
