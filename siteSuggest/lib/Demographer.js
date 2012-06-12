@@ -31,10 +31,7 @@ Demographer.prototype = {
     this.readHistory(cb);
   },
 
-  extractDomain: function(url) {
-    // now we need to grep the domain
-    let domain = require("url").URL(url).host;
-
+  extractDomain: function(domain) {
     // and make sure to get rid of www
     let re = /^www[.]/;
     domain = domain.replace(re, "");
@@ -42,10 +39,13 @@ Demographer.prototype = {
     // ok check if site is present in our global site list
     let siteData = this.allSites[domain];
 
-    // attempt to go to the root domain
+    // attempt to go to the root domain, keep the lastDomain
+    // so that we never ran into endless loop if regex does not replace
+    // anything.  Hence, regex failes on strings starting with '.'
+    let lastDomain = domain;
     while (!siteData) {
       domain = domain.replace(/^[^.]+[.]/, "");
-      if (domain.indexOf(".") <  0) {
+      if (domain == lastDomain || domain.length <= 1 || domain.indexOf(".") < 0) {
         domain = null;
         // no need to go further
         break;
@@ -57,14 +57,20 @@ Demographer.prototype = {
   },
 
   readHistory: function(cb) {
-    let query = "select visit_count, url from moz_places where visit_count >= 1";
+    let query = "select SUM(visit_count), rev_host from moz_places where visit_count >= 1 group by rev_host";
     historyUtils.executeHistoryQuery(query, null, {
       onRow: function(row) {
         let vcount = row.getResultByIndex(0);
-        let url = row.getResultByIndex(1);
+        let rev_host = row.getResultByIndex(1);
+        let host = rev_host.split("").reverse().join("");
+
+        // if host is preceeded with '.', remove it
+        if (host.charAt(0) == '.') {
+          host = host.slice(1);
+        }
 
         // now we need to grep the domain
-        let domain = this.extractDomain(url);
+        let domain = this.extractDomain(host);
         // bail if domain is empty
         if (!domain) {
           return;
