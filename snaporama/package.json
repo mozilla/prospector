@@ -2,7 +2,7 @@
     "name": "snaporama",
     "license": "MPL 1.1/GPL 2.0/LGPL 2.1",
     "author": "Mozilla Labs",
-    "version": "1",
+    "version": "2",
     "fullName": "Mozilla Labs: Prospector - Snaporama",
     "id": "snaporama@prospector.labs.mozilla",
     "description": "Keep your tabs organized by taking snapshots of groups of tabs and quickly bringing them back when you need them."
