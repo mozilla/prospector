@@ -15,7 +15,7 @@ Cu.import("resource://gre/modules/Services.jsm", this);
  * User profile object
 */
 function UserProfile() {
-  this.demographer = new Demographer("AlexaSites.txt");
+  this.demographer = new Demographer("Sites2Odp.txt");
 }
 
 const gUserProfile = new UserProfile();
