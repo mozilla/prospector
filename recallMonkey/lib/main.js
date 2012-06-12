@@ -60,7 +60,7 @@ function addBookmark() {
   let ios = Cc["@mozilla.org/network/io-service;1"]
             .getService(Ci.nsIIOService);
   let bid = bmsvc.insertBookmark(bmsvc.unfiledBookmarksFolder, 
-    ios.newURI("resource://recallmonkey-at-prospector-dot-labs-dot-mozilla-recallmonkey-data/dashboard.html?s=%s", null, null),
+    ios.newURI(self.data.url("dashboard.html?s=%s"), null, null),
     bmsvc.DEFAULT_INDEX,
     "RecallMonkey Search"
     );
@@ -114,7 +114,7 @@ let sr = new searcher.search();
 
 /* attach a worker that listens to the content script for messages */
 let mod = pageMod.PageMod({
-  include: "resource://recallmonkey-at-prospector-dot-labs-dot-mozilla-recallmonkey-data/*",
+  include: self.data.url("*"),
   contentScriptFile: self.data.url("monkey.js"),
   onAttach: function attached(worker) {
     worker.on("message", function(data) {
