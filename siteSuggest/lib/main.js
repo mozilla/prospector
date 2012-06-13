@@ -11,6 +11,13 @@ const {watchWindows} = require("watchWindows");
 
 Cu.import("resource://gre/modules/Services.jsm", this);
 
+// list of hosts granted access permission to apps installation list
+const MOZAPP_PAGES_WHITE_LIST = [
+  "https://newnewtab.mozillalabs.com/",
+  "https://newnewtab-dev.mozillalabs.com/",
+  "https://newnewtab-stage.mozillalabs.com/"
+];
+
 /**
  * User profile object
 */
@@ -75,6 +82,13 @@ function addAppsButton(window, browser) {
 }
 
 exports.main = function(options) {
+  // grant permissions to manage installed apps
+  MOZAPP_PAGES_WHITE_LIST.forEach(function(host) {
+    Services.perms.add(Services.io.newURI(host, null, null),
+      "webapps-manage",
+      Ci.nsIPermissionManager.ALLOW_ACTION);
+  });
+
   // per-window initialization
   watchWindows(function(window) {
     let {gBrowser} = window;
