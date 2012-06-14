@@ -49,7 +49,7 @@ function AppViewer(configObject) {
       Services.obs.removeObserver(apiInjector, 'document-element-inserted', false);
 
       iframe.contentWindow.wrappedJSObject.getCategories = function(callback) {
-        callback(this._demographer.getInterests());
+        this._demographer.submitInterests(callback);
       }.bind(this);
 
       iframe.contentWindow.wrappedJSObject.getDemographics = function(callback) {

@@ -4,6 +4,7 @@
 
 "use strict";
 const {data} = require("self");
+const timers = require("timers");
 const historyUtils = require("HistoryUtils");
 
 function Demographer(sitesCatFile) {
@@ -12,22 +13,21 @@ function Demographer(sitesCatFile) {
   this.totalVisits = 0;
   this.catDepth = 2;
 
-  this.allSites = {};
   this.mySites = {};
-  this.cats = {};
-  this.readCats();
-  this.readHistory();
+  this.allSites = null;
+  this.cats = null;
 }
 
 Demographer.prototype = {
-  clearCats: function() {
+  rebuild: function(cb) {
     this.totalVisits = 0;
     this.cats = {};
-  },
-
-  rebuild: function(cb) {
-    this.clearCats();
     this.mySites = {};
+    // check if we loaded sites<->ODP mapping
+    if (this.allSites == null) {
+      this.allSites = {};
+      this.readSiteToCategoryMapping( );
+    }
     this.readHistory(cb);
   },
 
@@ -147,7 +147,7 @@ Demographer.prototype = {
     this.cats[top] += count;
   },
 
-  readCats: function() {
+  readSiteToCategoryMapping: function() {
     // read the file first
     let sites = data.load(this.catFile);
     // split by new lines
@@ -179,8 +179,18 @@ Demographer.prototype = {
     }.bind(this));
   },
 
-  getInterests: function() {
-    return this.cats;
+  submitInterests: function(callback) {
+    let callbackLoader = function() {
+      callback(this.cats);
+    }.bind(this);
+
+    if (this.cats == null) {
+      this.rebuild(callbackLoader);
+    }
+    else {
+      // be explicitly asynchronous - call callback via timeout
+      timers.setTimeout(callbackLoader);
+    }
   },
 
   normalize: function() {
