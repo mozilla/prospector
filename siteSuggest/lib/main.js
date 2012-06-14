@@ -83,10 +83,12 @@ function addAppsButton(window, browser) {
 
 exports.main = function(options) {
   // grant permissions to manage installed apps
+  // and access AppCache
   MOZAPP_PAGES_WHITE_LIST.forEach(function(host) {
-    Services.perms.add(Services.io.newURI(host, null, null),
-      "webapps-manage",
-      Ci.nsIPermissionManager.ALLOW_ACTION);
+    let hostUri = Services.io.newURI(host, null, null);
+    Services.perms.add(hostUri, "webapps-manage", Ci.nsIPermissionManager.ALLOW_ACTION);
+    Services.perms.add(hostUri, "pin-app", Ci.nsIPermissionManager.ALLOW_ACTION);
+    Services.perms.add(hostUri, "offline-app", Ci.nsIPermissionManager.ALLOW_ACTION);
   });
 
   // per-window initialization
