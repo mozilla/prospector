@@ -3,9 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
+const {Ci,Cu,Cc} = require("chrome");
 const {data} = require("self");
 const timers = require("timers");
 const historyUtils = require("HistoryUtils");
+
+Cu.import("resource://gre/modules/Services.jsm", this);
+
+const ONE_WEEK_MILLI_SECONDS = 604800000;
 
 function Demographer(sitesCatFile) {
   this.catFile = sitesCatFile;
@@ -16,6 +21,21 @@ function Demographer(sitesCatFile) {
   this.mySites = {};
   this.allSites = null;
   this.cats = null;
+
+  // collect seconds since the epoch beings
+  this.lastReading = Date.now();
+
+  // set up observer to fire daily when user is idle
+  // and rebuild interests every week
+  let onceDailyObserver = function(doc, topic, data) {
+     let differenceSeconds = Date.now() - this.lastReading;
+     if (differenceSeconds > ONE_WEEK_MILLI_SECONDS) {
+       this.rebuild();
+       this.lastReading = Date.now();
+     }
+  }.bind(this);
+
+  Services.obs.addObserver(onceDailyObserver, 'idle-daily', false);
 }
 
 Demographer.prototype = {
