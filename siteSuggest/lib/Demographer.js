@@ -28,14 +28,14 @@ function Demographer(sitesCatFile) {
   // set up observer to fire daily when user is idle
   // and rebuild interests every week
   let onceDailyObserver = function(doc, topic, data) {
-     let differenceSeconds = Date.now() - this.lastReading;
-     if (differenceSeconds > ONE_WEEK_MILLI_SECONDS) {
-       this.rebuild();
-       this.lastReading = Date.now();
-     }
+    let differenceSeconds = Date.now() - this.lastReading;
+    if (differenceSeconds > ONE_WEEK_MILLI_SECONDS) {
+      this.rebuild();
+      this.lastReading = Date.now();
+    }
   }.bind(this);
 
-  Services.obs.addObserver(onceDailyObserver, 'idle-daily', false);
+  Services.obs.addObserver(onceDailyObserver, "idle-daily", false);
 }
 
 Demographer.prototype = {
