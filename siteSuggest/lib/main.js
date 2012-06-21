@@ -7,7 +7,7 @@ const {Ci,Cu,Cc} = require("chrome");
 const {AppViewer} = require("appViewer");
 const {Demographer} = require("Demographer");
 const tabs = require("tabs");
-const {watchWindows} = require("watchWindows");
+const {WindowTracker} = require("window-utils");
 
 Cu.import("resource://gre/modules/Services.jsm", this);
 
@@ -92,14 +92,20 @@ exports.main = function(options) {
   });
 
   // per-window initialization
-  watchWindows(function(window) {
-    let {gBrowser} = window;
+  let tracker = new WindowTracker({
+    onTrack: function(window) {
+      let {gBrowser} = window;
+      // Listen for tab content loads.
+      tabs.on("ready", function(tab) {
+        if (tabs.activeTab.url == "about:newtab") {
+          addApplicationFrame(window, gBrowser);
+        }
+      }); // end of tabs.on.ready
+    }, // end of onTrack
 
-    // Listen for tab content loads.
-    tabs.on("ready", function(tab) {
-      if (tabs.activeTab.url == "about:newtab") {
-        addAppsButton(window, gBrowser);
-      }
-    }); // end of tabs.on.ready
-  }); // end of watchWindows
+    // we explicitly do nothing for onUntrack
+    // there no browser XUL ui that we changed
+    // while changes to new tab are conceivably
+    // not critical: new tab gets replaced right away
+  }); // end of wondow tracker
 }
