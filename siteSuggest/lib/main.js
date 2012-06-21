@@ -4,8 +4,9 @@
 
 "use strict";
 const {Ci,Cu,Cc} = require("chrome");
-const {AppViewer} = require("appViewer");
+const {AppViewer} = require("AppViewer");
 const {Demographer} = require("Demographer");
+const {setTimeout} = require("timers");
 const tabs = require("tabs");
 const {WindowTracker} = require("window-utils");
 
@@ -27,58 +28,33 @@ function UserProfile() {
 
 const gUserProfile = new UserProfile();
 
-function addAppsButton(window, browser) {
+function addApplicationFrame(window, browser) {
   let document = browser.contentDocument;
-  if (!document) {
-    return; // sanity
-  }
+  let tabGrid = document.getElementById("newtab-grid");
+  let lastRowDiv = tabGrid.querySelector(".newtab-row:last-child");
+  let tabCell = tabGrid.querySelector(".newtab-cell");
 
-  let hisToggle = document.getElementById("newtab-toggle");
-  if (!hisToggle) {
-    return; // sanity
-  }
+  // Add a row and cell for the showing the app frame
+  let appDiv = lastRowDiv.cloneNode(false);
+  let appCell = tabCell.cloneNode(false);
+  appDiv.setAttribute("id", "appstab-row");
+  appDiv.appendChild(appCell);
 
-  let div = document.getElementById("newtab-vertical-margin");
-  let contentWindow = browser.contentWindow;
-  let appToggle = hisToggle.cloneNode(true);
-  appToggle.setAttribute("id", "apps-toggle");
-  appToggle.style.position = "absolute";
-  appToggle.style.width = "16px";
-  appToggle.style.height = "16px";
-  appToggle.style.height = "16px";
-  appToggle.style.top = "12px";
-  appToggle.style.right = "40px";
-  hisToggle.parentNode.insertBefore(appToggle, hisToggle.nextSibling);
-
-  let toggleStateShown = false;
-  let appViewer = new AppViewer({
-    window: window,
+  // Add the viewer frame into the cell
+  new AppViewer({
+    demographer: gUserProfile.demographer,
     document: document,
-    bElement: div,
-    demographer: gUserProfile.demographer
+    parentElement: appCell,
+    window: window,
   });
 
-  contentWindow.onresize = function onRes(event) {
-    appViewer.resize();
-  };
+  // Show the new last row in place of the old last row
+  lastRowDiv.parentNode.insertBefore(appDiv, lastRowDiv.nextSibling);
+  lastRowDiv.style.display = "none";
 
-  appToggle.onclick = function() {
-    if (toggleStateShown) {
-      appViewer.hide();
-      toggleStateShown = false;
-    }
-    else {
-      appViewer.show();
-      toggleStateShown = true;
-    }
-  };
-
-  let oldHandler = hisToggle.onclick;
-  hisToggle.onclick = function() {
-    appViewer.hide();
-    toggleStateShown = false;
-    oldHandler();
-  };
+  // Pretend the newly added cell isn't a cell to not confuse the page on load
+  appCell.classList.remove("newtab-cell");
+  setTimeout(function() appCell.classList.add("newtab-cell"));
 }
 
 exports.main = function(options) {
