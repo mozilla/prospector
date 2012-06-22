@@ -11,7 +11,6 @@ Cu.import("resource://gre/modules/Services.jsm", this);
 const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 function AppViewer(configObject) {
-  this._window = configObject.window;
   this._document = configObject.document;
   this._parentElement = configObject.parentElement;
   this._demographer = configObject.demographer;

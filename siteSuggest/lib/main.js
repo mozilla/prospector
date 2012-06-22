@@ -7,7 +7,6 @@ const {Ci,Cu,Cc} = require("chrome");
 const {AppViewer} = require("AppViewer");
 const {Demographer} = require("Demographer");
 const {setTimeout} = require("timers");
-const tabs = require("tabs");
 const {WindowTracker} = require("window-utils");
 
 Cu.import("resource://gre/modules/Services.jsm", this);
@@ -28,8 +27,7 @@ function UserProfile() {
 
 const gUserProfile = new UserProfile();
 
-function addApplicationFrame(window, browser) {
-  let document = browser.contentDocument;
+function addApplicationFrame(document) {
   let tabGrid = document.getElementById("newtab-grid");
   let lastRowDiv = tabGrid.querySelector(".newtab-row:last-child");
   let tabCell = tabGrid.querySelector(".newtab-cell");
@@ -45,7 +43,6 @@ function addApplicationFrame(window, browser) {
     demographer: gUserProfile.demographer,
     document: document,
     parentElement: appCell,
-    window: window,
   });
 
   // Show the new last row in place of the old last row
@@ -68,20 +65,20 @@ exports.main = function(options) {
   });
 
   // per-window initialization
+  function onContentLoaded(event) {
+    if (event.target.location == "about:newtab") {
+      addApplicationFrame(event.target);
+    }
+  }
+
+  // set up the window tracker
   let tracker = new WindowTracker({
     onTrack: function(window) {
-      let {gBrowser} = window;
-      // Listen for tab content loads.
-      tabs.on("ready", function(tab) {
-        if (tabs.activeTab.url == "about:newtab") {
-          addApplicationFrame(window, gBrowser);
-        }
-      }); // end of tabs.on.ready
+      window.addEventListener("DOMContentLoaded", onContentLoaded);
     }, // end of onTrack
 
-    // we explicitly do nothing for onUntrack
-    // there no browser XUL ui that we changed
-    // while changes to new tab are conceivably
-    // not critical: new tab gets replaced right away
+    onUntrack: function(window) {
+      window.removeEventListener("DOMContentLoaded", onContentLoaded);
+    } // end of onUntrack
   }); // end of wondow tracker
 }
