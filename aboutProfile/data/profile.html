@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+<title></title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<style>
+img {
+  height: 16px;
+  width: 16px;
+  min-width: 16px;
+}
+
+.cat {
+  display: block;
+}
+
+.explain > li {
+  display: block;
+  margin-left: 30px;
+}
+
+.inliner  {
+  display: inline-block;
+  margin: 20px;
+  padding: 0;
+}
+
+.inliner li  {
+  list-style-type: none;
+}
+
+.app_label {
+  display: inline-block;
+  font-size: smaller;
+  width: 200px;
+}
+
+.label {
+  display: inline-block;
+  width: 200px;
+}
+
+.bar {
+  display: inline-block;
+  background-color: olive;
+  color: olive;
+  text-align: right;
+}
+
+.missing {
+}
+
+
+.bar_number {
+  display: inline-block;
+  text-align: start;
+  font-size: x-smaller;
+}
+
+.demog {
+  display: block;
+}
+
+
+.dmog_label {
+  display: inline-block;
+  width: 80px;
+}
+
+.right_bar {
+  display: inline-block;
+  background-color: olive;
+  color: olive;
+  text-align: right;
+}
+
+.left_bar {
+
+  display: inline-block;
+  background-color: blue;
+  color: blue;
+  text-align: right;
+}
+
+.demog_bar {
+
+  display: inline-block;
+  text-align: right;
+}
+
+.app_rec {
+}
+
+#app_show {
+  display: inline-block;
+}
+
+#weights {
+  position: absolute;
+}
+
+#weights > span {
+  display: block;
+}
+
+#weights > span:hover {
+  outline: 1px solid black;
+}
+
+.weight {
+  background: -moz-linear-gradient(0deg, lightgray 0, gray 100%);
+  display: inline-block;
+  height: 20px;
+  width: 199px;
+}
+
+.weight > span {
+  pointer-events: none;
+}
+
+.control > span {
+  display: block;
+  margin-right: 10;
+}
+
+.app_heading {
+	margin-left: 50px;
+}
+
+#gender {
+  background: -moz-linear-gradient(0deg, red 0, white 50%, blue 100%);
+}
+
+#age {
+  background: -moz-linear-gradient(0deg, red 0, white 10%, orange 20%, white 30%, yellow 40%, white 50%, green 60%, white 70%, blue 80%, white 90%, purple 100%);
+}
+
+#sorted {
+  margin-left: 300px;
+  position: relative;
+}
+
+#sorted div {
+  -moz-transition-property: top, left;
+  -moz-transition-duration: 3s, 3s;
+  -moz-transition-timing-function: ease-in-out, ease-in-out;
+  white-space: nowrap;
+}
+
+#sorted div span {
+  display: inline-block;
+  text-align: right;
+  width: 40px;
+}
+</style>
+<script type="text/javascript;version=1.8">
+</script>
+</head>
+<body>
+
+<h3> profile v1.0 </h3>
+
+<dev>
+<strong><button id="test_apps_buttons">RECOMMEND APPS</button></strong>
+<div/>
+<div id="test_web_app" >
+<table border="1">
+<tr id="app_show"></tr>
+</table>
+</div>
+<a href="#" id="show_controls">toggle history controls</a>
+
+<div id="control" class="control" style="visibility: hidden">
+<span>Weight Function <select id="wFunctions"></select></span>
+<span>Categorization Depth<input size='3' type="text" id="depth"></input>
+<input type="checkbox" id="fullPath">Show Full Path Categories></input></span>
+<span>Ignore categories contributing less then <input size='3' type="text" id="catCutOff" value="0.01"></input> of combined score</span>
+<span>Use sites visited more than <input size='3' type="text" id="totalLimit"></input></span>
+<span>Use URL with frecency greater than <input size='3' type="text" id="frecencyLimit"></input></span>
+<span>Use URL visited sooner than <input size='3' type="text" id="daysLimit"></input> days ago</span>
+<span><button id="recompute">Go</button></span>
+<br/>
+<div id="internal_output">
+<br/>
+<table>
+<tr>
+<th>ODP Interests</th>
+<th><cpan class="app_heading">WebApps Categories</cpan></th>
+</tr>
+<tr>
+<td>
+<div id="cats">
+</div>
+</td>
+<td>
+<div class="app_heading" id="app_cats">
+</div>
+</td>
+</tr>
+</table>
+
+<h2> Demographics </h2>
+
+<div id="demogs">
+</div>
+<a href="#" id="missing_link">Sites missing classification </a>
+<div id="missing"></div>
+</div>
+</div>
+
+
+<!--
+<div id="weights" >
+<span><div id="male" class="weight"></div> male</span>
+<span><div id="female" class="weight"></div> female</span>
+<br/>
+<span><div id="18to24" class="weight"></div> 18-24</span>
+<span><div id="25to34" class="weight"></div> 25-34</span>
+<span><div id="35to44" class="weight"></div> 35-44</span>
+<span><div id="45to54" class="weight"></div> 45-54</span>
+<span><div id="55to64" class="weight"></div> 55-64</span>
+
+<span><div id="65plus" class="weight"></div> 65+</span>
+<br/>
+<span><div id="nocollege" class="weight"></div> no college</span>
+<span><div id="somecollege" class="weight"></div> some college</span>
+<span><div id="college" class="weight"></div> college</span>
+<span><div id="graduate" class="weight"></div> graduate school</span>
+<br/>
+
+<span><div id="nokids" class="weight"></div> no kids</span>
+<span><div id="yeskids" class="weight"></div> yes kids</span>
+<br/>
+<span><div id="home" class="weight"></div> from home</span>
+<span><div id="school" class="weight"></div> from school</span>
+<span><div id="work" class="weight"></div> from work</span>
+</div>
+
+<div id="sorted">
+</div>
+-->
+
+</body>
+</html>
