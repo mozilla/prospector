@@ -66,7 +66,7 @@ Profile.prototype = {
 	  	  url: data.url( "profile.html"),
 		  onReady: function ( tab ) {
   	  	        let worker = tab.attach({
-    	 	   			contentScriptFile: [data.url("jquery-1.7.2.js"), data.url("profile.js")]
+          contentScriptFile: [data.url("jquery/jquery.min.js"), data.url("profile.js")]
 		  		});
 
 			    function suggestApps( ) {
