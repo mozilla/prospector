@@ -8,38 +8,6 @@ $(document).ready(function() {
   self.port.emit("donedoc");
 });
 
-self.port.on("show_app_cats", function(cats)  {
-  try {
-    $("#app_cats").empty();
-    let largest = null;
-    Object.keys(cats).sort(function(a, b) {
-      return cats[b] - cats[a];
-    }).forEach(function(name) {
-      let value = cats[name];
-      if (!largest) {
-        largest = value;
-      }
-      let barWidth = Math.floor((200.00 * value) / largest);
-      if (barWidth < 5) {
-        barWidth = 5;
-      }
-      let catNode = $("<cpan/>").addClass("cat").append(
-        $("<span/>").addClass("app_label").text(name),
-        $("<div/>").addClass("bar").text("_").css({
-          "width": barWidth + "px"
-          }),
-        $("<span/>").addClass("bar_number").css({
-          "font-size": "x-small"
-        }).text(value));
-
-      $("#app_cats").append(catNode);
-    });
-  }
-  catch(ex) {
-    console.log("error " + ex);
-  }
-});
-
 self.port.on("show_cats", function(cats, totalAcross) {
   console.log("GOT CATS " + cats);
   let catBukets = {};
@@ -242,25 +210,4 @@ self.port.on("show_demog", function(demog) {
   $("#demogs").append($("<br/>"));
   displayDemogs(demog, ["home", "school", "work"]);
   $("#demogs").append($("<br/>"));
-});
-
-self.port.on("show_apps", function(apps) {
-   console.log("showing apps");
-   let appDiv = $("#app_show");
-   appDiv.empty();
-   apps.forEach(function(app) {
-     let theNode = $("<td/>").addClass("app_rec").append(
-       $("<a/>").text(app.cat).attr("href", "https://play.google.com/store/apps/category/" + app.cat + "?feature=category-nav"),
-       $("<div/>").text(app.title),
-       $("<a/>").attr("href", "https://play.google.com" + app.url).append(
-         $("<img/>").css({
-           "width": "78px",
-           "height": "78px"
-         }).attr({
-           "src": app.img,
-           "alt": app.title
-         })),
-       $("<div/>").text(app.descr));
-     appDiv.append(theNode);
-   });
 });

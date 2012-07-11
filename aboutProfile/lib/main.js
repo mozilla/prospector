@@ -9,7 +9,6 @@ const tabs = require("tabs");
 const {data} = require("self");
 
 const {Demographer} = require("Demographer");
-const {GoogleMapper} = require("GoogleMapper");
 
 function Profile() {
   let profile = this;
@@ -26,7 +25,6 @@ function Profile() {
 
   // create demographer
   this.demographer = new Demographer("SiteToOdp.txt", "demog2K.txt");
-  this.mapper = new GoogleMapper("google.maps", "google.apps");
 }
 
 Profile.prototype = {
@@ -38,29 +36,13 @@ Profile.prototype = {
           contentScriptFile: [data.url("jquery/jquery.min.js"), data.url("profile.js")]
         });
 
-        function suggestApps() {
-          console.log("getting apps");
-          let apps = [];
-          for (let x=0; x < 3; x++) {
-            apps.push(gProfile.mapper.suggest());
-          }
-          worker.port.emit("show_apps", apps);
-        }
-
         function loadData() {
           try {
-            // compute Google Cats mapping
-            gProfile.mapper.odpMap(gProfile.demographer.getInterests());
-
             worker.port.emit("show_cats",
                              gProfile.demographer.getInterests(),
                              gProfile.demographer.getTotalAcross());
             worker.port.emit("show_demog",
                              gProfile.demographer.getDemographics());
-            worker.port.emit("show_app_cats",
-                             gProfile.mapper.getMappings());
-
-            suggestApps();
           }
           catch(ex) {
             console.log("Error " + ex);
@@ -68,8 +50,6 @@ Profile.prototype = {
         }
 
         worker.port.on("donedoc", loadData);
-
-        worker.port.on("getapps", suggestApps);
       },
     });
   },
