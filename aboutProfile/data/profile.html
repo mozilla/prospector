@@ -4,12 +4,6 @@
 <title></title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <style>
-img {
-  height: 16px;
-  width: 16px;
-  min-width: 16px;
-}
-
 .cat {
   display: block;
 }
@@ -51,80 +45,14 @@ img {
   display: block;
 }
 
-
 .dmog_label {
   display: inline-block;
   width: 80px;
 }
 
-.right_bar {
-  display: inline-block;
-  background-color: olive;
-  color: olive;
-  text-align: right;
-}
-
-.left_bar {
-
-  display: inline-block;
-  background-color: blue;
-  color: blue;
-  text-align: right;
-}
-
 .demog_bar {
-
   display: inline-block;
   text-align: right;
-}
-
-#weights {
-  position: absolute;
-}
-
-#weights > span {
-  display: block;
-}
-
-#weights > span:hover {
-  outline: 1px solid black;
-}
-
-.weight {
-  background: -moz-linear-gradient(0deg, lightgray 0, gray 100%);
-  display: inline-block;
-  height: 20px;
-  width: 199px;
-}
-
-.weight > span {
-  pointer-events: none;
-}
-
-#gender {
-  background: -moz-linear-gradient(0deg, red 0, white 50%, blue 100%);
-}
-
-#age {
-  background: -moz-linear-gradient(0deg, red 0, white 10%, orange 20%, white 30%, yellow 40%, white 50%, green 60%, white 70%, blue 80%, white 90%, purple 100%);
-}
-
-#sorted {
-  margin-left: 300px;
-  position: relative;
-}
-
-#sorted div {
-  -moz-transition-property: top, left;
-  -moz-transition-duration: 3s, 3s;
-  -moz-transition-timing-function: ease-in-out, ease-in-out;
-  white-space: nowrap;
-}
-
-#sorted div span {
-  display: inline-block;
-  text-align: right;
-  width: 40px;
 }
 </style>
 <script type="text/javascript" src="jquery/jquery.min.js"></script>
@@ -135,11 +63,6 @@ img {
 </head>
 <body>
 
-<h3> profile v1.0 </h3>
-
-<div class="control">
-<div id="internal_output">
-<br/>
 <table>
 <tr>
 <th>ODP Interests</th>
@@ -156,40 +79,6 @@ img {
 
 <div id="demogs">
 </div>
-</div>
-</div>
-
-
-<!--
-<div id="weights" >
-<span><div id="male" class="weight"></div> male</span>
-<span><div id="female" class="weight"></div> female</span>
-<br/>
-<span><div id="18to24" class="weight"></div> 18-24</span>
-<span><div id="25to34" class="weight"></div> 25-34</span>
-<span><div id="35to44" class="weight"></div> 35-44</span>
-<span><div id="45to54" class="weight"></div> 45-54</span>
-<span><div id="55to64" class="weight"></div> 55-64</span>
-
-<span><div id="65plus" class="weight"></div> 65+</span>
-<br/>
-<span><div id="nocollege" class="weight"></div> no college</span>
-<span><div id="somecollege" class="weight"></div> some college</span>
-<span><div id="college" class="weight"></div> college</span>
-<span><div id="graduate" class="weight"></div> graduate school</span>
-<br/>
-
-<span><div id="nokids" class="weight"></div> no kids</span>
-<span><div id="yeskids" class="weight"></div> yes kids</span>
-<br/>
-<span><div id="home" class="weight"></div> from home</span>
-<span><div id="school" class="weight"></div> from school</span>
-<span><div id="work" class="weight"></div> from work</span>
-</div>
-
-<div id="sorted">
-</div>
--->
 
 </body>
 </html>
