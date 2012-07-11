@@ -6,74 +6,6 @@ $(document).ready(function() {
   console.log("READY");
 
   self.port.emit("donedoc");
-
-  $("#show_controls").click(function() {
-    let node = $("#control");
-    if (node.css("visibility") == "hidden") {
-      node.css("visibility", "visible");
-    }
-    else {
-      node.css("visibility", "hidden");
-    }
-  });
-});
-
-self.port.on("show_controls", function(limit, names, currentName, depth, frecency, days, cutOff) {
-  console.log(currentName);
-  $("#totalLimit").attr("value", limit);
-  $("#depth").attr("value", depth);
-  $("#frecencyLimit").attr("value", "" + frecency);
-  $("#daysLimit").attr("value", days);
-  // $("#catCutOff").attr("value", cutOff);
-
-  $("#wFunctions").empty();
-
-  names.forEach(function(item) {
-    let nd = $("<option/>").text(item).attr("value", item);
-    if (item == currentName) {
-      nd.attr("selected", "1");
-    }
-    $("#wFunctions").append(nd);
-  });
-
-  $("#recompute").one("click", function() {
-    $("#cats").empty();
-    $("#demogs").empty();
-    $("#missing").empty();
-    let weightFunction = $("#wFunctions option:selected").attr("value");
-    let totalLimit = $("#totalLimit").attr("value");
-    let depth = $("#depth").attr("value");
-    let frecency = $("#frecencyLimit").attr("value");
-    let days = $("#daysLimit").attr("value");
-    console.log(weightFunction, totalLimit);
-    self.port.emit("redo", weightFunction, totalLimit, depth, frecency, days);
-  });
-
-  $("#test_apps_buttons").on("click", function() {
-      self.port.emit("getapps");
-  });
-});
-
-self.port.on("show_missing", function(missing) {
-  console.log(JSON.stringify(missing));
-
-  let explaneNode = $("<cpan/>").addClass("explain").hide();
-  let champs = missing.items;
-  for (x in champs) {
-    explaneNode.append($("<li/>").text(champs[x].item + " " + Math.round(champs[x].weight)));
-  }
-
-  $("#missing").append(explaneNode);
-  $("#missing_link").click(function() {
-    if (explaneNode.attr("shown") == "1") {
-      explaneNode.hide();
-      explaneNode.attr("shown", "0");
-    }
-    else {
-      explaneNode.show();
-      explaneNode.attr("shown", "1");
-    }
-  });
 });
 
 self.port.on("show_app_cats", function(cats)  {
@@ -114,8 +46,8 @@ self.port.on("show_cats", function(cats, totalAcross) {
   let catNames = [];
   let aliases = [];
 
-  let cutOff = $("#catCutOff").attr("value") * 1.0 * totalAcross;
-  let fullPath = $("#fullPath").attr("checked");
+  let cutOff = 0.01 * 1.0 * totalAcross;
+  let fullPath = undefined;
   console.log("Cutoff " + cutOff);
   console.log("Fullpath " + fullPath);
 

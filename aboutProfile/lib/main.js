@@ -51,16 +51,7 @@ Profile.prototype = {
           try {
             // compute Google Cats mapping
             gProfile.mapper.odpMap(gProfile.demographer.getInterests());
-            worker.port.emit("show_controls",
-                             gProfile.demographer.getTotalLimit(),
-                             gProfile.demographer.getWeightFunctions(),
-                             gProfile.demographer.getCurrentWeightFunction(),
-                             gProfile.demographer.getCatDepth() ,
-                             gProfile.demographer.getFrecencyLimit() ,
-                             gProfile.demographer.getDayLimit());
 
-            worker.port.emit("show_missing",
-                             gProfile.demographer.getMissingSites());
             worker.port.emit("show_cats",
                              gProfile.demographer.getInterests(),
                              gProfile.demographer.getTotalAcross());
@@ -77,17 +68,6 @@ Profile.prototype = {
         }
 
         worker.port.on("donedoc", loadData);
-        worker.port.on("redo", function(weightFunction, totalLimit, depth, frecency, days) {
-          console.log("REDOING +++++++++");
-          gProfile.demographer.setCurrentWeightFunction(weightFunction);
-          gProfile.demographer.setTotalLimit(totalLimit);
-          gProfile.demographer.setCatDepth(depth);
-          gProfile.demographer.setFrecencyLimit(frecency);
-          gProfile.demographer.setDayLimit(days);
-          gProfile.demographer.rebuild(function() {
-            loadData();
-          });
-        });
 
         worker.port.on("getapps", suggestApps);
       },

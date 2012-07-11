@@ -47,10 +47,6 @@ img {
   text-align: right;
 }
 
-.missing {
-}
-
-
 .bar_number {
   display: inline-block;
   text-align: start;
@@ -118,11 +114,6 @@ img {
   pointer-events: none;
 }
 
-.control > span {
-  display: block;
-  margin-right: 10;
-}
-
 .app_heading {
 	margin-left: 50px;
 }
@@ -163,26 +154,13 @@ img {
 
 <h3> profile v1.0 </h3>
 
-<dev>
-<strong><button id="test_apps_buttons">RECOMMEND APPS</button></strong>
-<div/>
 <div id="test_web_app" >
 <table border="1">
 <tr id="app_show"></tr>
 </table>
 </div>
-<a href="#" id="show_controls">toggle history controls</a>
 
-<div id="control" class="control" style="visibility: hidden">
-<span>Weight Function <select id="wFunctions"></select></span>
-<span>Categorization Depth<input size='3' type="text" id="depth"></input>
-<input type="checkbox" id="fullPath">Show Full Path Categories></input></span>
-<span>Ignore categories contributing less then <input size='3' type="text" id="catCutOff" value="0.01"></input> of combined score</span>
-<span>Use sites visited more than <input size='3' type="text" id="totalLimit"></input></span>
-<span>Use URL with frecency greater than <input size='3' type="text" id="frecencyLimit"></input></span>
-<span>Use URL visited sooner than <input size='3' type="text" id="daysLimit"></input> days ago</span>
-<span><button id="recompute">Go</button></span>
-<br/>
+<div class="control">
 <div id="internal_output">
 <br/>
 <table>
@@ -206,8 +184,6 @@ img {
 
 <div id="demogs">
 </div>
-<a href="#" id="missing_link">Sites missing classification </a>
-<div id="missing"></div>
 </div>
 </div>
 
