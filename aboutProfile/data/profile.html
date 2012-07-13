@@ -4,7 +4,20 @@
 <title></title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <style>
-#catsTable td {
+body {
+  font-family: Helvetica;
+  font-size: .9em;
+}
+
+h1 {
+  font-size: 1.2em;
+}
+
+h2, th {
+  font-size: 1.1em;
+}
+
+#catsTable td, #demogsTable td {
   vertical-align: top;
 }
 
@@ -50,23 +63,41 @@
   color: transparent;
 }
 
+#demogsTable td > div {
+  border: 1px solid #333;
+  margin: 0 10px 5px;
+  padding: 10px 5px;
+}
+
+#demogsTable h3 {
+  font-size: 1em;
+  margin: 0 0 5px;
+}
+
 .demog {
   display: block;
 }
 
 .dmog_label {
   display: inline-block;
-  width: 80px;
+  font-size: .9em;
+  text-align: right;
+  width: 100px;
 }
 
 .demog_bar {
+  color: transparent;
   display: inline-block;
+  margin-bottom: 1px;
   text-align: right;
 }
 </style>
 <link rel="stylesheet" type="text/css" href="jquery/jquery.jqplot.min.css" />
 </head>
 <body>
+
+<h1>Local History Analysis Tool</h1>
+<p>This tool analyzes your browsing history and locally summarizes it into categories and demographics.</p>
 
 <table id="catsTable">
 <tr>
@@ -79,10 +110,21 @@
 </tr>
 </table>
 
-<h2> Demographics </h2>
+<h2>Demographics</h2>
 
-<div id="demogs">
-</div>
+<table id="demogsTable">
+<tr>
+<td>
+<div id="demog_gender"><h3>Gender</h3></div>
+<div id="demog_age"><h3>Age</h3></div>
+<div id="demog_children"><h3>Has Children</h3></div>
+</td>
+<td>
+<div id="demog_education"><h3>Education</h3></div>
+<div id="demog_location"><h3>Browser Location</h3></div>
+</td>
+</tr>
+</table>
 
 </body>
 </html>

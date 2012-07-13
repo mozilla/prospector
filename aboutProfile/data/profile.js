@@ -2,6 +2,29 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+const NEG_COLOR = "#c99";
+const POS_COLOR = "#9c9";
+
+const DEMOG_NAMES = {
+  male: "Male",
+  female: "Female",
+  age_18: "18-24",
+  age_25: "25-34",
+  age_35: "35-44",
+  age_45: "45-54",
+  age_55: "55-64",
+  age_65: "65+",
+  children: "Yes",
+  no_children: "No",
+  no_college: "No College",
+  some_college: "Some College",
+  college: "College",
+  graduate: "Graduate School",
+  home: "Home",
+  school: "School",
+  work: "Work",
+};
+
 $(document).ready(function() {
   console.log("READY");
 
@@ -63,9 +86,8 @@ self.port.on("show_cats", function(cats, totalAcross) {
   // Pick out the top (any-level) categories
   let catNames = Object.keys(cats).sort(function(a, b) {
     return cats[b].vcount - cats[a].vcount;
-  }).slice(0, 13);
+  }).slice(0, 14);
 
-  $("#cats").empty();
   let largest = null;
   let lastTop = "";
   for (x in catNames) {
@@ -112,7 +134,8 @@ self.port.on("show_cats", function(cats, totalAcross) {
   }
 });
 
-function displayDemogs(demog, buketNames) {
+function displayDemogs(demog, category, buketNames) {
+  let parentNode = $("#demog_" + category);
   let min = 10000000000000;
   let max = -10000000000000;
   for (x in buketNames) {
@@ -140,7 +163,7 @@ function displayDemogs(demog, buketNames) {
       }
       lMargin = 100 - width;
       rMargin = 100;
-      color = "blue";
+      color = NEG_COLOR;
     }
     else {
       if (value > 100) {
@@ -149,29 +172,25 @@ function displayDemogs(demog, buketNames) {
       width = value;
       rMargin = 100 - width;
       lMargin = 100;
-      color = "olive";
+      color = POS_COLOR;
     }
 
     let theNode = $("<cpan/>").addClass("demog").append(
-      $("<span/>").addClass("dmog_label").text(bucket),
+      $("<span/>").addClass("dmog_label").text(DEMOG_NAMES[bucket]),
       $("<span/>").addClass("demog_bar").text("_").css({
         "width": width + "px",
-        "margin-left": lMargin + "px",
-        "margin-right": rMargin + "px",
+        "margin-left": 50 + lMargin + "px",
+        "margin-right": 50 + rMargin + "px",
         "background-color": color,
-        "color": color
-      }),
-      $("<span/>").addClass("bar_number").css({
-        "font-size": "x-small"
-      }).text(Math.floor(vtotal)));
-    $("#demogs").append(theNode)
+      }));
+    parentNode.append(theNode)
 
     let explaneNode = $("<div/>").hide();
     let negNode = $("<ul/>").addClass("inliner");
     let champs = demog[bucket].neg.items;
     for (x in champs) {
       negNode.append($("<li/>").css({
-        "color": "blue"
+        "color": NEG_COLOR,
       }).text(champs[x].item.domain + " " + Math.round(champs[x].item.vcount) + " " + champs[x].item.drop));
     }
     explaneNode.append(negNode);
@@ -180,11 +199,11 @@ function displayDemogs(demog, buketNames) {
     champs = demog[bucket].pos.items;
     for (x in champs) {
       negNode.append($("<li/>").css({
-        "color": "olive"
+        "color": POS_COLOR,
       }).text(champs[x].item.domain + " " + Math.round(champs[x].item.vcount) + " " + champs[x].item.drop));
     }
     explaneNode.append(posNode);
-    $("#demogs").append(explaneNode);
+    parentNode.append(explaneNode);
 
     theNode.click(function() {
       if (explaneNode.attr("shown") == "1") {
@@ -202,15 +221,9 @@ function displayDemogs(demog, buketNames) {
 self.port.on("show_demog", function(demog) {
   console.log("GOT DEMOG " + demog);
 
-  $("#demogs").empty();
-  displayDemogs(demog, ["male", "female"]);
-  $("#demogs").append($("<br/>"));
-  displayDemogs(demog, ["age_18", "age_25", "age_35", "age_45", "age_55", "age_65"]);
-  $("#demogs").append($("<br/>"));
-  displayDemogs(demog, ["no_college", "some_college", "college", "graduate"]);
-  $("#demogs").append($("<br/>"));
-  displayDemogs(demog, ["children", "no_children"]);
-  $("#demogs").append($("<br/>"));
-  displayDemogs(demog, ["home", "school", "work"]);
-  $("#demogs").append($("<br/>"));
+  displayDemogs(demog, "gender", ["male", "female"]);
+  displayDemogs(demog, "age", ["age_18", "age_25", "age_35", "age_45", "age_55", "age_65"]);
+  displayDemogs(demog, "education", ["no_college", "some_college", "college", "graduate"]);
+  displayDemogs(demog, "children", ["children", "no_children"]);
+  displayDemogs(demog, "location", ["home", "school", "work"]);
 });
