@@ -11,45 +11,59 @@ $(document).ready(function() {
 self.port.on("show_cats", function(cats, totalAcross) {
   console.log("GOT CATS " + cats);
   let catBukets = {};
-  let catNames = [];
   let aliases = [];
 
-  let cutOff = 0.01 * 1.0 * totalAcross;
-  let fullPath = undefined;
-  console.log("Cutoff " + cutOff);
-  console.log("Fullpath " + fullPath);
+  // Figure out the count for each top level category
+  let topLevel = {};
+  Object.keys(cats).forEach(function(cat) {
+    let top = cat.replace(/\/.*/, "");
+    let {vcount} = cats[cat];
+    topLevel[top] = (topLevel[top] || 0) + vcount;
+  });
 
-  if (fullPath) {
-    Object.keys(cats).forEach(function(cat) {
-      let top = cat.replace(/\/.*/, "");
-      let bucket = catBukets[top];
-      if (!bucket) {
-        bucket = {
-          total: 0,
-          cats: []
-        };
-        catBukets[top] = bucket;
-      }
-      bucket.total += cats[cat].vcount;
-      bucket.cats.push(cat);
-    });
+  let seriesColors = ["#aae", "#eaa", "#eea", "#aea", "#eae", "#aee", "#acf",
+    "#fca", "#fac", "#ffc", "#cfa", "#afc", "#fcf", "#cff"];
 
-    Object.keys(catBukets).sort(function(a, b) {
-      return catBukets[b].total - catBukets[a].total;
-    }).forEach(function(top) {
-      console.log(top, JSON.stringify(catBukets[top].cats));
-      catNames = catNames.concat(catBukets[top].cats.sort(function(a, b) {
-        return cats[b].vcount - cats[a].vcount;
-      }));
-    });
-  }
-  else {
-    Object.keys(cats).sort(function(a, b) {
-      return cats[b].vcount - cats[a].vcount;
-    }).forEach(function(name) {
-      catNames.push(name);
-    });
-  }
+  // Convert the data for the plotter and assign colors
+  let sortedTops = [];
+  let topColors = {};
+  Object.keys(topLevel).sort(function(a, b) {
+    return topLevel[b] - topLevel[a];
+  }).forEach(function(top, pos) {
+    sortedTops.push([top, topLevel[top]]);
+    topColors[top] = seriesColors[pos];
+  });
+
+  // Plot the pie graph for the categories
+  let catsPie = $.jqplot("catsPie", [sortedTops], {
+    grid: {
+      background: "transparent",
+      drawBorder: false,
+      shadow: false,
+    },
+    legend: {
+      location: "e",
+      show: true,
+    },
+    seriesColors: seriesColors,
+    seriesDefaults: {
+      renderer: $.jqplot.PieRenderer,
+      rendererOptions: {
+        dataLabelPositionFactor: .6,
+        dataLabelThreshold: 4,
+        highlightMouseOver: false,
+        showDataLabels: true,
+        sliceMargin: 2,
+        startAngle: -90,
+      },
+      shadow: false,
+    },
+  });
+
+  // Pick out the top (any-level) categories
+  let catNames = Object.keys(cats).sort(function(a, b) {
+    return cats[b].vcount - cats[a].vcount;
+  }).slice(0, 13);
 
   $("#cats").empty();
   let largest = null;
@@ -59,36 +73,25 @@ self.port.on("show_cats", function(cats, totalAcross) {
     let top = name.replace(/\/.*/, "");
     let catData = cats[name];
 
-    if (catData.vcount < cutOff) {
-      continue;
-    }
-
-    if (fullPath == null) {
-      // remove the path prefix
-      name = name.replace(/^.*\//, "");
-    }
+    // remove the path prefix
+    name = name.replace(/^.*\//, "").replace(/_/g, " ");
 
     let champs = catData.champs.items;
     if (!largest) {
       largest = catData.vcount;
     }
-    let barWidth = Math.floor((200.00 * catData.vcount) / largest);
+    let barWidth = Math.floor((300.00 * catData.vcount) / largest);
     if (barWidth < 5) {
       barWidth = 5;
     }
+
+    // Display a bar colored based on the category
     let catNode = $("<cpan/>").addClass("cat").append(
       $("<span/>").addClass("label").text(name),
       $("<div/>").addClass("bar").text("_").css({
+        "background-color": topColors[top],
         "width": barWidth + "px"
-      }),
-      $("<span/>").addClass("bar_number").css({
-        "font-size": "x-small"
-      }).text(Math.round(catData.vcount)));
-
-    if (top != lastTop && fullPath != null) {
-      catNode.css({ "margin-top": "10px" });
-      lastTop = top;
-    }
+      }));
 
     $("#cats").append(catNode);
     let explaneNode = $("<cpan/>").addClass("explain").hide();

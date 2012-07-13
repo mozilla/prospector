@@ -33,7 +33,13 @@ Profile.prototype = {
       url: data.url("profile.html"),
       onReady: function(tab) {
         let worker = tab.attach({
-          contentScriptFile: [data.url("jquery/jquery.min.js"), data.url("profile.js")]
+          contentScriptFile: [
+            data.url("jquery/jquery.min.js"),
+            data.url("jquery/jquery.jqplot.min.js"),
+            data.url("jquery/jqplot.pieRenderer.min.js"),
+            data.url("jquery/jqplot.donutRenderer.min.js"),
+            data.url("profile.js"),
+          ]
         });
 
         function loadData() {

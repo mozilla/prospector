@@ -4,8 +4,22 @@
 <title></title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <style>
+#catsTable td {
+  vertical-align: top;
+}
+
+#catsPie {
+ height: 375px;
+ width: 500px;
+}
+
+#cats {
+  margin-top: 25px;
+}
+
 .cat {
   display: block;
+  margin-top: 5px;
 }
 
 .explain > li {
@@ -25,20 +39,15 @@
 
 .label {
   display: inline-block;
-  width: 200px;
+  font-size: .9em;
+  margin-right: 10px;
+  text-align: right;
+  width: 150px;
 }
 
 .bar {
   display: inline-block;
-  background-color: olive;
-  color: olive;
-  text-align: right;
-}
-
-.bar_number {
-  display: inline-block;
-  text-align: start;
-  font-size: x-smaller;
+  color: transparent;
 }
 
 .demog {
@@ -55,23 +64,18 @@
   text-align: right;
 }
 </style>
-<script type="text/javascript" src="jquery/jquery.min.js"></script>
-<script type="text/javascript" src="jquery/jquery.jqplot.min.js"></script>
-<script type="text/javascript" src="jquery/jqplot.pieRenderer.min.js"></script>
-<script type="text/javascript" src="jquery/jqplot.donutRenderer.min.js"></script>
 <link rel="stylesheet" type="text/css" href="jquery/jquery.jqplot.min.css" />
 </head>
 <body>
 
-<table>
+<table id="catsTable">
 <tr>
-<th>ODP Interests</th>
+<th><abbr title="Open Directory Project">ODP</abbr> Categorization</th>
+<th>Detailed category Ranking</th>
 </tr>
 <tr>
-<td>
-<div id="cats">
-</div>
-</td>
+<td><div id="catsPie"></div></td>
+<td><div id="cats"></div></td>
 </tr>
 </table>
 
