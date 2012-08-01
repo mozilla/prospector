@@ -8,6 +8,7 @@ const {data} = require("self");
 const {Demographer} = require("Demographer");
 const {Factory, Unknown} = require("api-utils/xpcom");
 const {PageMod} = require("page-mod");
+const tabs = require("tabs");
 
 const {Cu} = require("chrome");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -51,12 +52,20 @@ exports.main = function(options, callbacks) {
       worker.port.on("donedoc", function() {
         worker.port.emit("style", data.url("jquery/jquery.jqplot.min.css"));
 
-        worker.port.emit("show_cats",
-                         demographer.getInterests(),
-                         demographer.getTotalAcross());
-        worker.port.emit("show_demog",
-                         demographer.getDemographics());
+        // Make sure the demographer is done computing before accessing
+        demographer.onReady(function() {
+          worker.port.emit("show_cats",
+                           demographer.getInterests(),
+                           demographer.getTotalAcross());
+          worker.port.emit("show_demog",
+                           demographer.getDemographics());
+        });
       });
     }
   });
+
+  // Automatically open a tab unless it's a regular firefox restart
+  if (options.loadReason != "startup") {
+    tabs.open("about:profile");
+  }
 };

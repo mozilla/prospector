@@ -38,6 +38,9 @@ const demogBuckets = [
 ];
 
 function Demographer( sitesCatFile , sitesDemogFile  ) {
+  this.ready = false;
+  this.waitingReady = [];
+
     this.catFile = sitesCatFile;
     this.demogFile = sitesDemogFile;
     this.allSites = {};
@@ -69,6 +72,7 @@ Demographer.prototype = {
   },
 
   rebuild: function ( cb ) {
+    this.ready = false;
   	this.clearCats( );
 	this.mySites = {};
 	this.readHistory( cb );
@@ -141,6 +145,15 @@ Demographer.prototype = {
 			if( cb ) {
 				cb( );  // execute call back
 			}
+
+                  this.ready = true;
+                  this.waitingReady.slice().forEach(function(cb) {
+                    try {
+                      cb();
+                    }
+                    catch(ex) {}
+                  });
+                  this.waitingReady.length = 0;
 		}.bind( this ) ,
 
 		onError: function ( error ) {
@@ -286,6 +299,15 @@ Demographer.prototype = {
 
   },
 
+  // Allow consumers to wait until data is computed
+  onReady: function(cb) {
+    if (this.ready) {
+      timers.setTimeout(function() cb());
+    }
+    else {
+      this.waitingReady.push(cb);
+    }
+  },
 }
 
 
