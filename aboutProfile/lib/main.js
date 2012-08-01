@@ -4,79 +4,59 @@
 
 'use strict';
 
-const widgets = require("widget");
-const tabs = require("tabs");
 const {data} = require("self");
-
 const {Demographer} = require("Demographer");
+const {Factory, Unknown} = require("api-utils/xpcom");
+const {PageMod} = require("page-mod");
 
-function Profile() {
-  let profile = this;
-
-  widgets.Widget({
-    id: "profile",
-    label: "Profile",
-    contentURL: data.url("icon.png"),
-    onClick: function() {
-      console.log("clicked");
-      profile.loadControls();
-    }
-  });
-
-  // create demographer
-  this.demographer = new Demographer("SiteToOdp.txt", "demog2K.txt");
-}
-
-Profile.prototype = {
-  loadControls: function() {
-    tabs.open({
-      url: data.url("profile.html"),
-      onReady: function(tab) {
-        let worker = tab.attach({
-          contentScriptFile: [
-            data.url("jquery/jquery.min.js"),
-            data.url("jquery/jquery.jqplot.min.js"),
-            data.url("jquery/jqplot.pieRenderer.min.js"),
-            data.url("jquery/jqplot.donutRenderer.min.js"),
-            data.url("profile.js"),
-          ]
-        });
-
-        function loadData() {
-          try {
-            worker.port.emit("show_cats",
-                             gProfile.demographer.getInterests(),
-                             gProfile.demographer.getTotalAcross());
-            worker.port.emit("show_demog",
-                             gProfile.demographer.getDemographics());
-          }
-          catch(ex) {
-            console.log("Error " + ex);
-          }
-        }
-
-        worker.port.on("donedoc", loadData);
-      },
-    });
-  },
-
-  _debug: function(s) {
-    if (this._trace) {
-      console.debug(s);
-    }
-  },
-};
-
-const gProfile = new Profile();
+const {Cu} = require("chrome");
+Cu.import("resource://gre/modules/Services.jsm");
 
 exports.main = function(options, callbacks) {
-  console.log(" in main ");
-  gProfile._debug("Profile starting");
-};
+  // Create demographer
+  let demographer = new Demographer("SiteToOdp.txt", "demog2K.txt");
 
-exports.onUnload = function(reason) {
-};
+  // Handle about:profile requests
+  Factory.new({
+    contract: "@mozilla.org/network/protocol/about;1?what=profile",
 
-exports.getProfileForUnitTest = function() {
-  return gProfile;
+    component: Unknown.extend({
+      interfaces: ["nsIAboutModule"],
+
+      newChannel: function(uri) {
+        let chan = Services.io.newChannel(data.url("profile.html"), null, null);
+        chan.originalURI = uri;
+        return chan;
+      },
+
+      getURIFlags: function(uri) {
+        return 0;
+      }
+    })
+  });
+
+  // Add functionality into about:profile page loads
+  PageMod({
+    contentScriptFile: [
+      data.url("jquery/jquery.min.js"),
+      data.url("jquery/jquery.jqplot.min.js"),
+      data.url("jquery/jqplot.pieRenderer.min.js"),
+      data.url("jquery/jqplot.donutRenderer.min.js"),
+      data.url("profile.js"),
+    ],
+
+    include: ["about:profile"],
+
+    onAttach: function(worker) {
+      worker.port.on("donedoc", function() {
+        worker.port.emit("style", data.url("jquery/jquery.jqplot.min.css"));
+
+        worker.port.emit("show_cats",
+                         demographer.getInterests(),
+                         demographer.getTotalAcross());
+        worker.port.emit("show_demog",
+                         demographer.getDemographics());
+      });
+    }
+  });
 };

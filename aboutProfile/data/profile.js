@@ -31,6 +31,14 @@ $(document).ready(function() {
   self.port.emit("donedoc");
 });
 
+self.port.on("style", function(file) {
+  $("head").append($("<link>").attr({
+    href: file,
+    rel: "stylesheet",
+    type: "text/css"
+  }));
+});
+
 self.port.on("show_cats", function(cats, totalAcross) {
   console.log("GOT CATS " + cats);
   let catBukets = {};
