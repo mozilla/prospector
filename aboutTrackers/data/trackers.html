@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <style>
+#blockCookied {
+  pointer-events: none;
+}
+
+.uncookied {
+  color: gray;
+  font-style: italic;
+}
 </style>
 </head>
 <body>
@@ -13,6 +21,15 @@ Auto-Block Threshold:
 <button id="threshold-plus">+</button>
 <small>(Trackers that follow you across this many domains will be blocked.)</small>
 </div>
+
+<div>
+Only Block Cookied:
+<input id="blockCookied" type="checkbox"/>
+<small class="uncookied">(Allow sites without cookies to avoid being automatically blocked.)</small>
+</div>
+
+<br/>
+
 <table id="trackers">
 <tr><th>Block</th><th>Tracker</th><th>Tracked domains</th></tr>
 </table>

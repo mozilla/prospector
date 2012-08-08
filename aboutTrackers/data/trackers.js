@@ -4,6 +4,18 @@
 
 "use strict";
 
+// Indicate if only cookied sites should be auto-blocked
+self.port.on("show_blockCookied", function(blockCookied) {
+  let check = document.getElementById("blockCookied");
+  check.checked = blockCookied;
+
+  // Allow switching on and off from related nodes
+  check.parentNode.addEventListener("click", function({target}) {
+    check.checked = !check.checked;
+    self.port.emit("set_blockCookied", check.checked);
+  });
+});
+
 // Fill in the threshold and add functionality
 self.port.on("show_threshold", function(threshold) {
   let span = document.getElementById("threshold");
@@ -27,6 +39,7 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     return Object.keys(trackers[b]).length - Object.keys(trackers[a]).length;
   }).forEach(function(tracker) {
     let tr = document.createElement("tr");
+    tr.classList.add(cookied[tracker] ? "cookied" : "uncookied");
     table.appendChild(tr);
 
     let blockTd = document.createElement("td");
@@ -47,13 +60,6 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     let trackerTd = document.createElement("td");
     trackerTd.textContent = tracker;
     tr.appendChild(trackerTd);
-
-    if (cookied[tracker]) {
-      tr.style.fontWeight = "bold";
-    }
-    else {
-      tr.style.fontStyle = "italic";
-    }
 
     let tracked = Object.keys(trackers[tracker]).sort();
     let trackedTd = document.createElement("td");

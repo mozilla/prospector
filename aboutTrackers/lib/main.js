@@ -20,13 +20,13 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 exports.main = function() {
   // Initialize persistent data
   if (storage.autoBlockThreshold == null) {
-    storage.autoBlockThreshold = 14;
+    storage.autoBlockThreshold = 10;
   }
   if (storage.blocked == null) {
-    storage.blocked = {
-      // Various sites depend on this for jQuery, etc.
-      "googleapis.com": 0,
-    };
+    storage.blocked = {};
+  }
+  if (storage.onlyBlockCookied == null) {
+    storage.onlyBlockCookied = true;
   }
   if (storage.trackers == null) {
     storage.trackers = {};
@@ -89,15 +89,11 @@ exports.main = function() {
         if (storage.trackers[trackerDomain] == null) {
            storage.trackers[trackerDomain] = {};
         }
+
+        // Include this site as tracked and check for auto-block
         if (storage.trackers[trackerDomain][contextDomain] == null) {
           storage.trackers[trackerDomain][contextDomain] = 1;
-
-          // Auto-block if we exceed and don't have a setting
-          let tracked = Object.keys(storage.trackers[trackerDomain]).length;
-          if (tracked >= storage.autoBlockThreshold &&
-              storage.blocked[trackerDomain] == null) {
-            storage.blocked[trackerDomain] = "auto";
-          }
+          updateAutoBlock(trackerDomain);
         }
 
         // Check if this tracker should be blocked (auto or manual)
@@ -153,34 +149,24 @@ exports.main = function() {
     onAttach: function(worker) {
       let cookied = {};
       Object.keys(storage.trackers).forEach(function(tracker) {
-        cookied[tracker] = Services.cookies.countCookiesFromHost(tracker) > 0;
+        cookied[tracker] = isCookied(tracker);
       });
 
       // Update the page with stored values
+      worker.port.emit("show_blockCookied", storage.onlyBlockCookied);
       worker.port.emit("show_threshold", storage.autoBlockThreshold);
       worker.port.emit("show_trackers", storage.trackers, storage.blocked, cookied);
+
+      // Save changes to the only-block-cookied status
+      worker.port.on("set_blockCookied", function(blockCookied) {
+        storage.onlyBlockCookied = blockCookied;
+        updateAllAutoBlocked();
+      });
 
       // Save changes to the threshold
       worker.port.on("set_threshold", function(threshold) {
         storage.autoBlockThreshold = threshold;
-
-        // Auto-block/unblock sites for the new threshold
-        Object.keys(storage.trackers).forEach(function(tracker) {
-          // Ignore user-set blocked values
-          let oldBlocked = storage.blocked[tracker];
-          if (typeof oldBlocked == "number") {
-            return;
-          }
-
-          // Check the number of tracked sites against the threshold
-          let tracked = Object.keys(storage.trackers[tracker]).length;
-          storage.blocked[tracker] = tracked < threshold ? undefined : "auto";
-
-          // Update the UI for trackers that changed
-          if (oldBlocked != storage.blocked[tracker]) {
-            worker.port.emit("update_block", tracker, storage.blocked[tracker]);
-          }
-        });
+        updateAllAutoBlocked();
       });
 
       // Save changes to the block status for a tracker
@@ -188,6 +174,51 @@ exports.main = function() {
         storage.blocked[tracker] = +!storage.blocked[tracker];
         worker.port.emit("update_block", tracker, storage.blocked[tracker]);
       });
+
+      // Update the auto-blocked state for all trackers
+      function updateAllAutoBlocked() {
+        Object.keys(storage.trackers).forEach(function(tracker) {
+          // Update the UI for trackers if changed
+          if (updateAutoBlock(tracker)) {
+            worker.port.emit("update_block", tracker, storage.blocked[tracker]);
+          }
+        });
+      }
     }
   });
 };
+
+/**
+ * Determine if a tracker is using cookies.
+ */
+function isCookied(tracker) {
+  return Services.cookies.countCookiesFromHost(tracker) > 0;
+}
+
+/**
+ * Update the auto-blocked-ness of a tracker. Returns true if changed.
+ */
+function updateAutoBlock(tracker) {
+  // Ignore user-set blocked values
+  let oldBlocked = storage.blocked[tracker];
+  if (typeof oldBlocked == "number") {
+    return false;
+  }
+
+  // Check the number of tracked sites against the threshold
+  let tracked = Object.keys(storage.trackers[tracker]);
+  let matchThreshold = tracked.length >= storage.autoBlockThreshold;
+  let newBlocked = matchThreshold ? "auto" : undefined;
+
+  // Don't set auto-block if not blocking trackers without cookies
+  if (storage.onlyBlockCookied && !isCookied(tracker)) {
+    newBlocked = undefined;
+  }
+
+  // Change if necessary and inform if so
+  if (newBlocked != oldBlocked) {
+    storage.blocked[tracker] = newBlocked;
+    return true;
+  }
+  return false;
+}
