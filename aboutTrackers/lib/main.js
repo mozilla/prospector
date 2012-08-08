@@ -142,13 +142,11 @@ exports.main = function() {
 
   // Add functionality into about:trackers page loads
   PageMod({
-    contentScriptFile: [
-      data.url("trackers.js"),
-    ],
-
+    contentScriptFile: [data.url("trackers.js")],
     include: ["about:trackers"],
 
     onAttach: function(worker) {
+      // Build a mapping of which trackers have cookies
       let cookied = {};
       Object.keys(storage.trackers).forEach(function(tracker) {
         cookied[tracker] = isCookied(tracker);

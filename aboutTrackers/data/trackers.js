@@ -40,6 +40,7 @@ self.port.on("show_threshold", function(threshold) {
 
 // Build a table with the trackers and blocked status
 self.port.on("show_trackers", function(trackers, blocked, cookied) {
+  // Show trackers sorted by number of tracked sites then alphabetically
   let table = document.getElementById("trackers");
   Object.keys(trackers).sort().sort(function(a, b) {
     return Object.keys(trackers[b]).length - Object.keys(trackers[a]).length;
@@ -48,10 +49,9 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     tr.classList.add(cookied[tracker] ? "cookied" : "uncookied");
     table.appendChild(tr);
 
+    // Allow setting or clearing the blocked state
     let blockTd = document.createElement("td");
     tr.appendChild(blockTd);
-
-    // Allow setting or clearing the blocked state
     let blockCheck = document.createElement("input");
     blockCheck.id = "check-" + tracker;
     blockCheck.type = "checkbox";
@@ -67,6 +67,7 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     trackerTd.textContent = tracker;
     tr.appendChild(trackerTd);
 
+    // Show an alphabetical list of the tracked sites
     let tracked = Object.keys(trackers[tracker]).sort();
     let trackedTd = document.createElement("td");
     trackedTd.textContent = "(" + tracked.length + ") " + tracked.join(" ");
@@ -77,10 +78,12 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
 // Handle changes to blocked statuses
 self.port.on("update_block", setBlocked);
 
+// Update UI for the blocked-ness of a tracker
 function setBlocked(tracker, blocked) {
   let blockCheck = document.getElementById("check-" + tracker);
   blockCheck.checked = blocked;
 
+  // Style the whole row appropriately
   let tr = blockCheck.parentNode.parentNode;
   if (blocked == "auto") {
     tr.classList.add("autoblocked");
