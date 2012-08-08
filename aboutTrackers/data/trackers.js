@@ -4,6 +4,12 @@
 
 "use strict";
 
+// Allow clearing all custom settings then redo the page
+document.getElementById("reset").addEventListener("click", function() {
+  self.port.emit("reset");
+  document.location.reload();
+});
+
 // Indicate if only cookied sites should be auto-blocked
 self.port.on("show_blockCookied", function(blockCookied) {
   let check = document.getElementById("blockCookied");

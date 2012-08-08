@@ -17,16 +17,19 @@ const unload = require("unload");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
+const DEFAULT_AUTO_BLOCK_THRESHOLD = 7;
+const DEFAULT_ONLY_BLOCK_COOKIED = true;
+
 exports.main = function() {
   // Initialize persistent data and defaults
   if (storage.autoBlockThreshold == null) {
-    storage.autoBlockThreshold = 7;
+    storage.autoBlockThreshold = DEFAULT_AUTO_BLOCK_THRESHOLD;
   }
   if (storage.blocked == null) {
     storage.blocked = {};
   }
   if (storage.onlyBlockCookied == null) {
-    storage.onlyBlockCookied = true;
+    storage.onlyBlockCookied = DEFAULT_ONLY_BLOCK_COOKIED;
   }
   if (storage.trackers == null) {
     storage.trackers = {};
@@ -155,6 +158,14 @@ exports.main = function() {
       worker.port.emit("show_blockCookied", storage.onlyBlockCookied);
       worker.port.emit("show_threshold", storage.autoBlockThreshold);
       worker.port.emit("show_trackers", storage.trackers, storage.blocked, cookied);
+
+      // Allow clearing all custom settings and blockings
+      worker.port.on("reset", function() {
+        storage.autoBlockThreshold = DEFAULT_AUTO_BLOCK_THRESHOLD;
+        storage.blocked = {};
+        storage.onlyBlockCookied = DEFAULT_ONLY_BLOCK_COOKIED;
+        updateAllAutoBlocked();
+      });
 
       // Save changes to the only-block-cookied status
       worker.port.on("set_blockCookied", function(blockCookied) {
