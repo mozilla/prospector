@@ -1,0 +1,9 @@
+{
+  "author": "Mozilla Labs",
+  "description": "Track tracking sites and automatically block them.",
+  "fullName": "Mozilla Labs: Prospector - about:trackers",
+  "id": "aboutTrackers@prospector.labs.mozilla",
+  "license": "MPL 2.0",
+  "name": "about-trackers",
+  "version": "1"
+}
