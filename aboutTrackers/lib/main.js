@@ -18,9 +18,9 @@ Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 exports.main = function() {
-  // Initialize persistent data
+  // Initialize persistent data and defaults
   if (storage.autoBlockThreshold == null) {
-    storage.autoBlockThreshold = 10;
+    storage.autoBlockThreshold = 7;
   }
   if (storage.blocked == null) {
     storage.blocked = {};
@@ -123,17 +123,16 @@ exports.main = function() {
 
     Component: Class({
       extends: Unknown,
-
       interfaces: ["nsIAboutModule"],
+
+      getURIFlags: function(uri) {
+        return 0;
+      },
 
       newChannel: function(uri) {
         let chan = Services.io.newChannel(data.url("trackers.html"), null, null);
         chan.originalURI = uri;
         return chan;
-      },
-
-      getURIFlags: function(uri) {
-        return 0;
       }
     })
   });
@@ -207,8 +206,8 @@ function updateAutoBlock(tracker) {
 
   // Check the number of tracked sites against the threshold
   let tracked = Object.keys(storage.trackers[tracker]);
-  let matchThreshold = tracked.length >= storage.autoBlockThreshold;
-  let newBlocked = matchThreshold ? "auto" : undefined;
+  let overThreshold = tracked.length >= storage.autoBlockThreshold;
+  let newBlocked = overThreshold ? "auto" : undefined;
 
   // Don't set auto-block if not blocking trackers without cookies
   if (storage.onlyBlockCookied && !isCookied(tracker)) {

@@ -7,6 +7,10 @@
   pointer-events: none;
 }
 
+.autoblocked {
+  font-weight: bold;
+}
+
 .uncookied {
   color: gray;
   font-style: italic;
@@ -15,17 +19,17 @@
 </head>
 <body>
 <div>
-Auto-Block Threshold:
+Auto-block threshold:
 <span id="threshold"></span>
 <button id="threshold-minus">-</button>
 <button id="threshold-plus">+</button>
-<small>(Trackers that follow you across this many domains will be blocked.)</small>
+<small class="autoblocked">(Trackers that follow you across this many domains will be blocked.)</small>
 </div>
 
 <div>
-Only Block Cookied:
+Only block sites with cookies:
 <input id="blockCookied" type="checkbox"/>
-<small class="uncookied">(Allow sites without cookies to avoid being automatically blocked.)</small>
+<small class="uncookied">(Sites without cookies are less likely to be trackers.)</small>
 </div>
 
 <br/>

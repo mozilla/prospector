@@ -49,8 +49,8 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     let blockCheck = document.createElement("input");
     blockCheck.id = "check-" + tracker;
     blockCheck.type = "checkbox";
-    blockCheck.checked = blocked[tracker];
     blockTd.appendChild(blockCheck);
+    setBlocked(tracker, blocked[tracker]);
 
     // Track the toggle to storage
     blockTd.addEventListener("click", function() {
@@ -69,6 +69,17 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
 });
 
 // Handle changes to blocked statuses
-self.port.on("update_block", function(tracker, blocked) {
-  document.getElementById("check-" + tracker).checked = blocked;
-});
+self.port.on("update_block", setBlocked);
+
+function setBlocked(tracker, blocked) {
+  let blockCheck = document.getElementById("check-" + tracker);
+  blockCheck.checked = blocked;
+
+  let tr = blockCheck.parentNode.parentNode;
+  if (blocked == "auto") {
+    tr.classList.add("autoblocked");
+  }
+  else {
+    tr.classList.remove("autoblocked");
+  }
+}
