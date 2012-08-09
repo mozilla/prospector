@@ -40,6 +40,8 @@ self.port.on("show_threshold", function(threshold) {
 
 // Build a table with the trackers and blocked status
 self.port.on("show_trackers", function(trackers, blocked, cookied) {
+  let trackedTrackers = {};
+
   // Show trackers sorted by number of tracked sites then alphabetically
   let table = document.getElementById("trackers");
   Object.keys(trackers).sort().sort(function(a, b) {
@@ -72,7 +74,20 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     let trackedTd = document.createElement("td");
     trackedTd.textContent = "(" + tracked.length + ") " + tracked.join(" ");
     tr.appendChild(trackedTd);
+
+    // Find the tracked sites that are also trackers
+    tracked.forEach(function(site) {
+      if (trackers[site] != null) {
+        trackedTrackers[site] = true;
+      }
+    });
   });
+
+  let tracked = Object.keys(trackedTrackers).sort();
+  if (tracked.length > 0) {
+    let span = document.getElementById("trackedTrackers");
+    span.textContent = "(" + tracked.join(", ") + ")";
+  }
 });
 
 // Handle changes to blocked statuses
