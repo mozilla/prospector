@@ -198,19 +198,19 @@ exports.main = function() {
         storage.autoBlockThreshold = DEFAULT_AUTO_BLOCK_THRESHOLD;
         storage.blocked = {};
         storage.onlyBlockCookied = DEFAULT_ONLY_BLOCK_COOKIED;
-        updateAllAutoBlocked();
+        updateAllAutoBlocked(false);
       });
 
       // Save changes to the only-block-cookied status
       worker.port.on("set_blockCookied", function(blockCookied) {
         storage.onlyBlockCookied = blockCookied;
-        updateAllAutoBlocked();
+        updateAllAutoBlocked(true);
       });
 
       // Save changes to the threshold
       worker.port.on("set_threshold", function(threshold) {
         storage.autoBlockThreshold = threshold;
-        updateAllAutoBlocked();
+        updateAllAutoBlocked(true);
       });
 
       // Save changes to the block status for a tracker
@@ -219,11 +219,11 @@ exports.main = function() {
         worker.port.emit("update_block", tracker, storage.blocked[tracker]);
       });
 
-      // Update the auto-blocked state for all trackers
-      function updateAllAutoBlocked() {
+      // Update the auto-blocked state for all trackers and notify updates
+      function updateAllAutoBlocked(notify) {
         Object.keys(storage.trackers).forEach(function(tracker) {
           // Update the UI for trackers if changed
-          if (updateAutoBlock(tracker)) {
+          if (updateAutoBlock(tracker) && notify) {
             worker.port.emit("update_block", tracker, storage.blocked[tracker]);
           }
         });
