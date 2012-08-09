@@ -9,6 +9,7 @@ const {Class} = require("api-utils/heritage");
 const {data} = require("self");
 const {Factory, Unknown} = require("api-utils/xpcom");
 const {PageMod} = require("page-mod");
+const observerService = require("observer-service");
 const privateBrowsing = require("private-browsing")
 const {setTimeout} = require("timers");
 const {storage} = require("simple-storage");
@@ -41,6 +42,14 @@ exports.main = function() {
       if (Object.keys(storage.trackers[tracker]).length == 1) {
         delete storage.trackers[tracker];
       }
+    });
+  });
+
+  // Keep track of all the sites being tracked by trackers
+  let allTracked = {};
+  Object.keys(storage.trackers).forEach(function(tracker) {
+    Object.keys(storage.trackers[tracker]).forEach(function(tracked) {
+      allTracked[tracked] = true;
     });
   });
 
@@ -96,11 +105,18 @@ exports.main = function() {
         // Include this site as tracked and check for auto-block
         if (storage.trackers[trackerDomain][contextDomain] == null) {
           storage.trackers[trackerDomain][contextDomain] = 1;
+          allTracked[contextDomain] = true;
           updateAutoBlock(trackerDomain);
         }
 
         // Check if this tracker should be blocked (auto or manual)
         if (storage.blocked[trackerDomain]) {
+          // Don't block the connection for trackers that are tracked because
+          // the user visits this site, so just block the cookies instead
+          if (allTracked[trackerDomain]) {
+            unCookieNext = contentLocation.spec;
+            return Ci.nsIContentPolicy.ACCEPT;
+          }
           return Ci.nsIContentPolicy.REJECT_REQUEST;
         }
       }
@@ -119,6 +135,26 @@ exports.main = function() {
       return this.QueryInterface(iid);
     }
   }).init();
+
+  // Keep track of the next url that should have cookies removed
+  let unCookieNext = null;
+
+  // Watch for requests that happen immediately after accepting from shouldLoad
+  observerService.add("http-on-modify-request", function(subject) {
+    // Nothing to do if there's no url to uncookie
+    if (unCookieNext == null) {
+      return;
+    }
+
+    // Remove the cookie header for the url that matches
+    let httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+    if (httpChannel.originalURI.spec == unCookieNext) {
+      httpChannel.setRequestHeader("cookie", "", false);
+    }
+
+    // Always clear if we got the request or not (cache hit = no request)
+    unCookieNext = null;
+  });
 
   // Handle about:trackers requests
   Factory({
