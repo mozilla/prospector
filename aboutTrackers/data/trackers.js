@@ -77,7 +77,7 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
 
     // Find the tracked sites that are also trackers
     tracked.forEach(function(site) {
-      if (trackers[site] != null) {
+      if (trackers[site] != null && blocked[site]) {
         trackedTrackers[site] = true;
       }
     });

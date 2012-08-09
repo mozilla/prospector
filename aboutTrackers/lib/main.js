@@ -18,7 +18,7 @@ const unload = require("unload");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
-const DEFAULT_AUTO_BLOCK_THRESHOLD = 7;
+const DEFAULT_AUTO_BLOCK_THRESHOLD = 4;
 const DEFAULT_ONLY_BLOCK_COOKIED = true;
 
 exports.main = function() {
