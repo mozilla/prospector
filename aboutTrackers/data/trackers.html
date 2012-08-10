@@ -3,41 +3,64 @@
 <head>
 <meta charset="utf-8">
 <style>
-#blockCookied {
-  pointer-events: none;
+body {
+  font-family: Helvetica;
 }
 
-.autoblocked {
-  font-weight: bold;
+.block-connection {
+  color: red;
+}
+
+.block-cookie {
+  color: blue;
 }
 
 .uncookied {
   color: gray;
   font-style: italic;
 }
+
+#threshold-connection, #threshold-cookie {
+  font-size: larger;
+  font-weight: bold;
+}
+
+td {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+td:first-child {
+  text-align: center;
+}
+
+td#thresholds button {
+  width: 3em;
+}
 </style>
 </head>
 <body>
-<div>
-Auto-block threshold:
-<span id="threshold"></span>
-<button id="threshold-minus">-</button>
-<button id="threshold-plus">+</button>
-<small class="autoblocked">(Trackers that follow you across this many sites will be blocked.)</small>
-</div>
+<p>about:trackers remembers the sites you visit that are being tracked and blocks trackers that know too much about you.</p>
 
-<div>
-Only block sites with cookies:
-<input id="blockCookied" type="checkbox"/>
-<small class="uncookied">(Sites without cookies are less likely to be trackers.)</small>
-</div>
+<ul>
+<li class="block-connection">Trackers following you across <span id="threshold-connection"></span> sites will be completely blocked.</li>
+<li class="block-cookie">Sites you visit that are also trackers &amp; trackers that following you across <span id="threshold-cookie"></span> sites will not get their tracking cookies.</li>
+<li class="uncookied">Sites without cookies are not blocked because they are less likely to be trackers.</li>
+</ul>
 
-<div>
-<button id="reset">Reset</button>
-<small>(Use default auto-block settings and clear custom blockings.)</small>
-</div>
+<table>
+<tr>
+<td id="thresholds"><button id="threshold-plus">+</button><br/>
+<button id="threshold-minus">-</button></td>
+<td>Adjust automatic blocking levels</td>
+</tr>
+<tr>
+<td><button id="reset">Reset</button></td>
+<td>Clear custom blocks and use default settings</td>
+</tr>
+</table>
 
-<p>Note: Sites you visit that also are trackers <span id="trackedTrackers"></span> will have their cookies blocked instead of getting their connection completely blocked.</p>
+<br/>
 
 <table id="trackers">
 <tr><th>Block</th><th>Tracker</th><th>Tracked sites</th></tr>

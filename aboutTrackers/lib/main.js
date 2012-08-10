@@ -18,8 +18,13 @@ const unload = require("unload");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
-const DEFAULT_AUTO_BLOCK_THRESHOLD = 4;
-const DEFAULT_ONLY_BLOCK_COOKIED = true;
+const AUTO_BLOCK_COOKIE = "cookie";
+const AUTO_BLOCK_CONNECTION = "connection";
+const CONNECTION_MULTIPLIER = 2;
+const DEFAULT_AUTO_BLOCK_THRESHOLD = 5;
+
+// Keep track of all the sites being tracked by trackers
+const allTracked = {};
 
 exports.main = function() {
   // Initialize persistent data and defaults
@@ -28,9 +33,6 @@ exports.main = function() {
   }
   if (storage.blocked == null) {
     storage.blocked = {};
-  }
-  if (storage.onlyBlockCookied == null) {
-    storage.onlyBlockCookied = DEFAULT_ONLY_BLOCK_COOKIED;
   }
   if (storage.trackers == null) {
     storage.trackers = {};
@@ -45,8 +47,7 @@ exports.main = function() {
     });
   });
 
-  // Keep track of all the sites being tracked by trackers
-  let allTracked = {};
+  // Initialize the tracked trackers with existing data
   Object.keys(storage.trackers).forEach(function(tracker) {
     Object.keys(storage.trackers[tracker]).forEach(function(tracked) {
       allTracked[tracked] = true;
@@ -109,14 +110,13 @@ exports.main = function() {
           updateAutoBlock(trackerDomain);
         }
 
-        // Check if this tracker should be blocked (auto or manual)
-        if (storage.blocked[trackerDomain]) {
-          // Don't block the connection for trackers that are tracked because
-          // the user visits this site, so just block the cookies instead
-          if (allTracked[trackerDomain]) {
-            unCookieNext = contentLocation.spec;
-            return Ci.nsIContentPolicy.ACCEPT;
-          }
+        // Check if this tracker should get cookies blocked
+        if (storage.blocked[trackerDomain] == AUTO_BLOCK_COOKIE) {
+          unCookieNext = contentLocation.spec;
+          return Ci.nsIContentPolicy.ACCEPT;
+        }
+        // Block the connection for automatic and manual blocking
+        else if (storage.blocked[trackerDomain]) {
           return Ci.nsIContentPolicy.REJECT_REQUEST;
         }
       }
@@ -189,22 +189,14 @@ exports.main = function() {
       });
 
       // Update the page with stored values
-      worker.port.emit("show_blockCookied", storage.onlyBlockCookied);
-      worker.port.emit("show_threshold", storage.autoBlockThreshold);
+      worker.port.emit("show_threshold", storage.autoBlockThreshold, CONNECTION_MULTIPLIER);
       worker.port.emit("show_trackers", storage.trackers, storage.blocked, cookied);
 
       // Allow clearing all custom settings and blockings
       worker.port.on("reset", function() {
         storage.autoBlockThreshold = DEFAULT_AUTO_BLOCK_THRESHOLD;
         storage.blocked = {};
-        storage.onlyBlockCookied = DEFAULT_ONLY_BLOCK_COOKIED;
         updateAllAutoBlocked(false);
-      });
-
-      // Save changes to the only-block-cookied status
-      worker.port.on("set_blockCookied", function(blockCookied) {
-        storage.onlyBlockCookied = blockCookied;
-        updateAllAutoBlocked(true);
       });
 
       // Save changes to the threshold
@@ -249,14 +241,26 @@ function updateAutoBlock(tracker) {
     return false;
   }
 
-  // Check the number of tracked sites against the threshold
-  let tracked = Object.keys(storage.trackers[tracker]);
-  let overThreshold = tracked.length >= storage.autoBlockThreshold;
-  let newBlocked = overThreshold ? "auto" : undefined;
-
-  // Don't set auto-block if not blocking trackers without cookies
-  if (storage.onlyBlockCookied && !isCookied(tracker)) {
-    newBlocked = undefined;
+  // Figure out the new blocked status for cookied sites (uncookied go free)
+  let newBlocked;
+  if (isCookied(tracker)) {
+    // Check the number of tracked sites against the thresholds
+    let numTracked = Object.keys(storage.trackers[tracker]).length;
+    if (numTracked >= storage.autoBlockThreshold * CONNECTION_MULTIPLIER) {
+      // For trackers that are tracked, continue to block cookies because the
+      // user visits this site
+      if (allTracked[tracker]) {
+        newBlocked = AUTO_BLOCK_COOKIE;
+      }
+      // Fully block the connection for unvisited trackers
+      else {
+        newBlocked = AUTO_BLOCK_CONNECTION;
+      }
+    }
+    // Start blocking cookies for trackers that pass the first threshold
+    else if (numTracked >= storage.autoBlockThreshold) {
+      newBlocked = AUTO_BLOCK_COOKIE;
+    }
   }
 
   // Change if necessary and inform if so

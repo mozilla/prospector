@@ -10,29 +10,24 @@ document.getElementById("reset").addEventListener("click", function() {
   document.location.reload();
 });
 
-// Indicate if only cookied sites should be auto-blocked
-self.port.on("show_blockCookied", function(blockCookied) {
-  let check = document.getElementById("blockCookied");
-  check.checked = blockCookied;
-
-  // Allow switching on and off from related nodes
-  check.parentNode.addEventListener("click", function({target}) {
-    check.checked = !check.checked;
-    self.port.emit("set_blockCookied", check.checked);
-  });
-});
-
 // Fill in the threshold and add functionality
-self.port.on("show_threshold", function(threshold) {
-  let span = document.getElementById("threshold");
-  span.textContent = threshold;
+self.port.on("show_threshold", function(threshold, multiplier) {
+  let cookie = document.getElementById("threshold-cookie");
+  let connection = document.getElementById("threshold-connection");
+
+  // Show the threshold values
+  function updateUI() {
+    cookie.textContent = threshold;
+    connection.textContent = threshold * multiplier;
+  }
+  updateUI();
 
   // Update the threshold on clicks and save the value
   [["minus", -1], ["plus", 1]].forEach(function([id, delta]) {
     let button = document.getElementById("threshold-" + id);
     button.addEventListener("click", function() {
       threshold += delta;
-      span.textContent = threshold;
+      updateUI();
       self.port.emit("set_threshold", threshold);
     });
   });
@@ -40,8 +35,6 @@ self.port.on("show_threshold", function(threshold) {
 
 // Build a table with the trackers and blocked status
 self.port.on("show_trackers", function(trackers, blocked, cookied) {
-  let trackedTrackers = {};
-
   // Show trackers sorted by number of tracked sites then alphabetically
   let table = document.getElementById("trackers");
   Object.keys(trackers).sort().sort(function(a, b) {
@@ -74,20 +67,7 @@ self.port.on("show_trackers", function(trackers, blocked, cookied) {
     let trackedTd = document.createElement("td");
     trackedTd.textContent = "(" + tracked.length + ") " + tracked.join(" ");
     tr.appendChild(trackedTd);
-
-    // Find the tracked sites that are also trackers
-    tracked.forEach(function(site) {
-      if (trackers[site] != null && blocked[site]) {
-        trackedTrackers[site] = true;
-      }
-    });
   });
-
-  let tracked = Object.keys(trackedTrackers).sort();
-  if (tracked.length > 0) {
-    let span = document.getElementById("trackedTrackers");
-    span.textContent = "(" + tracked.join(", ") + ")";
-  }
 });
 
 // Handle changes to blocked statuses
@@ -98,12 +78,16 @@ function setBlocked(tracker, blocked) {
   let blockCheck = document.getElementById("check-" + tracker);
   blockCheck.checked = blocked;
 
-  // Style the whole row appropriately
+  // Remove any existing block styles
   let tr = blockCheck.parentNode.parentNode;
-  if (blocked == "auto") {
-    tr.classList.add("autoblocked");
-  }
-  else {
-    tr.classList.remove("autoblocked");
+  Array.slice(tr.classList).forEach(function(item) {
+    if (item.indexOf("block-") == 0) {
+      tr.classList.remove(item);
+    }
+  });
+
+  // Style the whole row appropriately
+  if (typeof blocked == "string") {
+    tr.classList.add("block-" + blocked);
   }
 }
