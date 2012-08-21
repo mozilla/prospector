@@ -1,9 +1,9 @@
 {
-    "name": "profile", 
-    "license": "MPL 2.0", 
-    "author": "", 
-    "version": "0.1", 
-    "fullName": "profile", 
-    "id": "jid1-ISK94hGUF3FsrA", 
-    "description": "a basic add-on"
+  "author": "Mozilla Labs",
+  "description": "Analyze your local browser data and summarize it into a visual profile.",
+  "fullName": "Mozilla Labs: Prospector - about:profile",
+  "id": "aboutProfile@prospector.labs.mozilla",
+  "name": "about-profile",
+  "license": "MPL 2.0",
+  "version": "1"
 }
