@@ -4,6 +4,7 @@
 
 'use strict';
 
+const {Class} = require("api-utils/heritage");
 const {data} = require("self");
 const {Demographer} = require("Demographer");
 const {Factory, Unknown} = require("api-utils/xpcom");
@@ -18,10 +19,11 @@ exports.main = function(options, callbacks) {
   let demographer = new Demographer("SiteToOdp.txt", "demog2K.txt");
 
   // Handle about:profile requests
-  Factory.new({
+  Factory({
     contract: "@mozilla.org/network/protocol/about;1?what=profile",
 
-    component: Unknown.extend({
+    Component: Class({
+      extends: Unknown,
       interfaces: ["nsIAboutModule"],
 
       newChannel: function(uri) {
