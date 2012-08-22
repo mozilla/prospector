@@ -18,70 +18,189 @@ Cu.import("resource://gre/modules/Services.jsm", this);
 const historyUtils = require("HistoryUtils");
 const {ItemJar} = require("ItemJar");
 const demogBuckets = [
-"age_18",
-"age_25",
-"age_35",
-"age_45",
-"age_55",
-"age_65",
-"no_college",
-"some_college",
-"college",
-"graduate",
-"male",
-"female",
-"children",
-"no_children",
-"home",
-"school",
-"work"
+  "age_18",
+  "age_25",
+  "age_35",
+  "age_45",
+  "age_55",
+  "age_65",
+  "no_college",
+  "some_college",
+  "college",
+  "graduate",
+  "male",
+  "female",
+  "children",
+  "no_children",
+  "home",
+  "school",
+  "work"
 ];
 
-function Demographer( sitesCatFile , sitesDemogFile  ) {
+function Demographer(sitesCatFile, sitesDemogFile) {
   this.ready = false;
+  this.fullReady = false;
+  this.intentReady = false;
   this.waitingReady = [];
+  this.catFile = sitesCatFile;
+  this.demogFile = sitesDemogFile;
+  this.allSites = {};
+  this.readCats();
+  this.readDemographics();
+  this.intentCats = {};
 
-    this.catFile = sitesCatFile;
-    this.demogFile = sitesDemogFile;
-    this.allSites = {};
-    this.mySites = {};
-	this.cats = {};
-	this.demog = { };
-	for ( x in demogBuckets ) {
-		this.demog[ demogBuckets[x] ] = { vtotal: 0 , neg: new ItemJar(5) , pos: new ItemJar(5) };
-	}
+  // now create a full history Analyzer
+  this.fullHistoryAnalyzer = new Analyzer(this.allSites, 60, 0);
+  this.fullHistoryAnalyzer.readHistory(function() {
+    this.fullReady = true;
+    this.flagCompletion();
+  }.bind(this));
 
-	this.catDepth = 2;
-	this.totalAcross = 0;
-
-	this.readCats( );
-	this.readDemographics( );
-	this.readHistory( );
-
+  // and the intent Analyzer
+  this.intentAnalyzer = new Analyzer(this.allSites, 2, 1);
+  this.intentAnalyzer.readHistory(function() {
+    this.intentReady = true;
+    this.flagCompletion();
+  }.bind(this));
 }
 
 Demographer.prototype = {
 
-  clearCats: function( ) {
-  	this.cats = {};
-	this.demog = { };
-    for ( x in demogBuckets ) {
-	        this.demog[ demogBuckets[x] ] = { vtotal: 0 , neg: new ItemJar(5) , pos: new ItemJar(5) };
+  flagCompletion: function() {
+    if (!this.fullReady || !this.intentReady) {
+      return;
     }
-	this.totalAcross = 0;
+    this.computeIntent();
+    this.ready = true;
+    this.waitingReady.slice().forEach(function(cb) {
+      try {
+         cb();
+      }
+      catch(ex) {}
+     });
+     this.waitingReady.length = 0;
   },
 
-  rebuild: function ( cb ) {
-    this.ready = false;
-  	this.clearCats( );
-	this.mySites = {};
-	this.readHistory( cb );
-	//this.computeSitesData( );
+  computeIntent: function() {
+     // get full history categories
+     let fullCats = this.fullHistoryAnalyzer.getInterests();
+     let fullAcross = this.fullHistoryAnalyzer.getTotalAcross();
+
+     // now get categories for the immidiate history
+     let shortCats = this.intentAnalyzer.getInterests();
+     let shortAcross = this.intentAnalyzer.getTotalAcross();
+
+     // so we are looking for categories that significantly exceed
+     // thier full history equavalent
+     Object.keys(shortCats).forEach(function(cat) {
+       if (shortCats[cat].vcount > 0 && fullCats[cat].vcount > 0) {
+         this.intentCats[cat] = shortCats[cat];
+         this.intentCats[cat].vcount = Math.floor(shortCats[cat].vcount * 100.0 / fullCats[cat].vcount);
+       }
+     }.bind(this));
   },
 
-  getTotalAcross: function( ) { return this.totalAcross; } ,
+  readCats: function() {
+    // read the file first
+    let sites = data.load(this.catFile);
+    // split by new lines
+    sites.split(/\n/).forEach(function(line) {
+      // figure site, rank and cat
+      let data = line.split(/ /);
+      let domain = data.shift();
+      if (domain == "") return;   // empty domain
+      let siteFoo = this.allSites[domain];
+      if (siteFoo == undefined) {
+        siteFoo = {};
+        siteFoo.cats = [];
+        this.allSites[domain] = siteFoo;
+      }
+      data.forEach(function(item) {
+        if (item && item != "" && item.indexOf("Regional") != 0) {
+          siteFoo.cats.push(item);
+        }
+      });
 
-  extractDomain: function ( domain ) {
+      if (siteFoo.cats.length == 0) {
+        delete this.allSites[domain];
+      }
+     }.bind(this));
+  },
+
+  readDemographics: function() {
+    let sites = data.load(this.demogFile);
+    sites.split(/\n/).forEach(function(line) {
+      let data = line.split(/\t/);
+      let domain = data.shift();
+      // get rid of the ID
+      data.shift();
+      let siteFoo = this.allSites[domain];
+      if (siteFoo == undefined) {
+        siteFoo = {};
+        this.allSites[domain] = siteFoo;
+      }
+      siteFoo.demog = data;
+    }.bind(this));
+  },
+
+  getTotalAcross: function() {
+    return this.fullHistoryAnalyzer.getTotalAcross();
+  },
+  getInterests: function() {
+    return this.fullHistoryAnalyzer.getInterests();
+  },
+  getDemographics: function() {
+    return this.fullHistoryAnalyzer.getDemographics();
+  },
+  getIntent: function() {
+    return this.intentCats;
+  },
+
+  // Allow consumers to wait until data is computed
+  onReady: function(cb) {
+    if (this.ready) {
+      timers.setTimeout(function() cb());
+    }
+    else {
+      this.waitingReady.push(cb);
+    }
+  },
+}
+
+function Analyzer(sitesData, daysBack, skipDemog) {
+    this.allSites = sitesData;
+    this.mySites = {};
+    this.cats = {};
+    this.demog = {};
+    this.catDepth = 2;
+    this.totalAcross = 0;
+    this.daysBack = daysBack;
+    this.skipDemog = skipDemog;
+}
+
+Analyzer.prototype = {
+  clearAll: function() {
+    this.mySites = {};
+    this.cats = {};
+    this.demog = {};
+    for (let x in demogBuckets) {
+        this.demog[demogBuckets[x]] = {vtotal: 0, neg: new ItemJar(5), pos: new ItemJar(5)};
+    }
+    this.totalAcross = 0;
+  },
+
+  flagCompletion: function() {
+    this.ready = true;
+    this.waitingReady.slice().forEach(function(cb) {
+      try {
+         cb();
+      }
+      catch(ex) {}
+    });
+    this.waitingReady.length = 0;
+  },
+
+  extractDomain: function(domain) {
     // and make sure to get rid of www
     let re = /^www[.]/;
     domain = domain.replace(re, "");
@@ -106,13 +225,19 @@ Demographer.prototype = {
     return siteData ? domain : null;
   },
 
-  readHistory: function ( cb ) {
-
+  readHistory: function(cb) {
+    this.clearAll();
+    let startTime = Date.now();
+    let microSecondsAgo = (startTime - this.daysBack * (60*60*24) * 1000) * 1000;
     let query = "select SUM(visit_count), rev_host from moz_places where visit_count >= 1 group by rev_host";
-	var s1 = Date.now();
-    historyUtils.executeHistoryQuery( query , null , 
-	   {
-	     onRow: function ( row ) {
+    if (this.daysBack) {
+      query = " select COUNT(1), p.rev_host from moz_places p,moz_historyvisits v " +
+              " where p.visit_count >= 1 and v.place_id = p.id and visit_date >= " + microSecondsAgo +
+              " group by rev_host";
+    }
+
+    historyUtils.executeHistoryQuery(query, null, {
+        onRow: function(row) {
           let vcount = row.getResultByIndex(0);
           let rev_host = row.getResultByIndex(1);
           let host = rev_host.split("").reverse().join("");
@@ -134,183 +259,105 @@ Demographer.prototype = {
             this.mySites[domain] = 0;
           }
           this.mySites[domain] += vcount;
+        }.bind(this),
 
-       	}.bind( this ) ,
+        onCompletion: function(reason) {
+          this.computeSitesData();
+          if (cb) {
+              cb();  // execute call back
+          }
+        }.bind(this),
 
-		onCompletion: function ( reason ) {
-		var s2 = Date.now();
-		console.log("sql exec", s2 - s1);
-			this.computeSitesData( );
-			console.log("compute", Date.now() - s2);
-			if( cb ) {
-				cb( );  // execute call back
-			}
-
-                  this.ready = true;
-                  this.waitingReady.slice().forEach(function(cb) {
-                    try {
-                      cb();
-                    }
-                    catch(ex) {}
-                  });
-                  this.waitingReady.length = 0;
-		}.bind( this ) ,
-
-		onError: function ( error ) {
-			console.log( error );
-		}.bind( this ) ,
-	 });
+        onError: function(error) {
+          console.log(error);
+        }.bind(this),
+     });
   },
 
-  computeSitesData: function( ) {
-  	for ( let domain in this.mySites ) {
-		if( domain ) {
-		    this.processHistorySite( domain );
-		}
-	}
+  computeSitesData: function() {
+    for (let domain in this.mySites) {
+      if (domain) {
+        this.processHistorySite(domain);
+      }
+    }
   },
 
-  computeSiteWeight: function( domain ) {
-  		
-		let vcount = this.mySites[ domain ];
-		if( vcount ) {
-			return Math.log(vcount);
-		}
-		else {
-			return 0;
-		}
-  },
-
-  processHistorySite: function( domain ) {
-
-  	// ok check if site is present 
-	let siteData = this.allSites[ domain ];
-
-	if( ! siteData ) return;   // domain is not found
-
-	let vcount = this.computeSiteWeight( domain );
-
-
-    // otherwise add it to the soup
-	if( siteData.cats ) {
-	    let addedHash = {};
-		siteData.cats.forEach( function ( category ) {
-			this.addToCategory( domain , category , vcount , addedHash );
-		}.bind( this ));
-		this.totalAcross += vcount;
-	}
-
-	if( siteData.demog ) {
-		// so we have demographics data add them to bukets
-		for( x in demogBuckets ) {
-			let buketName = demogBuckets[x];
-			let bucketDrop  = siteData.demog[x];
-			this.demog[ buketName ].vtotal += vcount * bucketDrop;
-			if( bucketDrop < 0 ) {
-				//console.log( domain , vcount , bucketDrop );
-				this.demog[ buketName ].neg.addItem( { domain: domain , vcount: vcount , drop: bucketDrop } , (-vcount) * bucketDrop )
-			} else {
-				this.demog[ buketName ].pos.addItem( { domain: domain , vcount: vcount , drop: bucketDrop } , (vcount) * bucketDrop )
-			}
-		}
-	}
-
-  },
-
-  addToCategory: function( domain , cat , count , addedHash ) {
-  	// for now simply take the top ones
-	//let top = cat.replace( /\/.*/ , "" );
-	let them = cat.split( "/" );
-	let top = them.shift( );
-	let depth = 1;
-	while( them.length && depth < this.catDepth ) {
-		top += "/" + them.shift( );
-		depth ++;
-	}
-	// check if we saw this category already
-	if( addedHash[ top ] ) {
-		return;
-	} 
-
-	addedHash[ top ] = 1;
-
-	if( ! this.cats[ top ]  ) { 
-		this.cats[ top ] = { vcount: 0 , tcount: 0 , champs: new ItemJar(15) };
-	}
-	this.cats[ top ].vcount += count;
-	this.cats[ top ].tcount ++;
-	this.cats[ top ].champs.addItem( { domain: domain , vcount: count } , count );
-  },
-
-  readCats: function ( ) {
-  		// read the file first
-		let sites = data.load( this.catFile );
-		// split by new lines
-		sites.split( /\n/ ).forEach( function( line ) {
-				// figure site , rank and cat
-				let data = line.split( / / );
-				let domain = data.shift( );
-				if( domain == "" ) return;   // empty domain
-				let siteFoo = this.allSites[ domain ];
-				if( siteFoo == undefined  ) {
-					siteFoo = {};
-					siteFoo.cats = [];
-					this.allSites[ domain ] = siteFoo;
-				}
-			    //siteFoo.rank = data[1];
-				data.forEach( function( item ) {
-				    if( item && item != "" && item.indexOf("Regional") != 0 ) {
-			    		siteFoo.cats.push( item );
-					}
-				});
-
-				if( siteFoo.cats.length == 0 ) {
-					delete this.allSites[ domain ];
-				}
-
-		 }.bind(this));
-		 //console.log( JSON.stringify( this.allSites ) );
-  },
-
-  readDemographics: function ( ) {
-  	let sites = data.load( this.demogFile );
-	sites.split( /\n/ ).forEach( function( line ) {
-			let data = line.split( /\t/ );
-			let domain = data.shift( );
-			data.shift( ); // get rid of the ID
-			let siteFoo = this.allSites[ domain ];
-			if( siteFoo == undefined  ) {
-				siteFoo = {};
-                this.allSites[ domain ] = siteFoo;
-			}
-            siteFoo.demog = data;
-		}.bind( this ));
-  },
-
-  getInterests: function( ) {
-
-  	return this.cats;
-
-  },
-
-  getDemographics: function( ) {
-
-  	return this.demog;
-
-  },
-
-  // Allow consumers to wait until data is computed
-  onReady: function(cb) {
-    if (this.ready) {
-      timers.setTimeout(function() cb());
+  computeSiteWeight: function(domain) {
+    let vcount = this.mySites[domain];
+    if (vcount) {
+      return Math.log(vcount);
     }
     else {
-      this.waitingReady.push(cb);
+      return 0;
     }
+  },
+
+  processHistorySite: function(domain) {
+    // ok check if site is present
+    let siteData = this.allSites[domain];
+
+    if (!siteData) return;   // domain is not found
+
+    let vcount = this.computeSiteWeight(domain);
+
+    // otherwise add it to the soup
+    if (siteData.cats) {
+      let addedHash = {};
+      siteData.cats.forEach(function(category) {
+          this.addToCategory(domain, category, vcount, addedHash);
+      }.bind(this));
+      this.totalAcross += vcount;
+    }
+
+    if (!this.skipDemog && siteData.demog) {
+      // so we have demographics data add them to bukets
+      for (let x in demogBuckets) {
+        let buketName = demogBuckets[x];
+        let bucketDrop  = siteData.demog[x];
+        this.demog[buketName].vtotal += vcount * bucketDrop;
+        if (bucketDrop < 0) {
+          this.demog[buketName].neg.addItem({domain: domain, vcount: vcount, drop: bucketDrop}, (-vcount) * bucketDrop)
+        }
+        else {
+          this.demog[buketName].pos.addItem({domain: domain, vcount: vcount, drop: bucketDrop}, (vcount) * bucketDrop)
+        }
+      }
+    }
+  },
+
+  addToCategory: function(domain, cat, count, addedHash) {
+    // for now simply take the top ones
+    let them = cat.split("/");
+    let top = them.shift();
+    let depth = 1;
+    while(them.length && depth < this.catDepth) {
+      top += "/" + them.shift();
+      depth ++;
+    }
+    // check if we saw this category already
+    if (addedHash[top]) {
+      return;
+    }
+
+    addedHash[top] = 1;
+
+    if (!this.cats[top]) {
+      this.cats[top] = {vcount: 0, tcount: 0, champs: new ItemJar(15)};
+    }
+    this.cats[top].vcount += count;
+    this.cats[top].tcount ++;
+    this.cats[top].champs.addItem({domain: domain, vcount: count}, count);
+  },
+
+  getTotalAcross: function() {
+    return this.totalAcross;
+  },
+  getInterests: function() {
+    return this.cats;
+  },
+  getDemographics: function() {
+    return this.demog;
   },
 }
 
-
 exports.Demographer = Demographer;
-
-

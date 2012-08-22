@@ -60,7 +60,8 @@ exports.main = function(options, callbacks) {
         demographer.onReady(function() {
           worker.port.emit("show_cats",
                            demographer.getInterests(),
-                           demographer.getTotalAcross());
+                           demographer.getTotalAcross(),
+                           demographer.getIntent());
           worker.port.emit("show_demog",
                            demographer.getDemographics());
         });

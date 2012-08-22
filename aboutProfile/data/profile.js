@@ -26,8 +26,6 @@ const DEMOG_NAMES = {
 };
 
 $(document).ready(function() {
-  console.log("READY");
-
   self.port.emit("donedoc");
 });
 
@@ -39,8 +37,7 @@ self.port.on("style", function(file) {
   }));
 });
 
-self.port.on("show_cats", function(cats, totalAcross) {
-  console.log("GOT CATS " + cats);
+self.port.on("show_cats", function(cats, totalAcross, intentCats) {
   let catBukets = {};
   let aliases = [];
 
@@ -90,7 +87,11 @@ self.port.on("show_cats", function(cats, totalAcross) {
       shadow: false,
     },
   });
+  displayCats( cats , "cats" , topColors );
+  displayCats( intentCats , "intent" , topColors );
+});
 
+function displayCats( cats , rootNodeID , topColors ) {
   // Pick out the top (any-level) categories
   let catNames = Object.keys(cats).sort(function(a, b) {
     return cats[b].vcount - cats[a].vcount;
@@ -98,6 +99,7 @@ self.port.on("show_cats", function(cats, totalAcross) {
 
   let largest = null;
   let lastTop = "";
+  let rootNode = $("#" + rootNodeID);
   for (x in catNames) {
     let name = catNames[x];
     let top = name.replace(/\/.*/, "");
@@ -123,12 +125,12 @@ self.port.on("show_cats", function(cats, totalAcross) {
         "width": barWidth + "px"
       }));
 
-    $("#cats").append(catNode);
+    rootNode.append(catNode);
     let explaneNode = $("<cpan/>").addClass("explain").hide();
     for (x in champs) {
       explaneNode.append($("<li/>").text(champs[x].item.domain + " " + Math.round(champs[x].item.vcount)));
     }
-    $("#cats").append(explaneNode);
+    rootNode.append(explaneNode);
     catNode.click(function() {
       if (explaneNode.attr("shown") == "1") {
         explaneNode.hide();
@@ -140,7 +142,7 @@ self.port.on("show_cats", function(cats, totalAcross) {
       }
     });
   }
-});
+}
 
 function displayDemogs(demog, category, buketNames) {
   let parentNode = $("#demog_" + category);
@@ -227,8 +229,6 @@ function displayDemogs(demog, category, buketNames) {
 }
 
 self.port.on("show_demog", function(demog) {
-  console.log("GOT DEMOG " + demog);
-
   displayDemogs(demog, "gender", ["male", "female"]);
   displayDemogs(demog, "age", ["age_18", "age_25", "age_35", "age_45", "age_55", "age_65"]);
   displayDemogs(demog, "education", ["no_college", "some_college", "college", "graduate"]);
