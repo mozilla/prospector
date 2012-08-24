@@ -5,5 +5,12 @@
   "id": "aboutProfile@prospector.labs.mozilla",
   "name": "about-profile",
   "license": "MPL 2.0",
+  "preferences": [{
+    "description": "Comma separated list of domains",
+    "name": "allowedAPIDomains",
+    "title": "Grant these domains profile API access",
+    "type": "string",
+    "value": ""
+  }],
   "version": "1"
 }

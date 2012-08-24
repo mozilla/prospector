@@ -8,10 +8,12 @@ const {Class} = require("api-utils/heritage");
 const {data} = require("self");
 const {Demographer} = require("Demographer");
 const {Factory, Unknown} = require("api-utils/xpcom");
+const Observer = require("observer-service");
 const {PageMod} = require("page-mod");
+const Preferences = require("simple-prefs");
 const tabs = require("tabs");
 
-const {Cu} = require("chrome");
+const {Ci,Cu} = require("chrome");
 Cu.import("resource://gre/modules/Services.jsm");
 
 exports.main = function(options, callbacks) {
@@ -33,7 +35,7 @@ exports.main = function(options, callbacks) {
       },
 
       getURIFlags: function(uri) {
-        return 0;
+        return Ci.nsIAboutModule.URI_SAFE_FOR_UNTRUSTED_CONTENT;
       }
     })
   });
@@ -64,6 +66,62 @@ exports.main = function(options, callbacks) {
         });
       });
     }
+  });
+
+  // Watch for preference changes to detect which pages to inject APIs
+  let allowedDomains;
+  const ALLOWED_API_PREF = "allowedAPIDomains";
+  Preferences.on(ALLOWED_API_PREF, updateAPIDomains);
+  function updateAPIDomains() {
+    allowedDomains = {};
+
+    // Short circuit if there's nothing to do
+    let userValue = Preferences.prefs[ALLOWED_API_PREF].trim();
+    if (userValue == "") {
+      return;
+    }
+
+    // Convert the array of domains to an object
+    userValue.split(",").forEach(function(domain) {
+      allowedDomains[domain] = true;
+    });
+  }
+  updateAPIDomains();
+
+  // Inject navigator.profile APIs into desired pages
+  Observer.add("document-element-inserted", function apiInjector(document) {
+    // Allow injecting into certain pages
+    let {defaultView, location} = document;
+    if (defaultView == null || allowedDomains[location.host] == null) {
+      return;
+    }
+
+    // Expose to the content of the page some profile APIs
+    let {navigator} = defaultView.wrappedJSObject;
+    navigator.profile = {
+      __exposedProps__: {
+        getCategories: "r"
+      },
+
+      // Allow getting categories with their percentage weighting
+      getCategories: function(callback) {
+        let rawData = demographer.getInterests();
+        let totalCount = demographer.getTotalAcross();
+        let result = {
+          __exposedProps__: {}
+        };
+
+        // Compute the percent and expose them
+        Object.keys(rawData).sort(function(a, b) {
+          return rawData[b].vcount - rawData[a].vcount;
+        }).forEach(function(category) {
+          result.__exposedProps__[category] = "r";
+          result[category] = rawData[category].vcount / totalCount;
+        });
+
+        callback(result);
+      }
+    };
   });
 
   // Automatically open a tab unless it's a regular firefox restart
