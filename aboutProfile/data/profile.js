@@ -95,7 +95,7 @@ function displayCats( cats , rootNodeID , topColors ) {
   // Pick out the top (any-level) categories
   let catNames = Object.keys(cats).sort(function(a, b) {
     return cats[b].vcount - cats[a].vcount;
-  }).slice(0, 14);
+  }).slice(0, 15);
 
   let largest = null;
   let lastTop = "";
@@ -112,7 +112,7 @@ function displayCats( cats , rootNodeID , topColors ) {
     if (!largest) {
       largest = catData.vcount;
     }
-    let barWidth = Math.floor((300.00 * catData.vcount) / largest);
+    let barWidth = Math.floor((250.00 * catData.vcount) / largest);
     if (barWidth < 5) {
       barWidth = 5;
     }
