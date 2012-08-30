@@ -101,7 +101,8 @@ exports.main = function(options, callbacks) {
     let {navigator} = defaultView.wrappedJSObject;
     navigator.profile = {
       __exposedProps__: {
-        getCategories: "r"
+        getCategories: "r",
+        getIntent: "r"
       },
 
       // Allow getting categories with their percentage weighting
@@ -118,6 +119,24 @@ exports.main = function(options, callbacks) {
         }).forEach(function(category) {
           result.__exposedProps__[category] = "r";
           result[category] = rawData[category].vcount / totalCount;
+        });
+
+        callback(result);
+      },
+
+      // Allow getting recent intents
+      getIntent: function(callback) {
+        let rawData = demographer.getIntent();
+        let result = {
+          __exposedProps__: {}
+        };
+
+        // Compute the percent and expose them
+        Object.keys(rawData).sort(function(a, b) {
+          return rawData[b].vcount - rawData[a].vcount;
+        }).forEach(function(category) {
+          result.__exposedProps__[category] = "r";
+          result[category] = rawData[category].vcount;
         });
 
         callback(result);
