@@ -50,14 +50,14 @@ function Demographer(sitesCatFile, sitesDemogFile) {
   this.intentCats = {};
 
   // now create a full history Analyzer
-  this.fullHistoryAnalyzer = new Analyzer(this.allSites, 60, 0);
+  this.fullHistoryAnalyzer = new Analyzer(this.allSites, 180, 0);
   this.fullHistoryAnalyzer.readHistory(function() {
     this.fullReady = true;
     this.flagCompletion();
   }.bind(this));
 
   // and the intent Analyzer
-  this.intentAnalyzer = new Analyzer(this.allSites, 2, 1);
+  this.intentAnalyzer = new Analyzer(this.allSites, 7, 1);
   this.intentAnalyzer.readHistory(function() {
     this.intentReady = true;
     this.flagCompletion();
