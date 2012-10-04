@@ -18,7 +18,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 exports.main = function(options, callbacks) {
   // Create demographer
-  let demographer = new Demographer("SiteToOdp.txt", "demog2K.txt");
+  let demographer = new Demographer("categories.txt", "demographics.txt");
 
   // Handle about:profile requests
   Factory({
