@@ -130,10 +130,8 @@ Demographer.prototype = {
   readDemographics: function() {
     let sites = data.load(this.demogFile);
     sites.split(/\n/).forEach(function(line) {
-      let data = line.split(/\t/);
+      let data = line.split(/ /);
       let domain = data.shift();
-      // get rid of the ID
-      data.shift();
       let siteFoo = this.allSites[domain];
       if (siteFoo == undefined) {
         siteFoo = {};
