@@ -4,7 +4,7 @@
 
 "use strict";
 
-const {Ci, Cc, Cm, Cr, Cu} = require("chrome");
+const {components, Ci, Cc, Cm, Cr, Cu} = require("chrome");
 const {Class} = require("api-utils/heritage");
 const {data} = require("self");
 const {Factory, Unknown} = require("api-utils/xpcom");
@@ -57,7 +57,7 @@ exports.main = function() {
   // Detect and block trackers with a content policy
   ({
     classDescription: "about:trackers content policy",
-    classID: Components.ID("d27de1fd-f2cc-4f84-be48-65d2510123b5"),
+    classID: components.ID("d27de1fd-f2cc-4f84-be48-65d2510123b5"),
     contractID: "@mozilla.org/about-trackers/content-policy;1",
     QueryInterface: XPCOMUtils.generateQI([Ci.nsIContentPolicy, Ci.nsIFactory]),
 
