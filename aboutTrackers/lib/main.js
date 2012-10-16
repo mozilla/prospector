@@ -14,6 +14,7 @@ const privateBrowsing = require("private-browsing")
 const {setTimeout} = require("timers");
 const {storage} = require("simple-storage");
 const unload = require("unload");
+const {WindowTracker} = require("window-utils");
 
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -22,6 +23,7 @@ const AUTO_BLOCK_COOKIE = "cookie";
 const AUTO_BLOCK_CONNECTION = "connection";
 const CONNECTION_MULTIPLIER = 2;
 const DEFAULT_AUTO_BLOCK_THRESHOLD = 5;
+const RELOAD_AUTO_ACCEPT_DURATION = 10000;
 
 // Keep track of all the sites being tracked by trackers
 const allTracked = {};
@@ -79,6 +81,11 @@ exports.main = function() {
     },
 
     shouldLoad: function(contentType, contentLocation, requestOrigin, context, mimeTypeGuess, extra) {
+      // Allow everything temporarily when the user reloads
+      if (acceptForReload) {
+        return Ci.nsIContentPolicy.ACCEPT;
+      }
+
       // Return to normal behavior (even not blocking) when private browsing
       if (privateBrowsing.isActive) {
         return Ci.nsIContentPolicy.ACCEPT;
@@ -219,6 +226,31 @@ exports.main = function() {
             worker.port.emit("update_block", tracker, storage.blocked[tracker]);
           }
         });
+      }
+    }
+  });
+
+  // Detect if the user hits reload to temporarily disable blocking
+  let acceptForReload = false;
+  new WindowTracker({
+    onReload: function(event) {
+      acceptForReload = true;
+      setTimeout(function() {
+        acceptForReload = false;
+      }, RELOAD_AUTO_ACCEPT_DURATION);
+    },
+
+    onTrack: function(window) {
+      let reload = window.document.getElementById("Browser:Reload");
+      if (reload != null) {
+        reload.addEventListener("command", this.onReload);
+      }
+    },
+
+    onUntrack: function(window) {
+      let reload = window.document.getElementById("Browser:Reload");
+      if (reload != null) {
+        reload.removeEventListener("command", this.onReload);
       }
     }
   });
