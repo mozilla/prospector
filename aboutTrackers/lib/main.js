@@ -10,6 +10,7 @@ const {data} = require("self");
 const {Factory, Unknown} = require("api-utils/xpcom");
 const {PageMod} = require("page-mod");
 const observerService = require("observer-service");
+const Preferences = require("simple-prefs");
 const privateBrowsing = require("private-browsing")
 const {setTimeout} = require("timers");
 const {storage} = require("simple-storage");
@@ -105,6 +106,11 @@ exports.main = function() {
           return Ci.nsIContentPolicy.ACCEPT;
         }
 
+        // Always allow known not-tracking domains
+        if (domainPrefs.knownNotTrackers[trackerDomain]) {
+          return Ci.nsIContentPolicy.ACCEPT;
+        }
+
         // We have a 3rd-party tracker, so initialize if it's new
         if (storage.trackers[trackerDomain] == null) {
            storage.trackers[trackerDomain] = {};
@@ -118,7 +124,8 @@ exports.main = function() {
         }
 
         // Check if this tracker should get cookies blocked
-        if (storage.blocked[trackerDomain] == AUTO_BLOCK_COOKIE) {
+        if (storage.blocked[trackerDomain] == AUTO_BLOCK_COOKIE ||
+            domainPrefs.potentialTrackers[trackerDomain]) {
           unCookieNext = contentLocation.spec;
           return Ci.nsIContentPolicy.ACCEPT;
         }
@@ -253,6 +260,28 @@ exports.main = function() {
         reload.removeEventListener("command", this.onReload);
       }
     }
+  });
+
+  // Watch for preference changes to list of domains
+  let domainPrefs = {};
+  const ALLOWED_API_PREF = "allowedAPIDomains";
+  ["knownNotTrackers", "potentialTrackers"].forEach(function(pref) {
+    Preferences.on(pref, updateDomains);
+    function updateDomains() {
+      domainPrefs[pref] = {};
+
+      // Short circuit if there's nothing to do
+      let userValue = Preferences.prefs[pref].trim();
+      if (userValue == "") {
+        return;
+      }
+
+      // Convert the array of domains to an object
+      userValue.split(/\s*,\s*/).forEach(function(domain) {
+        domainPrefs[pref][domain] = true;
+      });
+    }
+    updateDomains();
   });
 };
 
