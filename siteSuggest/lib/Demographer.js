@@ -21,6 +21,8 @@ function Demographer(sitesCatFile) {
   this.mySites = {};
   this.allSites = null;
   this.cats = null;
+  this.orderedCats = null;
+  this.totalSum = 0;
 
   // collect seconds since the epoch beings
   this.lastReading = Date.now();
@@ -43,6 +45,8 @@ Demographer.prototype = {
     this.totalVisits = 0;
     this.cats = {};
     this.mySites = {};
+    this.orderedCats = [];
+    this.totalSum = 0;
     // check if we loaded sites<->ODP mapping
     if (this.allSites == null) {
       this.allSites = {};
@@ -121,6 +125,7 @@ Demographer.prototype = {
       this.processHistorySite(domain);
     }
     this.normalize();
+    this.sortirize();
   },
 
   processHistorySite: function(domain) {
@@ -221,6 +226,32 @@ Demographer.prototype = {
       }
     }.bind(this));
   },
+
+  sortirize: function() {
+    Object.keys(this.cats).forEach(function(key) {
+       let value = Math.ceil(this.cats[key]);
+       this.totalSum += value;
+       for( var i = 0; i< value; i ++) {
+         this.orderedCats.push(key);
+       }
+    }.bind(this));
+  },
+
+  pickRandomBest: function(cb) {
+     if(this.orderedCats == null) {
+        this.submitInterests(function(cats) {
+          let index = Math.round(Math.random()*this.totalSum);
+          cb(this.orderedCats[index]);
+        }.bind(this));
+     }
+     else {
+        timers.setTimeout(function() {
+          let index = Math.round(Math.random()*this.totalSum);
+          cb(this.orderedCats[index]);
+        }.bind(this));
+     }
+  },
+  
 }
 
 exports.Demographer = Demographer;
