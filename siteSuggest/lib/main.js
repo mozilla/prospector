@@ -22,19 +22,48 @@ const gUserProfile = new UserProfile();
 
 function addApplicationFrame(document) {
   let tabGrid = document.getElementById("newtab-grid");
-  let lastRowDiv = tabGrid.querySelector(".newtab-row:last-child");
-  let tabCell = tabGrid.querySelector(".newtab-cell");
+  let theTab = tabGrid.querySelector(".newtab-row:last-child").querySelector(".newtab-cell:last-child");
+  let site = theTab.querySelector(".newtab-site");
+  let ref = site.getElementsByTagName("a")[0];
+  let spanImage = site.querySelector(".newtab-thumbnail");
+  let spanTitle = site.querySelector(".newtab-title");
+  let spanCatTitle = spanTitle.cloneNode(false);
+
+  theTab.setAttribute("style" , "box-shadow: 0 0 5px orange, 0 0 10px orange;");
+  ref.setAttribute( "style" , "overflow: hidden;");
+  spanCatTitle.setAttribute( "style" , "transition-property: margin-bottom; transition-duration: 1s; margin-bottom: -20px;");
+  ref.appendChild(spanCatTitle);
+
+  let window = document.defaultView;
+  let nesting = 0;
 
   // Add a row and cell for the showing the app frame
-  gUserProfile.demographer.pickRandomBest(function(cat) {
-     console.log(cat);
+  gUserProfile.demographer.pickRandomBest(function suggestCat(cat) {
+     let toggle = false;
      let req = request.Request({
           url: "https://sitesuggest.mozillalabs.com/" ,
           headers: { "Category": cat },
           onComplete: function(response) {
-            console.log( "response" , response.status );
             if( response.status == 200 ) {
-              console.log(JSON.stringify(response.json));
+              ref.setAttribute('title', response.json.title);
+              ref.setAttribute('href', response.json.url);
+              spanImage.setAttribute('style','background-image: url("' + response.json.image + '");');
+              spanTitle.textContent = response.json.title;
+              spanCatTitle.textContent = "Your interest: " + cat;
+              window.setInterval(function keepLoading() {
+                if( toggle ) {
+                  spanCatTitle.setAttribute( "style" , "transition-property: margin-bottom; transition-duration: 1s; margin-bottom: -20px;");
+                  toggle = false;
+                }
+                else {
+                  spanCatTitle.setAttribute( "style" , "transition-property: margin-bottom; transition-duration: 1s; margin-bottom: 0px;");
+                  toggle = true;
+                }
+              },3000);
+            }
+            else if( nesting < 3) {
+              nesting++;
+              gUserProfile.demographer.pickRandomBest(suggestCat);
             }
           }
         });
