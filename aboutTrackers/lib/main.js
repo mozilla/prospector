@@ -5,7 +5,7 @@
 "use strict";
 
 const {components, Ci, Cc, Cm, Cr, Cu} = require("chrome");
-const {Class} = require("api-utils/heritage");
+const {Class} = require("sdk/core/heritage");
 const {data} = require("self");
 const {Factory, Unknown} = require("api-utils/xpcom");
 const {PageMod} = require("page-mod");
