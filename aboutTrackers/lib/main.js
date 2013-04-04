@@ -87,20 +87,21 @@ exports.main = function() {
         return Ci.nsIContentPolicy.ACCEPT;
       }
 
-      // Return to normal behavior (even not blocking) when private browsing
-      if (privateBrowsing.isActive) {
-        return Ci.nsIContentPolicy.ACCEPT;
-      }
-
       try {
         // Ignore top level browser document loads
         if (contentType == Ci.nsIContentPolicy.TYPE_DOCUMENT) {
           return Ci.nsIContentPolicy.ACCEPT;
         }
 
+        // Return to normal behavior (not blocking) for private browsing windows
+        let topWindow = (context.ownerDocument || context).defaultView.top;
+        if (privateBrowsing.isPrivate(topWindow)) {
+          return Ci.nsIContentPolicy.ACCEPT;
+        }
+
         // Ignore requests that share a base domain
         let trackerDomain = Services.eTLD.getBaseDomain(contentLocation);
-        let topLevel = (context.ownerDocument || context).defaultView.top.location.host;
+        let topLevel = topWindow.location.host;
         let contextDomain = Services.eTLD.getBaseDomainFromHost(topLevel);
         if (trackerDomain == contextDomain) {
           return Ci.nsIContentPolicy.ACCEPT;
