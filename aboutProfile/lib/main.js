@@ -35,7 +35,7 @@ exports.main = function(options, callbacks) {
       },
 
       getURIFlags: function(uri) {
-        return Ci.nsIAboutModule.URI_SAFE_FOR_UNTRUSTED_CONTENT;
+        return 0;
       }
     })
   });
