@@ -4,7 +4,7 @@
 
 'use strict';
 
-const {Class} = require("api-utils/heritage");
+const {Class} = require("sdk/core/heritage");
 const {data} = require("self");
 const {Demographer} = require("Demographer");
 const {Factory, Unknown} = require("api-utils/xpcom");
