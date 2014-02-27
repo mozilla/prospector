@@ -6,16 +6,16 @@
 
 const {components, Ci, Cc, Cm, Cr, Cu} = require("chrome");
 const {Class} = require("sdk/core/heritage");
-const {data} = require("self");
-const {Factory, Unknown} = require("api-utils/xpcom");
-const {PageMod} = require("page-mod");
-const observerService = require("observer-service");
-const Preferences = require("simple-prefs");
-const privateBrowsing = require("private-browsing")
-const {setTimeout} = require("timers");
-const {storage} = require("simple-storage");
-const unload = require("unload");
-const {WindowTracker} = require("window-utils");
+const {data} = require("sdk/self");
+const {Factory, Unknown} = require("sdk/platform/xpcom");
+const {on, off} = require("sdk/system/events");
+const {PageMod} = require("sdk/page-mod");
+const Preferences = require("sdk/simple-prefs");
+const privateBrowsing = require("sdk/private-browsing")
+const {setTimeout} = require("sdk/timers");
+const {storage} = require("sdk/simple-storage");
+const unload = require("sdk/system/unload");
+const {WindowTracker} = require("sdk/deprecated/window-utils");
 
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
@@ -155,7 +155,7 @@ exports.main = function() {
   let unCookieNext = null;
 
   // Watch for requests that happen immediately after accepting from shouldLoad
-  observerService.add("http-on-modify-request", function(subject) {
+  on("http-on-modify-request", unCookier = function({subject}) {
     // Nothing to do if there's no url to uncookie
     if (unCookieNext == null) {
       return;
@@ -332,3 +332,6 @@ function updateAutoBlock(tracker) {
   }
   return false;
 }
+
+// Keep a hard reference to the observer while the add-on is running
+let unCookier;
