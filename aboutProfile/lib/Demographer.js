@@ -4,10 +4,8 @@
 
 'use strict';
 
-const file = require("file");
-const timers = require("timers");
-const {data} = require("self");
-const passwords = require("passwords");
+const {data} = require("sdk/self");
+const timers = require("sdk/timers");
 
 const {Cc,Ci,Cm,Cr,Cu,components} = require("chrome");
 

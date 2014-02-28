@@ -5,13 +5,13 @@
 'use strict';
 
 const {Class} = require("sdk/core/heritage");
-const {data} = require("self");
+const {data} = require("sdk/self");
 const {Demographer} = require("Demographer");
-const {Factory, Unknown} = require("api-utils/xpcom");
-const Observer = require("observer-service");
-const {PageMod} = require("page-mod");
-const Preferences = require("simple-prefs");
-const tabs = require("tabs");
+const {Factory, Unknown} = require("sdk/platform/xpcom");
+const {on, off} = require("sdk/system/events");
+const {PageMod} = require("sdk/page-mod");
+const Preferences = require("sdk/simple-prefs");
+const tabs = require("sdk/tabs");
 
 const {Ci,Cu} = require("chrome");
 Cu.import("resource://gre/modules/Services.jsm");
@@ -90,7 +90,7 @@ exports.main = function(options, callbacks) {
   updateAPIDomains();
 
   // Inject navigator.profile APIs into desired pages
-  Observer.add("document-element-inserted", function apiInjector(document) {
+  on("document-element-inserted", apiInjector = function({subject: document}) {
     // Allow injecting into certain pages
     let {defaultView, location} = document;
     if (defaultView == null || allowedDomains[location.host] == null) {
@@ -149,3 +149,6 @@ exports.main = function(options, callbacks) {
     tabs.open("about:profile");
   }
 };
+
+// Keep a hard reference to the observer while the add-on is running
+let apiInjector;

@@ -2,19 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
   * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-const file = require("file");
-const widgets = require("widget");
-const tabs = require("tabs");
-const request = require("request");
-const timers = require("timers");
-const windows = require("windows");
-const simpleStorage = require("simple-storage");
-const preferences = require("preferences-service");
-const {PageMod} = require("page-mod");
-const {data} = require("self");
-const passwords = require("passwords");
-
-
 function ItemJar( limit  ) {
     this.limit = limit;
     this.length = 0;
