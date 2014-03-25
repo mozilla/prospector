@@ -51,7 +51,9 @@ function prepareLessChrome(window) {
   let {document, gBrowser, gNavToolbox} = window;
 
   // Make sure tabs are on top
-  change(window.TabsOnTop, "enabled", true);
+  if (window.TabsOnTop != null) {
+    change(window.TabsOnTop, "enabled", true);
+  }
 
   // Always don't hide chrome by collapsing
   change(window.XULBrowserWindow, "hideChromeForLocation", function(orig) {
