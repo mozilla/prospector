@@ -223,9 +223,9 @@ function prepareLessChrome(window) {
     gNavToolbox.style.marginBottom = 0;
     
     // Dispatch an event after the chrome is shown
-    let event = document.createEvent("Event");
-    event.initEvent("LessChromeShown", true, false);
-    trigger.dispatchEvent(event);
+    let shownEvent = document.createEvent("Event");
+    shownEvent.initEvent("LessChromeShown", true, false);
+    trigger.dispatchEvent(shownEvent);
   }
 
   // Hide the chrome by animating away the non-tabs toolbar area
