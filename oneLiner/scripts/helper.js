@@ -14,7 +14,7 @@ function makeWindowHelpers(window) {
   let {document, clearTimeout, setTimeout} = window;
 
   // Call a function after waiting a little bit
-  function async(callback, delay) {
+  function defer(callback, delay) {
     let timer = setTimeout(function() {
       stopTimer();
       callback();
@@ -77,7 +77,7 @@ function makeWindowHelpers(window) {
         // If we have some amount of time to wait, wait
         let delay = arguments[func.length];
         if (delay)
-          node[timerName] = async(callFunc, delay);
+          node[timerName] = defer(callFunc, delay);
         // Otherwise do it synchronously
         else {
           callFunc();
@@ -115,9 +115,9 @@ function makeWindowHelpers(window) {
   }
 
   return {
-    async: async,
     change: change,
     createNode: createNode,
+    defer: defer,
     listen: function(n, e, f, c) listen(window, n, e, f, c),
     unload: function(f) unload(f, window),
   };

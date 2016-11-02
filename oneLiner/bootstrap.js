@@ -18,7 +18,7 @@ const URLBAR_WIDTH = 400;
 
 // Combine the navigation and tabs into one line
 function makeOneLine(window) {
-  let {async, change, createNode, listen, unload} = makeWindowHelpers(window);
+  let {change, createNode, defer, listen, unload} = makeWindowHelpers(window);
   let {document, gBrowser, gURLBar} = window;
 
   // Get aliases to various elements
@@ -168,7 +168,7 @@ function makeOneLine(window) {
   listen(gURLBar, "keydown", function(event) {
     if (event.keyCode == event.DOM_VK_ESCAPE) {
       let {popupOpen, value} = gURLBar;
-      async(function() {
+      defer(function() {
         // Only return focus to the page if nothing changed since escaping
         if (gURLBar.popupOpen == popupOpen && gURLBar.value == value)
           gBrowser.selectedBrowser.focus();
@@ -197,10 +197,10 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Move the navigation bar into the tabs bar
   watchWindows(function(window) {
-    let {async} = makeWindowHelpers(window);
+    let {defer} = makeWindowHelpers(window);
 
     // XXX Windows seems to reset toolbar items for new windows, so wait a bit
-    async(function() makeOneLine(window));
+    defer(function() makeOneLine(window));
   });
 
   // Detect toolbar customization to temporarily disable the add-on
