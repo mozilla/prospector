@@ -39,6 +39,7 @@ function makeOneLine(window) {
   let search = createNode("toolbarbutton");
   search.setAttribute("class", "toolbarbutton-1 chromeclass-toolbar-additional");
   search.setAttribute("image", images.search16);
+  search.setAttribute("id", "magnifying-glass");
   search.addEventListener("command", function() {
     let browser = gBrowser.selectedBrowser;
 
