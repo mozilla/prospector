@@ -112,6 +112,8 @@ getString.init = function(addon, getAlternate) {
   unload(function() Services.strings.flushBundles());
 }
 
+getString.unload = Services.strings.flushBundles;
+
 /**
  * Helper that adds event listeners and remembers to remove on unload
  */
