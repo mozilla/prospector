@@ -289,16 +289,29 @@ function spinQuery(connection, {names, params, query}) {
  * @return [function]: A 0-parameter function that undoes adding the callback.
  */
 function unload(callback, container) {
-  // Initialize the array of unloaders on the first usage
   let unloaders = unload.unloaders;
-  if (unloaders == null)
-    unloaders = unload.unloaders = [];
 
   // Calling with no arguments runs all the unloader callbacks
   if (callback == null) {
-    unloaders.slice().forEach(function(unloader) unloader());
-    unloaders.length = 0;
+    if (unloaders) {
+      unloaders.slice().forEach(function(unloader) unloader());
+      delete unload.unloaders;
+    }
     return;
+  }
+
+  // Wrap the callback in a function that ignores failures
+  function unloader() {
+    try {
+      callback();
+    }
+    catch(ex) {}
+  }
+
+  // call unloader immediately if already unloaded
+  if (!unloaders) {
+    unloader();
+    return function() {};
   }
 
   // The callback is bound to the lifetime of the container if we have one
@@ -314,13 +327,6 @@ function unload(callback, container) {
     }
   }
 
-  // Wrap the callback in a function that ignores failures
-  function unloader() {
-    try {
-      callback();
-    }
-    catch(ex) {}
-  }
   unloaders.push(unloader);
 
   // Provide a way to remove the unloader
@@ -331,6 +337,7 @@ function unload(callback, container) {
   }
   return removeUnloader;
 }
+unload.unloaders = [];
 
 /**
  * Apply a callback to each open and new browser windows.
@@ -356,7 +363,7 @@ function watchWindows(callback) {
   // Wait for the window to finish loading before running the callback
   function runOnLoad(window) {
     // Listen for one load event before checking the window type
-    window.addEventListener("load", function runOnce() {
+    listen(window, window, "load", function runOnce() {
       window.removeEventListener("load", runOnce, false);
       if (unloaded) return; // the extension has shutdown
       watcher(window);
