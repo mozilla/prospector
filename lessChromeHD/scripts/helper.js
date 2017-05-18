@@ -4,7 +4,7 @@
 
 "use strict";
 
-const BASE_OPACITY = .95;
+const BASE_OPACITY = 1; //.95;
 
 const isMac = Services.appinfo.OS == "Darwin";
 const isWin = Services.appinfo.OS == "WINNT";
