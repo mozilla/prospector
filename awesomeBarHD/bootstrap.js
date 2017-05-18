@@ -279,6 +279,46 @@ function addAwesomeBarHD(window) {
     }
   });
 
+  //Show category suggestion as we type
+  function suggestCategory() {
+    let {complete} = categoryBox;
+	
+    if(complete == null)
+      return;
+	
+    let {providers, defaultIndex, keyword} = complete.categoryData;
+    let {value, selectionStart} = hdInput;
+    let {url, name} = providers[defaultIndex];
+	
+    if(keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
+      hdInput.value = keyword;	  
+      hdInput.setSelectionRange(selectionStart, keyword.length);	
+    }
+    else if(makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
+      hdInput.value = makeWord(url).toLowerCase();	  
+      hdInput.setSelectionRange(selectionStart, makeWord(url).length);
+    }
+    else {
+      hdInput.value = makeWord(name).toLowerCase();	  
+      hdInput.setSelectionRange(selectionStart, makeWord(name).length);
+    }
+
+    //Reflect the hdInput value back to gURLBar
+    let {value, selectionStart, selectionEnd} = hdInput;
+    origInput.value= value;
+    origInput.setSelectionRange(selectionStart,selectionEnd);
+  }
+  
+  // Look for deletes to handle them better on input
+  listen(window, gURLBar.parentNode, "keypress", function(event) {
+    switch (event.keyCode) {
+      case event.DOM_VK_BACK_SPACE:		
+      case event.DOM_VK_DELETE:
+        deleting = true;
+        break;
+    }
+  });
+
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryNode, index) {
     usage.activate++;
