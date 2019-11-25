@@ -3,7 +3,7 @@
   , "version": "0.0.1"
   , "private": true
   , "dependencies": {
-      "express": "2.4.3"
+      "express": "4.17.1"
     , "bcrypt": "0.2.4"
   }
 }
