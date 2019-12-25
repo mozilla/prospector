@@ -22,6 +22,19 @@ let usage;
 // Keep track whether delete or backspace was pressed
 let deleting = false;
 
+// Keep track of what was there in the urlBar before Tab press
+let textBeforeTabPress = "";
+
+// Keep track of the ative category
+let activeCategory = "null";
+let activeCategoryList = ["null"];
+
+// Keep track of te original style for Identity Box
+let goCategoryStyle = null;
+
+// Track the completing index for a category
+let completingIndex = null;
+
 // Get and set preferences under the prospector pref branch
 XPCOMUtils.defineLazyGetter(global, "prefs", function() {
   Cu.import("resource://services-sync/ext/Preferences.js");
@@ -50,7 +63,25 @@ function addAwesomeBarHD(window) {
 
   let providerIcon = createNode("image");
   providerIcon.setAttribute("id", "page-proxy-favicon");
+  providerIcon.setAttribute("style","margin:0px 4px 0px 4px;padding:0px;");
+
+  let identityLabel = createNode("label");
+  identityLabel.setAttribute("id","identity-icon-label");
+  identityLabel.setAttribute("collapsed",true);
+  identityLabel.setAttribute("flex",1);
+  identityLabel.setAttribute("style","padding:0px 2px 0px 0px;margin:0px;"
+    + "color:rgb(40,40,40);");
+
+  let identityCountryLabel = createNode("label");  
+  identityCountryLabel.setAttribute("id","identity-icon-country-label");
+  identityCountryLabel.setAttribute("collapsed",true);
+  identityCountryLabel.setAttribute("flex",1);
+  identityCountryLabel.setAttribute("style","padding:0px 2px 0px 2px;"
+    + "margin:0px;color:rgb(40,40,40);");
+
   iconBox.appendChild(providerIcon);
+  iconBox.appendChild(identityLabel);
+  iconBox.appendChild(identityCountryLabel);
 
   // Show providers at the icon if something is active
   providerIcon.handleMouse = function() {
@@ -62,6 +93,12 @@ function addAwesomeBarHD(window) {
 
   providerIcon.addEventListener("click", providerIcon.handleMouse, false);
   providerIcon.addEventListener("mouseover", providerIcon.handleMouse, false);
+
+  identityLabel.addEventListener("click", function() {},false);
+  identityLabel.addEventListener("mouseover", function() {},false);
+
+  identityCountryLabel.addEventListener("click", function() {},false);
+  identityCountryLabel.addEventListener("mouseover", function() {},false);
 
   // Add stuff around the original urlbar input box
   let urlbarStack = createNode("stack");
@@ -107,6 +144,8 @@ function addAwesomeBarHD(window) {
 
     // Strip off the keyword based on the current active category
     let {value} = hdInput;
+    if (value.length < 1)
+      return;
     if (categoryBox.active != goCategory) {
       value = encodeURIComponent(value.replace(/^[^:]*:\s*/, ""));
       value = value.replace(/%20/g, spaceChar);
@@ -123,8 +162,6 @@ function addAwesomeBarHD(window) {
         prefetcher.lastUrl = url;
       }
     }
-
-    return url;
   };
 
   // Only prefetch if currently prefetching
@@ -137,6 +174,11 @@ function addAwesomeBarHD(window) {
   prefetcher.persistTo = function(targetTab) {
     let targetBrowser = targetTab.linkedBrowser;
     targetBrowser.stop();
+
+    // Updating the category of the targetTab and the current tab
+    activeCategoryList[targetTab._tPos] = activeCategoryList[gBrowser.selectedTab._tPos];
+    if (targetTab._tPos != gBrowser.selectedTab._tPos)
+      activeCategoryList[gBrowser.selectedTab._tPos] = "null";
 
     // Unhook our progress listener
     let selectedIndex = targetTab._tPos;
@@ -213,71 +255,204 @@ function addAwesomeBarHD(window) {
   categoryBox.style.cursor = "text";
   categoryBox.style.overflow = "hidden";
   categoryBox.style.pointerEvents = "none";
-  
-  //Helper function to convert url to name.
+
+  // Add an area to show complete category suggestion
+  let completePanel = createNode("hbox");
+  urlbarStack.appendChild(completePanel);
+
+  completePanel.setAttribute("flex", 1);
+  completePanel.setAttribute("pack", "end");
+  completePanel.setAttribute("collapsed", true);
+
+  completePanel.style.overflow = "hidden";
+  completePanel.style.pointerEvents = "none";
+
+  // Helper function to convert url's names to proper words.
   function firstCapital(word) {
-    if(word!= null)
+    if (word != null)
       return word.substr(0,1).toUpperCase()+word.substr(1);
     else
       return "";
   }
-  
+
   function makeWord(url) {
-    return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"").split(".")[0]);    
+    return firstCapital(url.replace("www.","").replace(/^(https:\/\/|http:\/\/)+/,"")
+      .split("/")[0]);
   }
-  
-  //Figure out if the current input text is activating any provider of category.
-  function checkInputForProviders(label,shortValue) {
-    let {categoryData} = label;
-    let {providers} = categoryData;
-	
-    for(let i=0;i<providers.length;i++){
-      let {url, name} = providers[i];
-      if (shortValue == makeWord(url).toLowerCase().slice(0,shortValue.length) || shortValue ==  makeWord(name).toLowerCase().slice(0,shortValue.length))
-        return i;
+
+  function updateLabel() {
+    let {active} = categoryBox;
+
+    if (active == null || active == goCategory) {
+      identityLabel.collapsed = true;
+      identityCountryLabel.collapsed = true;
+      identityCountryLabel.value=identityLabel.value="";
+      return;
     }
-    return -1;
-  } 
+
+    let {defaultIndex, providers, keyword} = active.categoryData;
+    identityLabel.collapsed = false;
+    identityCountryLabel.collapsed = false;
+
+    keyword = keyword.replace(":","").trim();
+    if (keyword == "search")
+      keyword = firstCapital(keyword)+" the web at";
+    else
+      keyword = "Search " + keyword + " at";
+    identityLabel.value = keyword;
+
+    let {name} = providers[defaultIndex];
+    identityCountryLabel.value = makeWord(name);
+  }
+
+  function updateIconColor() {
+    let {active} = categoryBox;
+
+    if (active == null || active == goCategory) {
+      if (goCategoryStyle != null)
+        iconBox.setAttribute("style",goCategoryStyle);
+      else
+        goCategoryStyle = iconBox.style;
+      return;
+    }
+
+    let display = document.createElementNS("http://www.w3.org/1999/xhtml", "img");
+    display.setAttribute("src", active.categoryData.providers[active.categoryData.defaultIndex].icon);
+    async(function() {
+      let {active} = categoryBox;
+      if (active == null || active == goCategory) {
+        if (goCategoryStyle != null)
+          iconBox.setAttribute("style",goCategoryStyle);
+        else
+          goCategoryStyle = iconBox.style;
+        return;
+      }
+      let color;
+      color = getDominantColor(display);
+      function rgb(a) "rgba(" + color + "," + a +")";
+      let gradient = ["top left", "farthest-corner", rgb(.3), rgb(.5)];
+
+      iconBox.setAttribute("style","background:-moz-radial-gradient(" + gradient + ")");
+    });
+  }
 
   //Show category suggestion as we type
   function suggestCategory() {
     let {complete} = categoryBox;
-	
-    if(complete == null)
+
+    if (complete == null || complete == goCategory)
       return;
-	
-    let {providers, defaultIndex, keyword} = complete.categoryData;
-    let {value, selectionStart} = hdInput;
-    let {url, name} = providers[defaultIndex];
-	
-    if(keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
-      hdInput.value = keyword;	  
-      hdInput.setSelectionRange(selectionStart, keyword.length);	
+
+    let {providers, keyword, defaultIndex} = complete.categoryData;
+    let {value, selectionStart, selectionEnd} = hdInput;
+    if (completingIndex == null)
+      completingIndex = defaultIndex;
+    let {url, name} = providers[completingIndex];
+
+    // If curesor at middle of input, compare for the whole input.
+    if (selectionStart == selectionEnd && selectionEnd < value.length)
+      return;
+
+    if (keyword.slice(0, selectionStart) == value.slice(0, selectionStart)) {
+      hdInput.value = keyword;
+      hdInput.setSelectionRange(selectionStart, keyword.length);
     }
-    else if(makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
-      hdInput.value = makeWord(url).toLowerCase();	  
+    else if (makeWord(url).toLowerCase().slice(0, selectionStart) == value.slice(0,selectionStart)) {
+      hdInput.value = makeWord(url).toLowerCase();
       hdInput.setSelectionRange(selectionStart, makeWord(url).length);
     }
     else {
-      hdInput.value = makeWord(name).toLowerCase();	  
-      hdInput.setSelectionRange(selectionStart, makeWord(name).length);
+      hdInput.value = name.toLowerCase();
+      hdInput.setSelectionRange(selectionStart, name.length);
     }
 
     //Reflect the hdInput value back to gURLBar
     let {value, selectionStart, selectionEnd} = hdInput;
-    origInput.value= value;
+    origInput.value = value;
     origInput.setSelectionRange(selectionStart,selectionEnd);
   }
-  
+
   // Look for deletes to handle them better on input
   listen(window, gURLBar.parentNode, "keypress", function(event) {
     switch (event.keyCode) {
-      case event.DOM_VK_BACK_SPACE:		
+      case event.DOM_VK_BACK_SPACE:
+        let {value} = hdInput;
+        if (value.length == 0 && categoryBox.active != goCategory && categoryBox.active != null) {
+          categoryBox.activate(goCategory);
+          hdInput.value = textBeforeTabPress;
+          event.preventDefault();
+
+          if (textBeforeTabPress != "")
+            async(function() {
+              if (textBeforeTabPress.length > 0) {
+                gURLBar.controller.startSearch(textBeforeTabPress);
+                gURLBar.popup.selectedIndex = 0;
+              }
+            },100);
+        }
       case event.DOM_VK_DELETE:
         deleting = true;
         break;
     }
   });
+
+  // Take pixel data for an image and find the dominant color
+  function processPixels(pixels) {
+    // Keep track of how many times a color appears in the image
+    let colorCount = {};
+    let dominantColor = "";
+    let maxCount = 0;
+
+    // Process each pixel one by one
+    pixels.forEach(function(data) {
+      // Round the color values to the closest multiple of 8
+      let [red, green, blue, alpha] = data.map(function(v) Math.round(v / 8) * 8);
+
+      // Ignore transparent pixels
+      if (alpha <= 40)
+        return;
+
+      // Ignore black-ish and white-ish
+      if (Math.max(red, green, blue) <= 40 || Math.min(red, green, blue) >= 216)
+        return;
+
+      // Increment or initialize the counter
+      let color = red + "," + green + "," + blue;
+      colorCount[color] = (colorCount[color] || 0) + 1;
+
+      // Keep track of the color that appears the most times
+      if (colorCount[color] > maxCount) {
+        maxCount = colorCount[color];
+        dominantColor = color;
+      }
+    });
+
+    // Break the color into rgb pieces
+    return dominantColor.split(",");
+  }
+
+  //// Compute the dominant color for a xhtml:img element
+  function getDominantColor(image) {
+    let canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
+    let {height, width} = image;
+    if (height <= 0 || width <= 0 || !height || !width)
+      return "255,255,255";
+    canvas.height = height;
+    canvas.width = width;
+
+    let context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0);
+
+    // Get the rgba pixel values as 4 one-byte values
+    let {data} = context.getImageData(0, 0, height, width);
+
+    // Group each set of 4 bytes into pixels
+    let pixels = [];
+    for (let i = 0; i < data.length; i += 4)
+      pixels.push(Array.slice(data, i, i + 4));
+
+    return processPixels(pixels);
+  }
 
   // Activate a category with an optional provider index
   categoryBox.activate = function(categoryNode, index) {
@@ -290,33 +465,52 @@ function addAwesomeBarHD(window) {
 
     // Remove any active query terms when activating another
     let query = value;
-    if (categoryBox.active != goCategory)
+    if (categoryBox.active != null && categoryBox.active != goCategory)
       query = query.replace(/^[^:]*:\s*/, "");
 
+    // Remember the urlBar value before changing the category from goCatgory
+    let {complete, active} = categoryBox;
+    if ((active == null || active == goCategory) && complete != null )
+      textBeforeTabPress = hdInput.value.slice(0, selectionStart);
+
     // Remove the short keyword from the query on tab complete
-    let {category, keyword} = categoryNode.categoryData;
+    let {category, keyword} = categoryNode.categoryData;    
     let shortKeyword = keyword.slice(0, selectionStart);
     let shortQuery = query.slice(0, selectionStart);
-    if (shortKeyword != "" && shortQuery == shortKeyword) {
+    if ((shortKeyword != "" && shortQuery == shortKeyword)) {
       query = query.slice(selectionEnd);
       sendEvent("complete", category);
     }
 
-    // Update the text with the active keyword
-    hdInput.value = keyword;	
-    
-    let {complete} = categoryBox;    
-    //If we were not completing to a category, then add the query also.
-    if (complete == null) {
-      hdInput.value+=query;
-      // Highlight the completed keyword if there's a query
-      let {length} = keyword;
-      hdInput.setSelectionRange(query == "" ? length : 0, length);
-    }
+    // Update the text with the remaining query
+    let {complete} = categoryBox;
+    if (complete == null)
+      hdInput.value=query
+    else
+      hdInput.value = "";
 
+    origInput.HDlastValue = hdInput.value;
     // Switch to a particular provider if necessary
     if (index != null)
       categoryNode.setIndex(index);
+
+    // Update the activeCategory Label for future reference
+    if (categoryNode != goCategory)
+      activeCategory = keyword;
+    else {
+      activeCategory = "null";
+      exitCategory.hidePopup();
+    }
+    checkCategoryPerTab();
+
+    // If active category is goCategory, tell the user about backspacing out of the category changed to
+    if (categoryBox.active == null || categoryBox.active == goCategory && hdInput.value == "")
+      exitCategory.showPanel();
+
+    // Reflect back the hdInput values back to gURLBar
+    let {value, selectionStart, selectionEnd} = hdInput;
+    origInput.value = value;
+    origInput.setSelectionRange(selectionStart, selectionEnd);
 
     // Update the autocomplete results now that we've activated
     categoryBox.processInput();
@@ -368,30 +562,16 @@ function addAwesomeBarHD(window) {
     gURLBar.handleCommand();
   };
 
-  // Select the keyword if the cursor is in the keyword
-  categoryBox.checkSelection = function() {
-    if (categoryBox.active == goCategory)
-      return;
-
-    // Move the selection boundaries if they're inside the keyword
-    let {selectionEnd, selectionStart, value} = hdInput;
-    let queryStart = value.match(/^[^:]*:\s*/)[0].length;
-    if (selectionStart <= queryStart)
-      hdInput.selectionStart = 0;
-    if (selectionEnd < queryStart)
-      hdInput.selectionEnd = queryStart;
-  };
-
   // Look through the input to decide what category could be activated
   categoryBox.prepareNext = function() {
     // Try finding a category to complete
     let {active} = categoryBox;
     categoryBox.complete = null;
-
     // See if there's any potential category to complete with tab
-    let {selectionStart, value} = hdInput;
-    let shortValue = value.slice(0, selectionStart);
+    let {selectionStart, selectionEnd, value} = hdInput;
+    let shortValue = value.slice(0, (selectionStart == selectionEnd && selectionEnd < value.length) ? value.length : selectionStart);
     let {length} = shortValue;
+
     if (length > 0 && active == goCategory) {
       Array.some(categoryBox.childNodes, function(label) {
         // Skip non-categories and the current active
@@ -399,20 +579,26 @@ function addAwesomeBarHD(window) {
         if (categoryData == null || label == active || categoryData.hidden == true)
           return;
 
-        let {keyword} = categoryData;
+        let {keyword, defaultIndex} = categoryData;
         if (keyword == "")
           return;
         if (shortValue == keyword.slice(0, length)) {
           categoryBox.complete = label;
+          completingIndex = defaultIndex;
           return true;
         }
         let index = checkInputForProviders(label,shortValue);
-	if (index >= 0) {          
-	  categoryBox.complete = label;
-	  categoryBox.complete.categoryData.defaultIndex = index;		  
-	  return true;
-	}
+        if (index >= 0) {
+          categoryBox.complete = label;
+          completingIndex = index;
+          return true;
+        }
       });
+    }
+
+    if (categoryBox.complete == null) {
+      completePanel.collapsed = true;
+      categoryBox.collapsed = false;
     }
 
     let temp = categoryBox.active.nextSibling.nextSibling;
@@ -434,14 +620,82 @@ function addAwesomeBarHD(window) {
     categoryBox.prev = temp;
   };
 
+  //Figure out if the current input text is activating any provider of category.
+  function checkInputForProviders(label,shortValue) {
+    let {providers} = label.categoryData;
+
+    for (let i=0; i<providers.length; i++){
+      let {url, name} = providers[i];
+      if (shortValue == makeWord(url).toLowerCase().slice(0,shortValue.length)
+        || shortValue == makeWord(name).toLowerCase().slice(0,shortValue.length))
+          return i;
+    }
+    return -1;
+  }
+
+  gBrowser.mTabContainer.addEventListener("TabOpen", function(event) {
+    let leftArray = activeCategoryList.slice(0, event.target._tPos);
+    activeCategory = (event.target._tPos == gBrowser.selectedTab._tPos) ? 
+      "null" : activeCategory;
+    activeCategoryList = leftArray.concat("null", activeCategoryList.slice(event.target._tPos));
+    // Display the corrent url of the new page.
+    window.URLBarSetURI();
+  }, false);
+
+  gBrowser.mTabContainer.addEventListener("TabClose", function(event) {
+    async(function() {
+      activeCategory = activeCategoryList[gBrowser.selectedTab._tPos];
+      categoryBox.processInput();
+      activeCategoryList.splice(event.target._tPos, 1);
+    },100);
+  }, false);
+
+  // Function to update the activeCategoryList for each tab
+  // based on activeCategory and the selected tab
+  function checkCategoryPerTab() {
+    let {length} = activeCategoryList;
+
+    if (length < gBrowser.selectedTab._tPos) {
+      while (length <= gBrowser.selectedTab._tPos) {
+        activeCategoryList.push("null");
+        length = activeCategoryList.length;
+      }
+    }
+    else {
+      if (activeCategoryList[gBrowser.selectedTab._tPos] == null)
+        activeCategory = activeCategoryList[gBrowser.selectedTab._tPos] = "null";
+      else
+        activeCategoryList[gBrowser.selectedTab._tPos] = activeCategory;
+    }
+  }
+
+  // Function to decide whether to show the category box or not
+  function displayCategoryBox() {
+    // Check if the input looks like a url
+    let {value} = hdInput;
+    let likeUrl = value.indexOf(" ") == -1 && value.indexOf("/") != -1;
+
+    let focused = gURLBar.hasAttribute("focused");
+    let doActive = focused || value != "";
+
+    // Hide the url parts if it's about:blank or active
+    let isBlank = getURI().spec == "about:blank";
+    let hideUrl = isBlank || doActive;
+
+    return !(likeUrl || !hideUrl);
+  }
+
   // Figure out if the current input text is activating a category
   categoryBox.processInput = function() {
     // Figure out what's the active category based on the input
-    let {value} = hdInput;
-    let inputParts = value.match(/^([^:]*):\s*(.*?)$/);
+    let {value, selectionStart} = hdInput;
+    activeCategory = activeCategoryList[gBrowser.selectedTab._tPos];
+
+    let inputParts = value.match(/^([^:]*):\s*(.*?)$/) || activeCategory.match(/^([^:]*):\s*(.*?)$/);
     categoryBox.active = goCategory;
     if (inputParts != null) {
       let inputKeyword = inputParts[1];
+
       Array.some(categoryBox.childNodes, function(label) {
         let {categoryData} = label;
         if (categoryData == null || categoryData.hidden == true)
@@ -449,16 +703,34 @@ function addAwesomeBarHD(window) {
         let {keyword} = categoryData;
         if (keyword == "")
           return;
+
         if (inputKeyword == keyword.slice(0, inputKeyword.length)) {
           categoryBox.active = label;
+
+          if (activeCategory == "null") 
+            textBeforeTabPress = inputKeyword.slice(0, selectionStart);
+          if (hdInput.value.search(":") > -1)
+            hdInput.value = hdInput.value.replace(/.+:/,"");
+
+          activeCategory = inputKeyword + ": ";
+          checkCategoryPerTab();
           return true;
         }
+
         let index = checkInputForProviders(label,inputKeyword);
-	if (index >= 0) {          
-	  categoryBox.active = label;
-	  categoryBox.active.categoryData.defaultIndex = index;		  
-	  return true;
-	}
+        if (index >= 0) {
+          categoryBox.active = label;
+          categoryBox.active.categoryData.defaultIndex = index;
+
+          if (activeCategory == "null")
+            textBeforeTabPress = inputKeyword.slice(0, selectionStart);
+          if (hdInput.value.search(":") > -1)
+            hdInput.value = hdInput.value.replace(/.+:/,"");
+
+          activeCategory = inputKeyword + ": ";
+          checkCategoryPerTab();
+          return true;
+        }
       });
     }
 
@@ -468,7 +740,7 @@ function addAwesomeBarHD(window) {
 
     // Convert the input into a url for the location bar and prefetch
     let {active} = categoryBox;
-    gURLBar.value = prefetcher.load(active);
+    prefetcher.load(active);
 
     // Only show results for going to a history page
     gURLBar.popup.collapsed = active != goCategory;
@@ -528,9 +800,15 @@ function addAwesomeBarHD(window) {
         color = "#00f";
         line = true;
       }
+
       style.color = color;
       style.textDecoration = line && categoryData != null ? "underline" : "";
     });
+
+    // Updating the text in the labels
+    updateLabel();
+    // Change the color of iconBox
+    updateIconColor();
 
     // Hide the url parts if it's about:blank or active
     let isBlank = getURI().spec == "about:blank";
@@ -543,8 +821,13 @@ function addAwesomeBarHD(window) {
     // Show the next category if focus is in the box
     if (focused && !likeUrl)
       tabPanel.showNextCategory();
-    else
+    else if (!categoryBox.complete && categoryBox.complete != goCategory)
       tabPanel.hidePopup();
+
+    if (categoryBox.complete != null && categoryBox.complete != goCategory)
+      completePanel.showCompletedCategory();
+    else
+      completePanel.collapsed = true;
 
     // Show the original identity box when inactive
     origIdentity.collapsed = doActive;
@@ -885,8 +1168,16 @@ function addAwesomeBarHD(window) {
     });
 
     // If we have a visible last separator, make it a period
-    if (lastSeparator != null)
+    let temp = categoryBox.lastChild.previousSibling;
+    while (temp.categoryData.hidden && temp != goCategory) {
+      temp = temp.previousSibling.previousSibling;
+    }
+    let {showIcon} = temp.categoryData;
+
+    if (lastSeparator != null && !showIcon)
       lastSeparator.setAttribute("value", ".");
+    else if (lastSeparator != null)
+      lastSeparator.setAttribute("value", "");
   }
   fixSeparators();
 
@@ -920,28 +1211,85 @@ function addAwesomeBarHD(window) {
     window.URLBarSetURI();
   }, false);
 
-  hdInput.addEventListener("click", function() {
-    categoryBox.checkSelection();
-  }, false);
-
   hdInput.addEventListener("focus", function() {
     gURLBar.setAttribute("focused", true);
+    checkCategoryPerTab();
     categoryBox.processInput();
   }, false);
 
   // Watch for inputs to handle from keyboard and from other add-ons
+  var hdListener =
+  {
+    QueryInterface: function(aIID) {
+      if (aIID.equals(Components.interfaces.nsIWebProgressListener) ||
+        aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
+        aIID.equals(Components.interfaces.nsISupports))
+        return this;
+      throw Components.results.NS_NOINTERFACE;
+    },
+
+    onLocationChange: function(aProgress, aRequest, aURI) {
+      // Copy over the new value and selection if it changed
+      gURLBar.onchange();
+    }
+  };
+  gBrowser.addTabsProgressListener(hdListener);
+  unload( function() {
+    gBrowser.removeTabsProgressListener(hdListener);
+  }); 
+
+  gURLBar.onchange = function() {
+    // Copy over the new value and selection if it changed and if not searching
+    if (activeCategory != null && activeCategory != "null" 
+      && !categoryBox.active && categoryBox.active != goCategory)
+      return;
+
+    async(function() {
+      categoryBox.updateLook();
+
+      // Strip off wyciwyg and passwords
+      let uri = getURI();
+      try {
+        uri = window.XULBrowserWindow._uriFixup.createExposableURI(uri);
+      }
+      catch(ex) {}
+
+      // Break the url down into differently-styled parts 
+      let url = window.losslessDecodeURI(uri);
+      if (gURLBar.value.match(/^([^:]*:\/*)/) != null)
+        url = gURLBar.value.match(/^([^:]*:\/*)/)[1];
+      url = url.match(/^([^:]*:\/*)/)[1] + gURLBar.value.replace(/^([^:]*:\/\/)/,"");
+      if (url == "about:blank")
+        return;
+
+      let match = url.match(/^([^:]*:\/*)([^\/]*)(.*)$/);
+      let urlParts = match == null ? ["", "", url] : match.slice(1);
+      origInput.HDlastValue = url;
+      preDomain.setAttribute("value", urlParts[0]);
+      domainText.setAttribute("value", urlParts[1]);
+      postDomain.setAttribute("value", urlParts[2]);
+    });
+  };
+
   hdInput.addEventListener("input", function() {
     // Don't try suggesting a keyword when the user wants to delete
     if (deleting) {
+      categoryBox.complete = null;
+      completePanel.showCompletedCategory();
       deleting = false;
       return;
     }
     // Copy over the new value and selection if it changed while not searching
     let {HDlastValue, selectionEnd, selectionStart, value} = origInput;
     if (HDlastValue != value) {
-      hdInput.value = value;
+      origInput.HDlastValue = hdInput.value = value;
       hdInput.setSelectionRange(selectionStart, selectionEnd);
     }
+
+    // If use enters some text ater category change , clear out textBeforeTabPress
+    if (hdInput.value.length > 0)
+      textBeforeTabPress = "";
+
     categoryBox.processInput();
     suggestCategory();
   }, false);
@@ -954,45 +1302,20 @@ function addAwesomeBarHD(window) {
     // Keep the focus in the input box instead of blurring
     event.preventDefault();
 
-    // Return focus to the browser if already empty
-    if (hdInput.value == "")
-      gBrowser.selectedBrowser.focus();
-    // Empty out the input on first escape
-    else {
-      hdInput.value = "";
+    // Hide the results popup if it is visible
+    if (!gURLBar.popup.collapsed && gURLBar.popup.selectedIndex != -1) {
+      gURLBar.popup.selectedIndex = -1;
+      gURLBar.popup.collapsed = true;
+    }
+    // Return focus to the browser if already empty and make active category null
+    else if (hdInput.value == "") {
+      activeCategory = "null";
       categoryBox.processInput();
+      gBrowser.selectedBrowser.focus();
     }
-  }, false);
-
-  // Detect cursor movements to auto-select the keyword
-  hdInput.addEventListener("keypress", function(event) {
-    let {active} = categoryBox;
-    if (active == goCategory)
-      return;
-
-    // Only care about the various keys can cause the cursor to move
-    switch (event.keyCode) {
-      case event.DOM_VK_END:
-      case event.DOM_VK_DOWN:
-      case event.DOM_VK_HOME:
-      case event.DOM_VK_LEFT:
-      case event.DOM_VK_RIGHT:
-      case event.DOM_VK_UP:
-        break;
-
-      default:
-        return;
-    }
-
-    // Don't re-select if there's a selection of the keyword already
-    let {selectionEnd, selectionStart, value} = hdInput;
-    let queryStart = value.match(/^[^:]*:\s*/)[0].length;
-    if (selectionEnd == queryStart && selectionStart != queryStart)
-      return;
-
-    // Must not be selecting or cursor is at the query, so select, but wait for
-    // the cursor to actually move before detecting the selection
-    async(function() categoryBox.checkSelection());
+    // Empty out the input on the escape when Results popup is nt viible
+    else
+      textBeforeTabPress = origInput.value = hdInput.value = "";
   }, false);
 
   // Specially handle some navigation keys
@@ -1083,10 +1406,7 @@ function addAwesomeBarHD(window) {
     // Let ctrl-tab do the usual tab switching
     if (event.ctrlKey)
       return;
-    
-    event.preventDefault();
-    event.stopPropagation();
-	
+
     // Only allow switching when the query isn't highlighted
     function canSwitch() {
       // Can always switch when nothing is selected
@@ -1100,7 +1420,7 @@ function addAwesomeBarHD(window) {
     }
 
     // Allow moving backwards through categories
-    let {complete, next, prev} = categoryBox;	
+    let {complete, next, prev} = categoryBox;
     let {selectionStart, selectionEnd, value} = origInput;
     if (event.shiftKey && canSwitch()) {
       usage.tabPrev++;
@@ -1109,21 +1429,27 @@ function addAwesomeBarHD(window) {
     // Allow tab completion of a category
     else if (complete != null) {
       usage.tabComplete++;
-      categoryBox.activate(complete);	  
+      categoryBox.activate(complete, completingIndex);
     }
     //If there is no category to complete and we can't switch, 
-    //Copy over the new value and selection if it changed when not searching
-    else if (selectionStart<selectionEnd && selectionEnd==value.length) {
+    // Copy over the new value and selection if it changed when not searching
+    else if (selectionStart < selectionEnd && selectionEnd == value.length) {
       let {selectionStart, selectionEnd, value} = hdInput;
       origInput.HDlastValue = origInput.value = value;
       origInput.setSelectionRange(selectionStart, selectionEnd);
-      gURLBar.mController.handleText();      
+      gURLBar.mController.handleText();
     }
     // Allow moving forwards through categories
     else if (canSwitch()) {
       usage.tabNext++;
-      categoryBox.activate(next);	  
+      categoryBox.activate(next);
     }
+    // Allow usual behavior when nothing matches
+    else
+      return;
+
+    event.preventDefault();
+    event.stopPropagation();
   });
 
   // Activate the go category when dismissing the autocomplete results
@@ -1351,6 +1677,13 @@ function addAwesomeBarHD(window) {
 
   tabPanel.style.MozWindowShadow = "none";
 
+  // Creating a popup to tell user that he can backspace to exit that category
+  let exitCategory = createNode("panel");
+  document.getElementById("mainPopupSet").appendChild(exitCategory);
+  exitCategory.setAttribute("noautofocus", true);
+
+  exitCategory.style.MozWindowShadow = "none";
+
   // Change display when shift is pressed
   tabPanel.onKey = function(event) {
     if (event.keyCode != event.DOM_VK_SHIFT)
@@ -1364,6 +1697,11 @@ function addAwesomeBarHD(window) {
 
   // Open the panel showing what next category to tab to
   tabPanel.showNextCategory = function() {
+
+    // Do nothing if complete category suggestion is shown
+    if (completePanel.collapsed == false)
+      return;
+
     // Show the previous category if going backwards
     let {shifted, textTab} = tabPanel;
     let {next, prev} = categoryBox;
@@ -1433,6 +1771,110 @@ function addAwesomeBarHD(window) {
 
     // Show the panel just above the input near the cursor
     tabPanel.openPopup(iconBox, "before_start");
+
+    // Hide the panel after 5 seconds
+    async(function() tabPanel.hidePopup(), 5000);
+  };
+
+  // Add an event listener to show or hide completePanel popup
+  listen(window, gURLBar.parentNode, "keypress", function() {
+    if (categoryBox.complete != null && categoryBox.complete != goCategory)
+      completePanel.showCompletedCategory();
+    else 
+      completePanel.collapsed = true;
+
+    // Call the exitCategory function after a delay to let happen the keypress event
+    async(function() {
+      if (categoryBox.active != null && categoryBox.active != goCategory)
+        exitCategory.showPanel();
+    });
+  }, false);
+  
+  // Open the panel showing what next category to tab to
+  completePanel.showCompletedCategory = function() {
+    let {textTab} = completePanel;
+    let {complete} = categoryBox;
+
+    if (complete != null && complete != goCategory) {
+      categoryBox.collapsed = true;
+      tabPanel.hidePopup();
+    }
+    else {
+      categoryBox.collapsed = !displayCategoryBox();
+      completePanel.collapsed = true;
+      return;
+    }
+
+    // Set the appropriate key to press
+    textTab.setAttribute("value", "Tab");
+
+    // Read out various state to specially highlight based on input
+    let {category, defaultIndex, providers} = complete.categoryData;
+    let {selectionStart, value} = hdInput;
+    let shortValue = value.slice(0, selectionStart);
+    let {length} = shortValue;
+
+    // Track various parts of the text to split in the panel
+    let splitParts = {
+      preUnder: "search for ",
+      postUnder: "",
+    }
+
+    splitParts.postUnder = category;
+
+    // Slightly change the wording for the search category
+    if (complete == searchCategory) {
+      splitParts.preUnder = "";
+      splitParts.postUnder += " the web";
+    }
+
+    // Set the words in the corresponding parts
+    for (let [part, text] in Iterator(splitParts))
+      completePanel[part].setAttribute("value", text);
+
+    // Update the provider information
+    if (completingIndex == null)
+      completingIndex = defaultIndex;
+    let {name} = providers[completingIndex];
+    completePanel.provider.setAttribute("value", name);
+
+    // Show the panel just above the input near the cursor
+    completePanel.collapsed = false;
+
+    let display = document.createElementNS("http://www.w3.org/1999/xhtml", "img");
+    display.setAttribute("src", complete.categoryData.providers[completingIndex].icon);
+    let color;
+
+    async( function() {
+      color = getDominantColor(display);
+      function rgb(a) "rgba(" + color + "," + a +")";
+      let gradient = ["top left", "farthest-corner", rgb(.2), rgb(.4)];
+
+      completePanel.provider.style.backgroundImage = "-moz-radial-gradient(" + gradient + ")";
+    });
+
+    async( function() {
+      categoryBox.collapsed = !displayCategoryBox();
+      completePanel.collapsed = true;
+      }, 10000);
+  };
+
+  // Function to show the exitCategory popup when no input in hdInput
+  exitCategory.showPanel = function() {
+    let {value} = hdInput;
+    let {active} = categoryBox;
+    // Hide the tabPanel temorarily
+    let {state} = tabPanel;
+    tabPanel.hidePopup();
+
+    if (value.length == 0 && origInput.value.length == 0) {
+      exitCategory.openPopup(iconBox, "before_start");
+      async( function() {
+        exitCategory.hidePopup();
+        if (state == "open")
+          tabPanel.showNextCategory();
+      }, 2000);
+    }
   };
 
   // Maybe update the panel if the shift key is held
@@ -1447,6 +1889,14 @@ function addAwesomeBarHD(window) {
 
   unload(function() {
     tabPanel.parentNode.removeChild(tabPanel);
+  });
+
+  unload(function() {
+    completePanel.parentNode.removeChild(completePanel);
+  });
+
+  unload(function() {
+    exitCategory.parentNode.removeChild(exitCategory);
   });
 
   // Create a local scope for various tabPanel specific nodes
@@ -1558,7 +2008,93 @@ function addAwesomeBarHD(window) {
       filter.parentNode.removeChild(filter);
     });
   }
+  // Create a local scope for Complete Category popup panel
+  {
+    let tabBox = createNode("hbox");
+    completePanel.appendChild(tabBox);
 
+    tabBox.setAttribute("align", "center");
+    tabBox.setAttribute("style", "border:solid 1px; -moz-border-left-colors:rgba(50,50,50,0.5);" 
+      + "-moz-border-bottom-colors:rgba(50,50,50,0); -moz-border-right-colors:rgba(50,50,50,0);"
+      + "-moz-border-top-colors:rgba(50,50,50,0);margin-top:-2px;");
+    tabBox.style.backgroundColor = "rgba(255,255,255,0)";
+    tabBox.style.margin = "-2px 0px";
+    tabBox.style.overflow = "hidden";
+
+    let textPress = createNode("label");
+    tabBox.appendChild(textPress);
+
+    textPress.setAttribute("value", "Press");
+    textPress.style.color = "#999";
+    textPress.style.margin = "0 3px 0 3px";
+
+    let textTab = createNode("label");
+    completePanel.textTab = textTab;
+    tabBox.appendChild(textTab);
+
+    textTab.style.backgroundImage = "-moz-linear-gradient(top, rgb(240, 240, 240), rgb(220, 220, 220))";
+    textTab.style.borderRadius = "2px";
+    textTab.style.margin = "0";
+    textTab.style.padding = "0 2px";
+
+    let textTo = createNode("label");
+    tabBox.appendChild(textTo);
+
+    textTo.setAttribute("value", "to ");
+
+    textTo.style.color = "#999";
+    textTo.style.margin = "0 0 0 3px";
+
+    let preUnder = createNode("label");
+    completePanel.preUnder = preUnder;
+    tabBox.appendChild(preUnder);
+
+    preUnder.style.color = "#999";
+    preUnder.style.margin = "0";
+
+    let postUnder = createNode("label");
+    completePanel.postUnder = postUnder;
+    tabBox.appendChild(postUnder);
+
+    postUnder.style.color = "#555";
+    postUnder.style.margin = "0";
+
+    let textAt = createNode("label");
+    tabBox.appendChild(textAt);
+
+    textAt.setAttribute("value", "at");
+
+    textAt.style.color = "#999";
+    textAt.style.margin = "0 3px";
+
+    let provider = createNode("label");
+    completePanel.provider = provider;
+    tabBox.appendChild(provider);
+
+    provider.style.color = "#666";
+    provider.style.borderRadius = "3px";
+    provider.style.padding = "0 2px";
+  }
+  // Create a local scope for exit Category Panel
+  {
+    let popupBox = createNode("hbox");
+    exitCategory.appendChild(popupBox);
+
+    popupBox.setAttribute("align", "center");
+
+    popupBox.style.backgroundColor = "white";
+    popupBox.style.border = "1px solid rgb(50, 50, 50)";
+    popupBox.style.borderRadius = "5px";
+    popupBox.style.padding = "2px";
+
+    let textBox = createNode("label");
+    popupBox.appendChild(textBox);
+
+    textBox.setAttribute("value", "Press Backspace to exit out of this category.");
+
+    textBox.style.color = "#999";
+    textBox.style.margin = "0 3px 0 0";  
+  }
   // Catch various existing browser commands to redirect to the dashboard
   let commandSet = document.getElementById("mainCommandSet");
   let commandWatcher = function(event) {
@@ -1774,8 +2310,8 @@ function startup({id}) AddonManager.getAddonByID(id, function(addon) {
 
   // Combine location and search!
   watchWindows(addAwesomeBarHD);
+  categoryBox.processInput();
 })
-
 
 /**
  * Handle the add-on being deactivated on uninstall/disable
